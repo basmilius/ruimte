@@ -3,6 +3,7 @@ import { cp, mkdir, mkdtemp, realpath, rm, symlink, unlink, writeFile } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, GitStatus } from '@ruimte/contracts';
+import { fileChange } from '../git/diff.ts';
 import { gitIn, initRepo } from '../git/test-repo.ts';
 import { ruimteUiSources, type UiSourceHosts } from './ui-sources.ts';
 
@@ -65,6 +66,7 @@ beforeEach(async () => {
             return statusOf();
         },
         gitLog: async () => ({ commits: [], cursor: null }),
+        gitDiff: fileChange,
         tasks: (chatId) => {
             reads.push(chatId);
             return [];
@@ -210,6 +212,42 @@ test('diff links retain a deleted file and select the staged side', async () => 
         reason: 'target-unavailable',
         message: 'This file has no current diff.'
     });
+});
+
+test('an open diff reads the change of its file in the working tree, in a commit and between revisions', async () => {
+    await cp(repository, folder, { recursive: true });
+    await writeFile(join(folder, 'a.md'), 'second');
+    await gitIn(folder, ['commit', '--quiet', '--all', '--message', 'second']);
+    await writeFile(join(folder, 'a.md'), 'third  spaced');
+    hosts.gitStatus = async () =>
+        statusOf({ repo: true, root: folder, branch: 'main', files: [{ path: 'a.md', state: 'unstaged', status: 'M', added: 1, deleted: 1, binary: false }] });
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    const working = await host.diff!(info(), access, { path: 'a.md' });
+    expect(working.patch).toContain('-second');
+    expect(working.patch).toContain('+third  spaced');
+    const commit = await host.diff!(info(), access, { path: 'a.md', to: 'HEAD' });
+    expect(commit.patch).toContain('-initial');
+    expect(commit.patch).toContain('+second');
+    const between = await host.diff!(info(), access, { path: 'a.md', from: 'HEAD~1', to: 'HEAD' });
+    expect(between.patch).toBe(commit.patch);
+    const since = await host.diff!(info(), access, { path: 'a.md', from: 'HEAD~1' });
+    expect(since.patch).toContain('-initial');
+    expect(since.patch).toContain('+third  spaced');
+});
+
+test('an open diff refuses a revision that is none, an option in its place and a file outside the project', async () => {
+    await cp(repository, folder, { recursive: true });
+    await writeFile(join(root, 'outside', 'secret.md'), 'secret');
+    const host = ruimteUiSources(hosts);
+    const access = await host.capture(info());
+    await expect(host.diff!(info(), access, { path: 'a.md', from: 'no-such-branch' })).rejects.toMatchObject({
+        reason: 'target-unavailable',
+        message: 'no-such-branch is not a commit in this repository.'
+    });
+    await expect(host.diff!(info(), access, { path: 'a.md', from: '--output=leak.txt' })).rejects.toMatchObject({ reason: 'target-unavailable' });
+    await expect(host.diff!(info(), access, { path: 'escaped/secret.md', to: 'HEAD' })).rejects.toMatchObject({ reason: 'outside-project' });
+    await expect(host.diff!(info(), access, { path: 'a.md' })).rejects.toMatchObject({ message: 'This file has no current diff.' });
 });
 
 test("commit and diff links resolve in a repository beside the agent's own", async () => {

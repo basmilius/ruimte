@@ -1,25 +1,30 @@
 import type { Area } from '../area.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import { uiDiagnosticsPath, UiDiagnosticTally } from '../stats/ui-diagnostics.ts';
 import { fileUsageStore, usageStatePath, UsageCounter } from '../stats/usage-counter.ts';
 import { UsageReporter } from '../stats/usage-reporter.ts';
 import { installUsageCounter } from '../stats/usage-stats.ts';
 import { stopTelemetry, telemetryBuild, type Launcher } from '../telemetry/reporter.ts';
 import { VERSION } from '../version.ts';
+import type { SessionEvent } from '../wire.ts';
 
 export interface UsageStatsBundle {
     // Sends the finished days; asked beside the model catalogs, at the start and on `provider.list`.
     flush(): void;
     changed(on: boolean): Promise<void>;
     stop(): Promise<void>;
+    // Tallies the diagnostics of UI blocks in a file that stays on this machine, whatever the build.
+    observe(event: SessionEvent): void;
 }
-
-const SILENT: UsageStatsBundle = { flush: () => undefined, changed: () => Promise.resolve(), stop: () => Promise.resolve() };
 
 /* Only a release build counts and sends, the same stamp the crash reports go by; any other build has nothing. */
 export async function wireUsageStats(home: string, identity: EndpointIdentity, auth: AuthStore, launcher: Launcher): Promise<UsageStatsBundle> {
+    const diagnostics = new UiDiagnosticTally({ store: fileUsageStore(uiDiagnosticsPath(home)) });
+    await diagnostics.load();
+    const observe = (event: SessionEvent) => diagnostics.observe(event);
     if (!telemetryBuild()) {
-        return SILENT;
+        return { flush: () => undefined, changed: () => Promise.resolve(), stop: () => diagnostics.persist(), observe };
     }
     const counter = new UsageCounter({ store: fileUsageStore(usageStatePath(home)), describe: () => ({ version: VERSION, launcher }) });
     await counter.load();
@@ -42,7 +47,10 @@ export async function wireUsageStats(home: string, identity: EndpointIdentity, a
                 await counter.discard();
             }
         },
-        stop: () => counter.persist()
+        stop: async () => {
+            await Promise.all([counter.persist(), diagnostics.persist()]);
+        },
+        observe
     };
 }
 

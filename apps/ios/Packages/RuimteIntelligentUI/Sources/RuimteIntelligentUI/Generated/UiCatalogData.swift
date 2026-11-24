@@ -2,7 +2,7 @@
 
 public enum UiCatalogData {
     public static let version = 1
-    public static let components: Set<String> = ["Summary", "Callout", "Tag", "Progress", "Steps", "Step", "Timeline", "Event", "Stats", "Stat", "EntityList", "Entry", "Table", "Column", "Chart", "Tabs", "Tab", "Sections", "Section", "CodeBlock", "Image", "Gallery", "Compare", "Model", "Map", "Place", "Sources", "Source", "File", "Diff", "Commit", "Node", "Checklist", "Item", "Switch", "Slider", "Segmented", "Select", "Option", "TextField", "Button", "Show", "Each", "Choices", "Choice"]
+    public static let components: Set<String> = ["Summary", "Callout", "Tag", "Progress", "Steps", "Step", "Timeline", "Event", "Stats", "Stat", "Meter", "Parts", "Part", "EntityList", "Entry", "Table", "Column", "Chart", "Tabs", "Tab", "Sections", "Section", "Columns", "Pane", "Alternatives", "Alternative", "Pro", "Con", "Tree", "Branch", "Leaf", "CodeBlock", "Quote", "Keys", "Image", "Gallery", "Compare", "Model", "Map", "Place", "Sources", "Source", "File", "Diff", "Changes", "Change", "Commit", "Node", "Checklist", "Item", "Switch", "Slider", "Segmented", "Select", "Radio", "Option", "TextField", "NumberField", "Button", "Show", "Each", "Choices", "Choice"]
     /// The components of the `links` group, which the host resolves.
-    public static let links: Set<String> = ["File", "Diff", "Commit", "Node"]
+    public static let links: Set<String> = ["File", "Diff", "Changes", "Change", "Commit", "Node"]
 }

@@ -774,6 +774,7 @@ exports[`every reply and event field keeps its vocabulary 1`] = `
   "reply tunnel.update #/properties/rows/items/properties/kind = ["dev", "mcp"]",
   "reply tunnel.update #/properties/stage = ["cannot-install", "checking", "failed", "installing", "no-token", "no-tunnel", "not-installed", "running", "starting"]",
   "reply tunnel.update #/properties/tunnel/anyOf/0/properties/runner/anyOf/0 = ["other", "ruimte"]",
+  "reply ui.diff #/properties/state = ["patch", "refused"]",
   "reply ui.link #/properties/state = ["chip", "plain"]",
   "reply ui.query #/properties/state = ["failed", "fresh", "refused"]",
   "reply usage.limits #/properties/providers/items/properties/kind = ["anthropic-claude-api", "antigravity", "claude", "codex", "copilot", "grok", "nanogpt"]",

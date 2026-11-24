@@ -395,6 +395,65 @@ export async function diffFile(cwd: string, path: string, options: DiffOptions, 
     return result;
 }
 
+export interface FileChangeOptions {
+    /* A revision to read the change from; with `to` the change between the two, without it the change up to the working tree. */
+    from?: string;
+
+    /* Alone, the commit whose own change is read. */
+    to?: string;
+    staged: boolean;
+    ignoreWhitespace: boolean;
+}
+
+/*
+ * The change of one file as an open Diff of a UI block shows it: in the working tree, in one commit
+ * or between two revisions, under the caps of the panel. The revisions come from an agent's text, so
+ * each is resolved to a hash before it reaches a diff.
+ */
+export async function fileChange(cwd: string, path: string, options: FileChangeOptions): Promise<GitDiffResult> {
+    const { from, to, staged, ignoreWhitespace } = options;
+
+    if (from === undefined) {
+        return to === undefined
+            ? await diffFile(cwd, path, { scope: 'worktree', staged, ignoreWhitespace }, null)
+            : await diffFile(cwd, path, { scope: 'commit', commit: await commitHash(cwd, to), staged: false, ignoreWhitespace }, null);
+    }
+
+    const top = await toplevel(cwd);
+
+    if (!(await insideCheckout(top, path))) {
+        throw new GitError('outside-checkout', `${path} is not inside the checkout.`);
+    }
+
+    const revisions = [await commitHash(top, from), ...(to === undefined ? [] : [await commitHash(top, to)])];
+    const args = ['diff', ...PATCH_ARGS, ...(ignoreWhitespace ? ['--ignore-all-space'] : []), ...revisions, '--', `:(literal)${path}`];
+    const counts = await runGit(asNumstat(args), top);
+    const stat = counts.code > 1 ? null : (parseNumstat(counts.stdout)[0] ?? null);
+    const result: GitDiffResult = { path, diff: '', added: stat?.added ?? 0, deleted: stat?.deleted ?? 0, binary: stat?.binary ?? false };
+
+    if (result.binary) {
+        return { ...result, omitted: 'binary' };
+    }
+
+    if (result.added + result.deleted > PANEL_CAPS.fileLines) {
+        return { ...result, omitted: 'too-large' };
+    }
+
+    const patch = await runGit(args, top);
+
+    return patch.code > 1 || patch.stdout.length > PANEL_CAPS.fileBytes ? { ...result, omitted: 'too-large' } : { ...result, diff: patch.stdout };
+}
+
+async function commitHash(cwd: string, revision: string): Promise<string> {
+    const hash = await verifyRev(`${revision}^{commit}`, cwd);
+
+    if (hash === null) {
+        throw new GitError('git-failed', `${revision} is not a commit in this repository.`);
+    }
+
+    return hash;
+}
+
 // The tree of a repository with nothing in it: what the first commit is diffed against.
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 

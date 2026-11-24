@@ -17,6 +17,43 @@ enum UiLinkState: Equatable {
         if reading["state"] == .string("chip") { return .chip(label: reading["label"]?.stringValue) }
         return .plain(reason: UiReason.text(reading) ?? String(localized: "Outside the project, shown as text"))
     }
+
+    var isChip: Bool {
+        if case .chip = self { return true }
+        return false
+    }
+
+    var reason: String? {
+        if case .plain(let reason) = self { return reason }
+        return nil
+    }
+}
+
+/// What a node is doing, which its chip shows as a dot in the color the rest of the app gives that state. A word a
+/// newer machine sends reads as none.
+enum UiNodeStatus: String {
+    case running, needsYou, done
+
+    @MainActor static func of(_ node: UiNode, context: UiRenderContext) -> Self? {
+        guard node.type == "Node" else { return nil }
+        return context.model.resolvedLinks[node.id]?["status"]?.stringValue.flatMap(Self.init(rawValue:))
+    }
+
+    var color: Color {
+        switch self {
+        case .running: MobileStyle.statusRunning
+        case .needsYou: MobileStyle.statusNeedsYou
+        case .done: MobileStyle.statusIdle
+        }
+    }
+
+    var word: String {
+        switch self {
+        case .running: String(localized: "Running")
+        case .needsYou: String(localized: "Needs you")
+        case .done: String(localized: "Done")
+        }
+    }
 }
 
 /// What a link shows: an icon, its short name and the full name a long press offers.
@@ -30,15 +67,16 @@ struct UiLinkFace {
 
     init(_ node: UiNode, label: String?) {
         switch node.type {
-        case "File":
-            let path = node.string("path") ?? ""
-            let line = node.number("line").map { ":\(Int($0))" }
+        // A CodeBlock links as a File by its `file` and `start`, and a Leaf by its `path`.
+        case "File", "CodeBlock", "Leaf":
+            let path = node.string(node.type == "CodeBlock" ? "file" : "path") ?? ""
+            let line = node.number(node.type == "CodeBlock" ? "start" : "line").map { ":\(Int($0))" }
             icon = "file"
             name = UiFormat.baseName(path)
             suffix = line
             full = path + (line ?? "")
             mono = false
-        case "Diff":
+        case "Diff", "Change":
             let path = node.string("path") ?? ""
             icon = "file-diff"
             name = UiFormat.baseName(path)
@@ -108,6 +146,8 @@ struct UiInlineRun: View {
                 ForEach(nodes.filter { !$0.isText }) { node in
                     if node.type == "Tag" {
                         UiTagView(node: node)
+                    } else if node.type == "Keys" {
+                        UiKeysView(node: node)
                     } else {
                         UiLinkChip(node: node, context: context)
                     }
@@ -138,9 +178,23 @@ struct UiInlineRun: View {
                 tag.backgroundColor = color.opacity(0.12)
                 tag.font = .footnote.weight(.medium)
                 value += tag
+            } else if node.type == "Keys" {
+                value += keys(node)
             } else {
                 value += link(node)
             }
+        }
+        return value
+    }
+
+    /// The caps of a shortcut in the sentence that names it, each on a ground of its own.
+    private func keys(_ node: UiNode) -> AttributedString {
+        var value = AttributedString()
+        for cap in UiKeyCaps.caps(node.label) {
+            var key = AttributedString("\u{2009}\(cap)\u{2009}")
+            key.backgroundColor = MobileStyle.inset
+            key.font = .footnote.weight(.medium)
+            value += key + AttributedString("\u{200A}")
         }
         return value
     }
@@ -156,6 +210,12 @@ struct UiInlineRun: View {
                 var line = AttributedString(suffix)
                 line.foregroundColor = MobileStyle.muted
                 chip += line
+            }
+            if let status = UiNodeStatus.of(node, context: context) {
+                var dot = AttributedString(" ●")
+                dot.foregroundColor = status.color
+                dot.font = .caption2
+                chip += dot
             }
             chip += AttributedString("\u{2009}")
             chip.backgroundColor = MobileStyle.inset
@@ -215,14 +275,17 @@ enum UiProse {
 struct UiLinkChip: View {
     let node: UiNode
     let context: UiRenderContext
+    /// Why the link stays text whatever the machine says of its target, such as an open Diff it would not read.
+    var refused: String? = nil
     @State private var reason: String?
 
     var body: some View {
-        let state = UiLinkState.of(node, context: context)
+        let state = refused.map { UiLinkState.plain(reason: $0) } ?? UiLinkState.of(node, context: context)
         Group {
             switch state {
             case .chip(let label):
                 let face = UiLinkFace(node, label: label)
+                let status = UiNodeStatus.of(node, context: context)
                 Button {
                     Task { reason = await UiLinkOpening.open(node, context: context) }
                 } label: {
@@ -233,6 +296,7 @@ struct UiLinkChip: View {
                         if let suffix = face.suffix {
                             Text(suffix).font(.footnote).foregroundStyle(MobileStyle.muted).monospacedDigit()
                         }
+                        if let status { Circle().fill(status.color).frame(width: 6, height: 6) }
                     }
                     .foregroundStyle(MobileStyle.text)
                     .padding(.horizontal, 9).frame(minHeight: 28)
@@ -242,6 +306,8 @@ struct UiLinkChip: View {
                 .buttonStyle(.plain)
                 .disabled(context.host.open == nil)
                 .accessibilityLabel(face.full)
+                // The dot says the state by its color alone, so the chip says it in words too.
+                .accessibilityValue(status?.word ?? "")
                 .accessibilityHint(context.host.open == nil ? "" : String(localized: "Opens in the project"))
                 .contextMenu {
                     Button(String(localized: "Copy path"), lucideIcon: "copy") {
@@ -271,16 +337,23 @@ struct UiLinkChip: View {
     }
 }
 
+/// A link as a row: the chip and, where it has children, what the agent says about it.
 struct UiLinkRow: View {
     let node: UiNode
     let context: UiRenderContext
+    /// Set while the machine reads what the row is about to show, which puts a spinner behind the chip.
+    var reading = false
+    var refused: String? = nil
 
     var body: some View {
-        if node.children.isEmpty {
-            UiLinkChip(node: node, context: context)
+        if node.children.isEmpty && !reading {
+            UiLinkChip(node: node, context: context, refused: refused)
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                UiLinkChip(node: node, context: context).fixedSize()
+                UiLinkChip(node: node, context: context, refused: refused).fixedSize()
+                if reading {
+                    Spinner(size: 12, label: String(localized: "Loading diff")).foregroundStyle(MobileStyle.faint)
+                }
                 UiNodesView(nodes: node.children, parent: node.type, context: context)
                     .font(.subheadline).foregroundStyle(MobileStyle.muted)
             }

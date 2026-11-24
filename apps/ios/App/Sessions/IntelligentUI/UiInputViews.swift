@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteShared
 import SwiftUI
 
 struct UiPending: ViewModifier {
@@ -57,10 +58,15 @@ struct UiItemView: View {
             .accessibilityAddTraits(.isToggle)
             .accessibilityAddTraits(selected ? [.isSelected] : [])
             .accessibilityValue(selected ? String(localized: "On") : String(localized: "Off"))
-            UiNodesView(nodes: node.children, parent: node.type, context: context)
-                .font(.subheadline).foregroundStyle(MobileStyle.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityHidden(node.children.allSatisfy(\.isText))
+            VStack(alignment: .leading, spacing: 2) {
+                UiNodesView(nodes: node.children, parent: node.type, context: context)
+                    .font(.subheadline).foregroundStyle(MobileStyle.text)
+                    .accessibilityHidden(node.children.allSatisfy(\.isText))
+                if let detail = node.string("detail"), !detail.isEmpty {
+                    Text(detail).font(.caption).foregroundStyle(MobileStyle.muted)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, UiTileStyle.padding).padding(.vertical, 8)
         .frame(minHeight: 44)
@@ -193,28 +199,100 @@ struct UiSliderView: View {
     }
 }
 
-/// Left aligned and never wider than its options; when they do not fit the card, a menu of the same options.
+/// Left aligned and never wider than its options, under its label where it has one; when the options do not fit the
+/// card, a menu of the same options.
 struct UiSegmentedView: View {
     let node: UiNode
     let context: UiRenderContext
 
     var body: some View {
         let options = UiOptions(node, context: context)
-        ViewThatFits(in: .horizontal) {
-            Picker(String(localized: "Options"), selection: options.selection) { options.rows }
-                .pickerStyle(.segmented).fixedSize()
-            Picker(String(localized: "Options"), selection: options.selection) { options.rows }
-                .pickerStyle(.menu).tint(MobileStyle.text)
+        let label = node.string("label") ?? ""
+        let name = label.isEmpty ? String(localized: "Options") : label
+        VStack(alignment: .leading, spacing: 6) {
+            if !label.isEmpty {
+                Text(label).font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 2)
+                    .accessibilityHidden(true)
+            }
+            ViewThatFits(in: .horizontal) {
+                Picker(name, selection: options.selection) { options.rows }
+                    .pickerStyle(.segmented).fixedSize()
+                Picker(name, selection: options.selection) { options.rows }
+                    .pickerStyle(.menu).tint(MobileStyle.text)
+            }
+            .disabled(!context.editable(node))
+            .accessibilityLabel(name)
         }
-        .disabled(!context.editable(node))
         .frame(maxWidth: .infinity, alignment: .leading)
         .modifier(UiPending(complete: node.complete))
         .sensoryFeedback(.selection, trigger: options.picked)
     }
 }
 
-/// A line of text with its label above, which stops taking characters at its limit. Nothing here submits: the text
-/// reaches the agent only through a Choice. What is typed shows at once and the block evaluates it right behind.
+/// One value out of a list whose options each take a line of explanation: a tile per option, ringed in the accent
+/// while it is the choice. Like Segmented, an Option is picked by its place.
+struct UiRadioView: View {
+    let node: UiNode
+    let context: UiRenderContext
+
+    var body: some View {
+        let options = UiOptions(node, context: context)
+        let label = node.string("label") ?? ""
+        let enabled = context.editable(node)
+        VStack(alignment: .leading, spacing: 6) {
+            if !label.isEmpty {
+                Text(label).font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 2)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            ForEach(Array(options.options.enumerated()), id: \.element.id) { index, option in
+                row(option, checked: index == options.picked, enabled: enabled) {
+                    options.selection.wrappedValue = index
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label.isEmpty ? String(localized: "Options") : label)
+        .modifier(UiPending(complete: node.complete))
+        .sensoryFeedback(.selection, trigger: options.picked)
+    }
+
+    private func row(_ option: UiNode, checked: Bool, enabled: Bool, pick: @escaping () -> Void) -> some View {
+        let detail = option.string("detail") ?? ""
+        return Button(action: pick) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Image(lucide: checked ? "circle-dot" : "circle", size: 18)
+                    .foregroundStyle(checked ? MobileStyle.accent : MobileStyle.muted)
+                    .frame(width: 24, height: 24)
+                    .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 6 }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(option.label).font(.subheadline.weight(.medium)).foregroundStyle(MobileStyle.text)
+                    if !detail.isEmpty { Text(detail).font(.caption).foregroundStyle(MobileStyle.muted) }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, UiTileStyle.padding).padding(.vertical, 8)
+            .frame(minHeight: 44)
+            .uiTile(horizontal: 0, vertical: 0)
+            .overlay {
+                if checked {
+                    RoundedRectangle(cornerRadius: UiTileStyle.radius).strokeBorder(MobileStyle.accent, lineWidth: 2)
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: UiTileStyle.radius))
+        }
+        .buttonStyle(.plain)
+        // Not disabled, which would dim the tiles of an answered block; a change is refused there anyway.
+        .allowsHitTesting(enabled)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(option.label)
+        .accessibilityValue(detail)
+        .accessibilityAddTraits(checked ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// A line of text, or with `multiline` a few lines that grow with what is typed, with its label above. It stops
+/// taking characters at its limit. Nothing here submits: the text reaches the agent only through a Choice. What is
+/// typed shows at once and the block evaluates it right behind.
 struct UiTextFieldView: View {
     let node: UiNode
     let context: UiRenderContext
@@ -230,16 +308,29 @@ struct UiTextFieldView: View {
         let bound = node.currentValue?.stringValue ?? ""
         let text = draft ?? bound
         let used = text.utf16.count
+        let multiline = node.bool("multiline") == true
         VStack(alignment: .leading, spacing: 6) {
             UiNodesView(nodes: node.children, parent: node.type, context: context)
                 .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 2)
                 .accessibilityHidden(true)
-            TextField(
-                node.label, text: Binding(get: { text }, set: { draft = $0 }),
-                prompt: node.string("placeholder").map { Text(verbatim: $0) }
-            )
+            Group {
+                if multiline {
+                    // Return makes a new line here, so this field has no Done key.
+                    TextField(
+                        node.label, text: Binding(get: { text }, set: { draft = $0 }),
+                        prompt: node.string("placeholder").map { Text(verbatim: $0) }, axis: .vertical
+                    )
+                    .lineLimit(2...6).padding(.vertical, 8)
+                } else {
+                    TextField(
+                        node.label, text: Binding(get: { text }, set: { draft = $0 }),
+                        prompt: node.string("placeholder").map { Text(verbatim: $0) }
+                    )
+                    .submitLabel(.done).onSubmit { focused = false }
+                }
+            }
             .font(.subheadline).foregroundStyle(MobileStyle.text)
-            .focused($focused).submitLabel(.done).onSubmit { focused = false }
+            .focused($focused)
             .disabled(!context.editable(node))
             .padding(.horizontal, 10).frame(minHeight: 36)
             .uiTile(horizontal: 0, vertical: 0)
@@ -263,6 +354,89 @@ struct UiTextFieldView: View {
                 if draft == kept { draft = nil }
             }
         }
+    }
+}
+
+/// A number a person types: the label above the field, the unit inside it at the end, and with `step` a stepper
+/// beside it. What is typed stays in the field while it has the focus and reaches the block only as a number inside
+/// the range, so a half-typed or refused value never leaves the field. Leaving it puts the last good number back.
+struct UiNumberFieldView: View {
+    let node: UiNode
+    let context: UiRenderContext
+    @State private var typed: String?
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let low = node.number("min")
+        let high = node.number("max")
+        let step = node.number("step").flatMap { $0 > 0 ? $0 : nil }
+        let value = node.currentValue?.numberValue ?? 0
+        let refused = typed.map { UiNumberInput.parse($0, min: low, max: high) == nil } ?? false
+        let enabled = context.editable(node)
+        VStack(alignment: .leading, spacing: 6) {
+            UiNodesView(nodes: node.children, parent: node.type, context: context)
+                .font(.caption).foregroundStyle(MobileStyle.muted).padding(.horizontal, 2)
+                .accessibilityHidden(true)
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    TextField(
+                        node.label,
+                        text: Binding(get: { typed ?? UiTableCell.textOf(.number(value)) }, set: { typed = $0 })
+                    )
+                    .font(.subheadline).foregroundStyle(MobileStyle.text).monospacedDigit()
+                    // A decimal pad has no minus, so a field that takes one below zero gets the wider keyboard.
+                    .keyboardType((low ?? -1) < 0 ? .numbersAndPunctuation : .decimalPad)
+                    .focused($focused).submitLabel(.done).onSubmit { focused = false }
+                    .disabled(!enabled)
+                    .accessibilityLabel(node.label)
+                    .accessibilityValue(UiFormat.withUnit(UiFormat.number(value), node.string("unit")))
+                    if let unit = node.string("unit"), !unit.isEmpty {
+                        Text(unit).font(.caption).foregroundStyle(MobileStyle.muted).accessibilityHidden(true)
+                    }
+                }
+                .padding(.horizontal, 10).frame(minHeight: 36)
+                .uiTile(horizontal: 0, vertical: 0)
+                .overlay {
+                    if refused {
+                        RoundedRectangle(cornerRadius: UiTileStyle.radius).strokeBorder(MobileStyle.statusError)
+                    }
+                }
+                .frame(maxWidth: 200, alignment: .leading)
+                if let step {
+                    Stepper(node.label) {
+                        move(value, by: step, min: low, max: high)
+                    } onDecrement: {
+                        move(value, by: -step, min: low, max: high)
+                    }
+                    .labelsHidden().disabled(!enabled)
+                }
+            }
+            if refused {
+                Text(Self.range(min: low, max: high)).font(.caption).foregroundStyle(MobileStyle.statusError)
+            }
+        }
+        .modifier(UiPending(complete: node.complete))
+        .onChange(of: typed) { _, text in
+            guard let text, let number = UiNumberInput.parse(text, min: low, max: high) else { return }
+            context.change(node, to: .number(number))
+        }
+        .onChange(of: focused) { _, focused in
+            if !focused { typed = nil }
+        }
+    }
+
+    private func move(_ value: Double, by step: Double, min: Double?, max: Double?) {
+        typed = nil
+        context.change(node, to: .number(UiNumberInput.stepped(value, by: step, min: min, max: max)))
+    }
+
+    private static func range(min: Double?, max: Double?) -> String {
+        let low = min.map { Format.rounded($0, decimals: 6) }
+        let high = max.map { Format.rounded($0, decimals: 6) }
+        if let low, let high { return String(localized: "A number from \(low) to \(high)") }
+        if let low { return String(localized: "A number of at least \(low)") }
+        if let high { return String(localized: "A number of at most \(high)") }
+        return String(localized: "A number")
     }
 }
 

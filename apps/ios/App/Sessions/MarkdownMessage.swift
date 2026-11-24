@@ -180,6 +180,35 @@ private struct MarkdownTableCell: Layout {
     }
 }
 
+/// Which lines of a code block are numbered and marked.
+struct CodeLines: Equatable {
+    /// The number of the first line. Without it no line shows a number.
+    var start: Int?
+    /// The numbers of the lines to mark, counted from `start`, or from 1 without it.
+    var marked: Set<Int> = []
+
+    func number(at index: Int) -> Int { (start ?? 1) + index }
+
+    func isMarked(at index: Int) -> Bool { marked.contains(number(at: index)) }
+
+    /// The digits of the last line's number, which every number is as wide as; nil where no line shows one.
+    func digits(lines: Int) -> Int? {
+        start.map { String($0 + max(0, lines - 1)).count }
+    }
+
+    /// The lines of highlighted code, each with its colors and without its line break.
+    static func split(_ text: AttributedString) -> [AttributedString] {
+        var rows: [AttributedString] = []
+        var start = text.startIndex
+        for index in text.characters.indices where text.characters[index].isNewline {
+            rows.append(AttributedString(text[start..<index]))
+            start = text.characters.index(after: index)
+        }
+        rows.append(AttributedString(text[start...]))
+        return rows
+    }
+}
+
 struct CodeMessage: View {
     let text: String
     var language = ""
@@ -188,6 +217,9 @@ struct CodeMessage: View {
     var replacement: AnyView?
     /// Goes before Copy.
     var action: AnyView?
+    /// Stands in place of the language, such as the chip of the file the code is from.
+    var header: AnyView?
+    var lines: CodeLines?
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.chatReplySource) private var replySource
     @State private var colors = CodeHighlightState()
@@ -198,9 +230,13 @@ struct CodeMessage: View {
         if !text.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 0) {
-                    Text(language.isEmpty ? String(localized: "Code") : language)
-                        .font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted)
-                        .padding(.leading, 14)
+                    if let header {
+                        header.padding(.leading, 8)
+                    } else {
+                        Text(language.isEmpty ? String(localized: "Code") : language)
+                            .font(.caption.weight(.medium)).foregroundStyle(MobileStyle.muted)
+                            .padding(.leading, 14)
+                    }
                     Spacer()
                     if ChatShellPrepare.offers(language: language, code: text, closed: closed, source: replySource) {
                         ChatPrepareButton(language: language, code: text)
@@ -227,6 +263,12 @@ struct CodeMessage: View {
                 Divider().overlay(MobileStyle.border)
                 if let replacement {
                     replacement
+                } else if let lines, wrapsLines {
+                    linedText(lines)
+                } else if let lines {
+                    // Every line takes the width of the widest, so a mark runs the whole way under a scroll.
+                    ScrollView(.horizontal) { linedText(lines).fixedSize(horizontal: true, vertical: false) }
+                        .fixedSize(horizontal: false, vertical: true)
                 } else if wrapsLines {
                     codeText.frame(maxWidth: .infinity, alignment: .leading)
                 } else {
@@ -254,6 +296,39 @@ struct CodeMessage: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14).padding(.vertical, 12)
             .accessibilityIdentifier(colors.highlighted == nil ? "code.loading" : "code.highlighted")
+    }
+
+    /// The code a line at a time, each behind its number where the block has one. A marked line has a ground and
+    /// a bar of its own, and says so to VoiceOver.
+    private func linedText(_ lines: CodeLines) -> some View {
+        let rows = CodeLines.split(colors.displayed(text))
+        let digits = lines.digits(lines: rows.count)
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                let marked = lines.isMarked(at: index)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    if let digits {
+                        // A number is as wide as the widest one, at any text size.
+                        Text(verbatim: String(repeating: "0", count: digits)).hidden()
+                            .overlay(alignment: .trailing) {
+                                Text(verbatim: "\(lines.number(at: index))").foregroundStyle(MobileStyle.faint)
+                            }
+                            .accessibilityHidden(true)
+                    }
+                    Text(row.characters.isEmpty ? AttributedString(" ") : row).textSelection(.enabled)
+                        .fixedSize(horizontal: !wrapsLines, vertical: true)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 1.5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(marked ? MobileStyle.accent.opacity(0.1) : .clear)
+                .overlay(alignment: .leading) {
+                    if marked { Rectangle().fill(MobileStyle.accent).frame(width: 2) }
+                }
+                .accessibilityValue(marked ? String(localized: "Highlighted") : "")
+            }
+        }
+        .font(.system(.footnote, design: .monospaced))
+        .padding(.vertical, 10)
     }
 
 }

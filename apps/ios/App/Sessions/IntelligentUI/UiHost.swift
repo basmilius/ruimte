@@ -10,6 +10,8 @@ struct UiHost {
     /// The project a link must lie in before it opens; `UiLinkDestination.parse` checks it against the daemon's reading.
     var projectID: String?
     var connected = false
+    /// Whether the machine answers `ui.diff`; without it an open Diff stays the chip it is.
+    var readsDiffs = false
     /// Opens a file, diff, commit or node the daemon resolved again at the tap.
     var open: (@MainActor (UiLinkDestination) -> Void)?
     /// Opens a Source or a link in prose, always HTTP(S) and always after a tap.
@@ -88,6 +90,8 @@ struct UiRecentlyUsed<Value> {
     let written: Set<String>
     let headID: String?
     let catalogVersion: Int?
+    /// The open Diffs of the block whose change the machine is asked for; one past these stays a chip.
+    var openDiffs: Set<String> = []
 
     /// Until the last compile nothing in the block can be chosen or changed.
     var streaming: Bool { !model.complete }

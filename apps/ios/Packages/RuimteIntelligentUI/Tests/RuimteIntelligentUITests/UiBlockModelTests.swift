@@ -196,6 +196,30 @@ private actor UiRequestRecorder {
         #expect(call.1["path"] == nil)
     }
 
+    @Test func aDiffIsReadByItsNodeAndAFailedReadStandsAsARefusal() async throws {
+        let recorder = UiRequestRecorder()
+        let block = try block(2)
+        let model = UiBlockModel(chatID: "chat", itemID: "item", block: block, request: recorder.request)
+        await model.update(block: block)
+        let nodeID = try #require(model.nodes.first?["id"]?.stringValue)
+        await model.readDiff(nodeID: nodeID)
+        #expect(await recorder.calls.isEmpty)
+        model.setActive(visible: false, connected: true)
+        await model.readDiff(nodeID: nodeID)
+        let call = try #require(await recorder.calls.first)
+        #expect(call.0 == .uiDiff)
+        #expect(call.1["nodeId"] == .string(nodeID))
+        #expect(call.1["path"] == nil)
+        #expect(model.diffs[nodeID]?["state"] == .string("plain"))
+        let failing = UiBlockModel(chatID: "chat", itemID: "item", block: block) { _, _ in
+            throw UiInterpreterError.invalid("timed out")
+        }
+        await failing.update(block: block)
+        failing.setActive(visible: false, connected: true)
+        await failing.readDiff(nodeID: nodeID)
+        #expect(failing.diffs[nodeID] == .object(["state": .string("refused")]))
+    }
+
     @Test func aCanceledEvaluationLeavesTheBlockReadable() async throws {
         let recorder = UiRequestRecorder()
         let block = try block("local input")

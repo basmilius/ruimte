@@ -14,10 +14,18 @@ struct UiChartView: View {
     @ScaledMetric(relativeTo: .footnote) private var stackedRowHeight: CGFloat = 32
     @ScaledMetric(relativeTo: .footnote) private var plotHeight: CGFloat = 160
 
-    private static let colors: [Color] = [
-        MobileStyle.accent, MobileStyle.chart2, MobileStyle.chart3, MobileStyle.chart4, MobileStyle.chart5,
-        MobileStyle.chart6,
-    ]
+    /// The tone a chart gives a series, by its key.
+    private var tones: [String: UiTone] {
+        (node.props["tones"]?.objectValue ?? [:]).compactMapValues { $0.stringValue.flatMap(UiTone.init(rawValue:)) }
+    }
+
+    /// A series wears its tone where the chart names one, and otherwise the palette color of its place.
+    private func colors(_ chart: UiChartData) -> [Color] {
+        let tones = tones
+        return chart.series.enumerated().map { index, series in
+            tones[series.key].map(UiToneStyle.color) ?? UiChartPalette.colors[index]
+        }
+    }
 
     private struct Point: Identifiable {
         let id: String
@@ -34,16 +42,25 @@ struct UiChartView: View {
         } else if let chart = UiChartData(node) {
             let unit = node.string("unit")
             let summary = Self.summary(chart, unit: unit)
+            let title = node.string("title") ?? ""
             VStack(alignment: .leading, spacing: 10) {
+                if !title.isEmpty {
+                    Text(title).font(.subheadline.weight(.medium)).foregroundStyle(MobileStyle.text)
+                        .accessibilityAddTraits(.isHeader)
+                }
                 VStack(alignment: .leading, spacing: 8) {
                     plot(chart, kind: chart.kind, unit: unit).frame(
                         height: height(chart.kind, rows: chart.labels.count))
-                    if chart.series.count > 1 { legend(chart) }
+                    if chart.series.count > 1 || chart.series.contains(where: { tones[$0.key] != nil }) {
+                        legend(chart)
+                    }
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(summary)
                 .accessibilityChartDescriptor(
-                    UiChartDescriptor(chart: chart, unit: unit, summary: summary, line: chart.kind == "line")
+                    UiChartDescriptor(
+                        chart: chart, unit: unit, summary: summary, tones: tones,
+                        line: chart.kind == "line" || chart.kind == "area")
                 )
                 .modifier(UiChartValues(values: chart.values, unit: unit))
                 notes(chart, unit: unit)
@@ -125,7 +142,16 @@ struct UiChartView: View {
             case "stacked":
                 BarMark(x: .value("Value", value), y: .value("Label", point.label))
                     .foregroundStyle(by: .value("Series", point.series))
-            case "line":
+            case "line", "area":
+                if kind == "area" {
+                    // Unstacked, so each series stands on the zero line as it does on the desktop.
+                    AreaMark(
+                        x: .value("Label", point.label), y: .value("Value", value),
+                        series: .value("Series", point.series), stacking: .unstacked
+                    )
+                    .foregroundStyle(by: .value("Series", point.series))
+                    .interpolationMethod(.monotone).opacity(0.16)
+                }
                 LineMark(x: .value("Label", point.label), y: .value("Value", value))
                     .foregroundStyle(by: .value("Series", point.series))
                     .interpolationMethod(.monotone)
@@ -140,9 +166,7 @@ struct UiChartView: View {
                     .cornerRadius(3)
             }
         }
-        .chartForegroundStyleScale(
-            domain: chart.series.map(\.key), range: Array(Self.colors.prefix(chart.series.count))
-        )
+        .chartForegroundStyleScale(domain: chart.series.map(\.key), range: colors(chart))
         .chartLegend(.hidden)
         .modifier(UiChartScale(horizontal: horizontal, domain: domain))
         .chartXAxis {
@@ -171,11 +195,18 @@ struct UiChartView: View {
         }
     }
 
+    /// A series with a tone shows the tone's icon in place of its square, so the tone is never its color alone.
     private func legend(_ chart: UiChartData) -> some View {
-        UiFlowLayout(spacing: 12) {
+        let colors = colors(chart)
+        let tones = tones
+        return UiFlowLayout(spacing: 12) {
             ForEach(Array(chart.series.enumerated()), id: \.element.key) { index, series in
                 HStack(spacing: 6) {
-                    RoundedRectangle(cornerRadius: 2).fill(Self.colors[index]).frame(width: 8, height: 8)
+                    if let tone = tones[series.key] {
+                        Image(lucide: tone.icon, size: 12).foregroundStyle(colors[index])
+                    } else {
+                        RoundedRectangle(cornerRadius: 2).fill(colors[index]).frame(width: 8, height: 8)
+                    }
                     Text(series.key).font(.caption).foregroundStyle(MobileStyle.muted)
                 }
             }
@@ -193,6 +224,14 @@ struct UiChartView: View {
             )
             : String(localized: "\(chart.values.labels.count) values, highest \(top.label) at \(value)")
     }
+}
+
+/// The colors of a chart's series and of the parts of a bar, from the accent on.
+enum UiChartPalette {
+    static let colors: [Color] = [
+        MobileStyle.accent, MobileStyle.chart2, MobileStyle.chart3, MobileStyle.chart4, MobileStyle.chart5,
+        MobileStyle.chart6,
+    ]
 }
 
 private struct UiChartScale: ViewModifier {
@@ -271,6 +310,8 @@ private struct UiChartDescriptor: AXChartDescriptorRepresentable {
     let chart: UiChartData
     let unit: String?
     let summary: String
+    /// A tone is said in a word behind the name of its series.
+    let tones: [String: UiTone]
     let line: Bool
 
     func makeChartDescriptor() -> AXChartDescriptor {
@@ -281,7 +322,9 @@ private struct UiChartDescriptor: AXChartDescriptorRepresentable {
         ) { UiFormat.withUnit(UiFormat.number($0), unit) }
         let series = chart.series.map { series in
             AXDataSeriesDescriptor(
-                name: series.key, isContinuous: line,
+                name: [series.key, UiToneStyle.word(tones[series.key])].filter { !$0.isEmpty }
+                    .joined(separator: ", "),
+                isContinuous: line,
                 dataPoints: series.values.enumerated().compactMap { index, value in
                     value.map { AXDataPoint(x: chart.labels[index], y: $0) }
                 })

@@ -35,7 +35,8 @@ struct UiBlockView: View {
         let context = UiRenderContext(
             model: model, local: UiBlockLocal.shared(localKey), host: host,
             written: UiCatalog.writtenTexts(model.block["nodes"]?.arrayValue ?? []), headID: head?.id,
-            catalogVersion: model.block["catalogVersion"]?.numberValue.map { Int($0) })
+            catalogVersion: model.block["catalogVersion"]?.numberValue.map { Int($0) },
+            openDiffs: Set(openDiffs(nodes)))
         VStack(alignment: .leading, spacing: 12) {
             Group {
                 if shownAsText != nil {
@@ -92,6 +93,7 @@ struct UiBlockView: View {
             streamed = false
         }
         .task(id: linkCheck(nodes)) { await checkLinks(nodes) }
+        .task(id: diffCheck(nodes)) { await readDiffs(nodes) }
     }
 
     private func activate() {
@@ -113,7 +115,7 @@ struct UiBlockView: View {
         var ids: [String] = []
         func visit(_ nodes: [UiNode]) {
             for node in nodes where node.error == nil && node.complete {
-                if UiCatalog.links.contains(node.type), model.resolvedLinks[node.id] == nil { ids.append(node.id) }
+                if UiCatalog.hasLinkTarget(node), model.resolvedLinks[node.id] == nil { ids.append(node.id) }
                 visit(node.children)
             }
         }
@@ -129,13 +131,30 @@ struct UiBlockView: View {
             _ = try? await model.link(nodeID: id)
         }
     }
+
+    /// The open Diffs a final block shows the change of, on a machine that reads diffs.
+    private func openDiffs(_ nodes: [UiNode]) -> [String] {
+        model.complete && host.readsDiffs ? UiOpenDiff.wanted(nodes) : []
+    }
+
+    private func diffCheck(_ nodes: [UiNode]) -> [String] {
+        host.connected ? openDiffs(nodes).filter { model.diffs[$0] == nil } : []
+    }
+
+    /// The agent writes only the path, so what a Diff shows is what git holds and never what a model copied.
+    private func readDiffs(_ nodes: [UiNode]) async {
+        for id in diffCheck(nodes) {
+            guard !Task.isCancelled else { return }
+            await model.readDiff(nodeID: id)
+        }
+    }
 }
 
 /// The children of one parent. A run of text and inline nodes becomes one paragraph; everything else stands as a
 /// row of its own, each node on its own so one that cannot be drawn leaves its siblings alone.
 struct UiNodesView: View {
     static let block = "$block"
-    private static let paragraphParents: Set<String> = [block, "Tab", "Section"]
+    private static let paragraphParents: Set<String> = [block, "Tab", "Pane", "Section"]
 
     let nodes: [UiNode]
     let parent: String
@@ -265,6 +284,8 @@ struct UiNodeView: View {
         case "Event": UiEventView(node: node, context: context)
         case "Stats": UiStatsView(node: node, context: context)
         case "Stat": UiStatView(node: node, lit: context.model.lit[UiBlockModel.litKey(nodeID: node.id)])
+        case "Meter": UiMeterView(node: node, context: context)
+        case "Parts": UiPartsView(node: node, context: context)
         case "EntityList": UiEntityListView(node: node, context: context)
         case "Entry": UiEntryView(node: node, context: context)
         case "Table": UiTableView(node: node, context: context)
@@ -273,14 +294,27 @@ struct UiNodeView: View {
         case "Tab": UiNodesView(nodes: node.children, parent: "Tab", context: context)
         case "Sections": UiSectionsView(node: node, context: context)
         case "Section": UiSectionView(node: node, touched: false, context: context)
-        case "CodeBlock": UiCodeBlockView(node: node)
+        case "Columns": UiColumnsView(node: node, context: context)
+        case "Pane": UiPaneView(node: node, context: context)
+        case "Alternatives": UiAlternativesView(node: node, context: context)
+        case "Alternative": UiAlternativeView(node: node, context: context)
+        case "Pro", "Con": UiPointView(node: node, context: context)
+        case "Tree": UiTreeView(node: node, context: context)
+        case "Branch": UiBranchView(node: node, context: context)
+        case "Leaf": UiLeafView(node: node, context: context)
+        case "CodeBlock": UiCodeBlockView(node: node, context: context)
+        case "Quote": UiQuoteView(node: node)
+        case "Keys": UiKeysView(node: node)
         case "Image": UiImageView(node: node)
         case "Gallery": UiGalleryView(node: node, context: context)
         case "Compare": UiCompareView(node: node)
         case "Model": UiModelView(node: node)
         case "Sources": UiSourcesView(node: node, context: context)
         case "Source": UiSourceView(node: node, number: nil, context: context)
-        case "File", "Diff", "Commit", "Node": UiLinkRow(node: node, context: context)
+        case "File", "Commit", "Node": UiLinkRow(node: node, context: context)
+        case "Diff": UiDiffView(node: node, context: context)
+        case "Changes": UiChangesView(node: node, context: context)
+        case "Change": UiChangeView(node: node, context: context)
         case "Checklist": UiChecklistView(node: node, context: context)
         case "Item": UiItemView(node: node, selected: false, enabled: false, toggle: {}, context: context)
         case "Switch": UiSwitchView(node: node, context: context)
@@ -288,6 +322,8 @@ struct UiNodeView: View {
         case "Segmented": UiSegmentedView(node: node, context: context)
         case "Map": UiMapView(node: node, context: context)
         case "TextField": UiTextFieldView(node: node, context: context)
+        case "NumberField": UiNumberFieldView(node: node, context: context)
+        case "Radio": UiRadioView(node: node, context: context)
         case "Select": UiSelectView(node: node, context: context)
         case "Button": UiButtonView(node: node, context: context)
         case "Choices": UiChoicesView(node: node, context: context)

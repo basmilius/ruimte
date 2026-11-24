@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { AttachmentStore, BookmarkStore, ChatCore, ChatStore, ClaudeTitleReader, VisualStore } from '@adecore/agents/chat';
 import { AgentLineageStore, NoticeNotes, NoticeStore, TaskStore, restartBackgroundLimits, unshownNotes, type Clock } from '@adecore/agents/coordination';
 import { homeFolder } from '@ruimte/service/home';
@@ -21,6 +22,7 @@ import type { MachineHome } from '../disk/machine-home.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
 import type { Checkpoints } from '../git/checkpoints.ts';
+import { fileChange } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
 import { NodeLifecycle } from '../node-lifecycle.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
@@ -339,6 +341,13 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             worktreePaths: (folder) => later.git().checkouts.paths(folder),
             gitStatus: (cwd) => later.git().statuses.status(cwd),
             gitLog: readLog,
+            // A checkout may hold the home, so the file is judged where it really lies before git reads it.
+            gitDiff: async (root, path, options) => {
+                await machineHome.refuse(root);
+                await machineHome.refuseHolding(resolve(root, path));
+
+                return await fileChange(root, path, options);
+            },
             launches: (projectId) => later.launches().agentHost.list(projectId),
             tasks: (chatId) => tasks.ofParent(chatId),
             databases: () => later.databases().agents

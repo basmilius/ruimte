@@ -377,6 +377,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `tunnelState` = "tunnel.state"
     case `tunnelUnlink` = "tunnel.unlink"
     case `tunnelUpdate` = "tunnel.update"
+    case `uiDiff` = "ui.diff"
     case `uiLink` = "ui.link"
     case `uiQuery` = "ui.query"
     case `usageCount` = "usage.count"

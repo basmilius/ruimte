@@ -5,13 +5,33 @@ import RuimteShared
 import SwiftUI
 
 /// The thread's own code view; the highlighter follows the text as it grows, so nothing jumps when the node closes.
+/// With a file the header is its chip, which opens the file at `start` once the machine checked it, in place of the
+/// language. `start` numbers the lines and `highlight` marks them.
 struct UiCodeBlockView: View {
     let node: UiNode
+    let context: UiRenderContext
 
     var body: some View {
         let code = node.nodeText.replacingOccurrences(of: #"^\n|\n$"#, with: "", options: .regularExpression)
-        CodeMessage(text: code, language: node.complete ? node.string("language") ?? "" : "")
-            .uiTile(flat: true, horizontal: 6, vertical: 6)
+        let file = node.string("file").flatMap { $0.isEmpty ? nil : $0 }
+        let language = node.string("language") ?? file.flatMap(Self.language(ofFile:)) ?? ""
+        CodeMessage(
+            text: code, language: node.complete ? language : "",
+            header: file == nil ? nil : AnyView(UiLinkChip(node: node, context: context)), lines: Self.lines(node)
+        )
+        .uiTile(flat: true, horizontal: 6, vertical: 6)
+    }
+
+    /// Nil for code that is one run of text: without a start and without a highlight.
+    static func lines(_ node: UiNode) -> CodeLines? {
+        let start = node.number("start").flatMap { Int(exactly: $0) }
+        let marked = Set((node.props["highlight"]?.arrayValue ?? []).compactMap { $0.numberValue.flatMap { Int(exactly: $0) } })
+        return start == nil && marked.isEmpty ? nil : CodeLines(start: start, marked: marked)
+    }
+
+    /// What a file is written in, by its extension, for code that names its file and no language.
+    static func language(ofFile path: String) -> String? {
+        path.firstMatch(of: /\.([A-Za-z0-9]+)$/).map { $0.1.lowercased() }
     }
 }
 

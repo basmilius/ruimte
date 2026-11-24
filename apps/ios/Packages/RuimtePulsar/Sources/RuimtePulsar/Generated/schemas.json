@@ -11761,6 +11761,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -12040,6 +12046,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -13526,6 +13535,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -13805,6 +13820,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -15285,6 +15303,12 @@
                                     "nodeId": {
                                       "type": "string"
                                     },
+                                    "component": {
+                                      "type": "string"
+                                    },
+                                    "prop": {
+                                      "type": "string"
+                                    },
                                     "severity": {
                                       "type": "string",
                                       "const": "warning"
@@ -15564,6 +15588,9 @@
                                           "type": "string"
                                         },
                                         "reason": {
+                                          "type": "string"
+                                        },
+                                        "status": {
                                           "type": "string"
                                         }
                                       },
@@ -16862,6 +16889,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -17073,6 +17106,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -18794,6 +18830,12 @@
                                       "nodeId": {
                                         "type": "string"
                                       },
+                                      "component": {
+                                        "type": "string"
+                                      },
+                                      "prop": {
+                                        "type": "string"
+                                      },
                                       "severity": {
                                         "type": "string",
                                         "const": "warning"
@@ -19073,6 +19115,9 @@
                                             "type": "string"
                                           },
                                           "reason": {
+                                            "type": "string"
+                                          },
+                                          "status": {
                                             "type": "string"
                                           }
                                         },
@@ -21090,6 +21135,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -21369,6 +21420,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -26400,6 +26454,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -26679,6 +26739,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -30403,6 +30466,12 @@
                             "nodeId": {
                               "type": "string"
                             },
+                            "component": {
+                              "type": "string"
+                            },
+                            "prop": {
+                              "type": "string"
+                            },
                             "severity": {
                               "type": "string",
                               "const": "warning"
@@ -30682,6 +30751,9 @@
                                   "type": "string"
                                 },
                                 "reason": {
+                                  "type": "string"
+                                },
+                                "status": {
                                   "type": "string"
                                 }
                               },
@@ -79731,6 +79803,90 @@
       "suggestedMcpLabel"
     ]
   },
+  "request.ui.diff.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "itemId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "blockId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "revision": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "reads": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "values": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "additionalProperties": {}
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "chatId",
+      "itemId",
+      "blockId",
+      "revision",
+      "nodeId"
+    ]
+  },
+  "request.ui.diff.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "state": {
+        "type": "string",
+        "enum": [
+          "patch",
+          "refused"
+        ]
+      },
+      "patch": {
+        "type": "string"
+      },
+      "truncated": {
+        "type": "boolean"
+      },
+      "code": {
+        "type": "string"
+      },
+      "reason": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "state"
+    ]
+  },
   "request.ui.link.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -79906,6 +80062,9 @@
         "type": "string"
       },
       "reason": {
+        "type": "string"
+      },
+      "status": {
         "type": "string"
       }
     },
@@ -82381,6 +82540,12 @@
                                   "nodeId": {
                                     "type": "string"
                                   },
+                                  "component": {
+                                    "type": "string"
+                                  },
+                                  "prop": {
+                                    "type": "string"
+                                  },
                                   "severity": {
                                     "type": "string",
                                     "const": "warning"
@@ -82660,6 +82825,9 @@
                                         "type": "string"
                                       },
                                       "reason": {
+                                        "type": "string"
+                                      },
+                                      "status": {
                                         "type": "string"
                                       }
                                     },
@@ -83958,6 +84126,12 @@
                           "nodeId": {
                             "type": "string"
                           },
+                          "component": {
+                            "type": "string"
+                          },
+                          "prop": {
+                            "type": "string"
+                          },
                           "severity": {
                             "type": "string",
                             "const": "warning"
@@ -84169,6 +84343,9 @@
                                 "type": "string"
                               },
                               "reason": {
+                                "type": "string"
+                              },
+                              "status": {
                                 "type": "string"
                               }
                             },
@@ -85890,6 +86067,12 @@
                                     "nodeId": {
                                       "type": "string"
                                     },
+                                    "component": {
+                                      "type": "string"
+                                    },
+                                    "prop": {
+                                      "type": "string"
+                                    },
                                     "severity": {
                                       "type": "string",
                                       "const": "warning"
@@ -86169,6 +86352,9 @@
                                           "type": "string"
                                         },
                                         "reason": {
+                                          "type": "string"
+                                        },
+                                        "status": {
                                           "type": "string"
                                         }
                                       },

@@ -178,6 +178,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     sessions.observe((event) => push.consume(event));
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));
+    chats.observe((event) => stats.observe(event));
     sessions.observe((event) => work.activity.consume(event));
     chats.observe((event) => work.activity.consume(event));
     processes.processes.observeAlerts((alerts) => push.processAlerts(alerts));

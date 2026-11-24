@@ -43,7 +43,7 @@ import { useUi } from '@/state/ui';
 import { transportFor, type Transport } from '@/transport';
 import { readPiece } from '@/transport-api/piece';
 import { readResource } from '@/transport/byte-transfer';
-import { useMachineAnswers } from '@/transport/features';
+import { machineAnswers, useMachineAnswers } from '@/transport/features';
 import { useMachineUrl } from '@/transport/machine-url';
 import { RuimteMark } from '@/ui/RuimteMark';
 
@@ -140,6 +140,13 @@ export const CHAT_HOST: ChatHostLayer = {
     actions: PERSON_CHAT_ACTIONS,
     intelligentUi: {
         link: async (endpointId, payload) => requireTransport(endpointId).request('ui.link', payload),
+        diff: async (endpointId, payload) => {
+            const transport = requireTransport(endpointId);
+            // A machine from before open diffs leaves the Diff the chip it was.
+            return machineAnswers(transport.connection, 'ui.diff')
+                ? await transport.request('ui.diff', payload)
+                : { state: 'refused', code: 'diffs-unsupported' };
+        },
         subscribe: (endpointId, chatId, changed) => {
             const transport = transportFor(endpointId);
             if (transport === null) {

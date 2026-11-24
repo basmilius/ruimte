@@ -1,6 +1,6 @@
 import { realpath, stat } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, relative, resolve } from 'node:path';
-import { ChatUiRefusal } from '@adecore/agents/chat';
+import { ChatUiRefusal, type ChatUiDiffRequest } from '@adecore/agents/chat';
 import type { UiLinkResolution, UiLinkTarget } from '@adecore/intelligent-ui/links';
 import { isNotFound } from '@adecore/utils/errors';
 import { fileExists } from '@adecore/utils/fs';
@@ -9,7 +9,7 @@ import type { ChatInfo } from '@ruimte/contracts';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { locateFile } from '../fs/locate.ts';
 import { cachedRepos } from '../git/repo-cache.ts';
-import { git, toplevel } from '../git/run.ts';
+import { git, toplevel, GitError } from '../git/run.ts';
 import { UiSourceAccessSchema, type UiSourceAccess } from './ui-access.ts';
 import type { UiSourceHosts } from './ui-sources.ts';
 
@@ -26,7 +26,53 @@ interface LinkPlace {
     folder: string;
 }
 
-export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, input: unknown, target: UiLinkTarget): Promise<UiLinkResolution> {
+/*
+ * The change an open Diff shows. The file is placed as its link is, so it lies in a repository of the
+ * agent's project; one that names a revision is read from history and needs no change in the working tree.
+ */
+export async function readUiProjectDiff(host: UiSourceHosts, info: ChatInfo, input: unknown, request: ChatUiDiffRequest): Promise<{ patch: string }> {
+    const { from, to } = request;
+    const link = await resolveUiProjectLink(host, info, input, { type: 'Diff', path: request.path }, from !== undefined || to !== undefined);
+
+    if (link.state !== 'chip' || link.cwd === undefined || link.relativePath === undefined) {
+        throw new ChatUiRefusal(link.code ?? 'target-unavailable', link.reason ?? 'This file has no change to show.');
+    }
+
+    try {
+        const change = await host.gitDiff(link.cwd, link.relativePath, {
+            from,
+            to,
+            staged: link.staged === true,
+            ignoreWhitespace: request.whitespace === 'hide'
+        });
+
+        if (change.omitted === 'binary') {
+            throw new ChatUiRefusal('link-unsupported', 'This file is not text, so its change is not shown here.');
+        }
+
+        if (change.omitted !== undefined) {
+            throw new ChatUiRefusal('target-unavailable', 'This change is too large to show here.');
+        }
+
+        return { patch: change.diff };
+    } catch (error) {
+        // A revision that is no commit, or a path git places outside the checkout.
+        if (error instanceof GitError) {
+            throw new ChatUiRefusal('target-unavailable', error.message);
+        }
+
+        throw error;
+    }
+}
+
+/* `history` places a Diff that reads revisions, which needs no current change of its file. */
+export async function resolveUiProjectLink(
+    host: UiSourceHosts,
+    info: ChatInfo,
+    input: unknown,
+    target: UiLinkTarget,
+    history = false
+): Promise<UiLinkResolution> {
     const access = UiSourceAccessSchema.parse(input);
     const place = host.place(info.chatId);
     if (!place || place.projectId !== access.projectId || (await realpath(place.folder)) !== access.folder) {
@@ -49,7 +95,7 @@ export async function resolveUiProjectLink(host: UiSourceHosts, info: ChatInfo, 
     if (target.type === 'Commit') {
         return resolveCommit(host, place, access, cwd, target.sha);
     }
-    return resolvePath(host, place, access, cwd, target);
+    return resolvePath(host, place, access, cwd, target, history);
 }
 
 async function resolveCommit(host: UiSourceHosts, place: LinkPlace, access: UiSourceAccess, cwd: string, wanted: string): Promise<UiLinkResolution> {
@@ -95,7 +141,8 @@ async function resolvePath(
     place: LinkPlace,
     access: UiSourceAccess,
     cwd: string,
-    target: Extract<UiLinkTarget, { type: 'File' | 'Diff' }>
+    target: Extract<UiLinkTarget, { type: 'File' | 'Diff' }>,
+    history: boolean
 ): Promise<UiLinkResolution> {
     let path = await locatedPath(place, access, target.path);
     let parent = path;
@@ -129,6 +176,9 @@ async function resolvePath(
         throw new ChatUiRefusal('outside-project', "This diff is outside the repositories of the agent's project.");
     }
     await checkCwd(place.folder, root, host.worktreePaths);
+    if (history) {
+        return { state: 'chip', projectId: place.projectId, target: { ...target, path }, cwd: root, label: basename(path), relativePath: relative(root, path) };
+    }
     const status = await host.gitStatus(root);
     const changed = status.files.filter((file) => resolve(root, file.path) === path);
     if (!changed.length) {

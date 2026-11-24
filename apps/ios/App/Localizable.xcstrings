@@ -25417,6 +25417,383 @@
         }
       }
     },
+    "%lld options" : {
+      "comment" : "VoiceOver label of a set of alternatives in a block",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld option"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld options"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld optie"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld opties"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld lines added" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line added"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines added"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regel toegevoegd"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regels toegevoegd"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld lines removed" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld line removed"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld lines removed"
+                }
+              }
+            }
+          }
+        },
+        "nl" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regel verwijderd"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld regels verwijderd"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "A number" : {
+      "comment" : "Under a number field whose text is no number",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een getal"
+          }
+        }
+      }
+    },
+    "A number from %@ to %@" : {
+      "comment" : "Under a number field whose value lies outside its range",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een getal van %1$@ tot en met %2$@"
+          }
+        }
+      }
+    },
+    "A number of at least %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een getal van minstens %@"
+          }
+        }
+      }
+    },
+    "A number of at most %@" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een getal van hoogstens %@"
+          }
+        }
+      }
+    },
+    "Against:" : {
+      "comment" : "VoiceOver reads this before a point against an option",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tegen:"
+          }
+        }
+      }
+    },
+    "Ascending" : {
+      "comment" : "VoiceOver value of a table column sorted from small to large",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oplopend"
+          }
+        }
+      }
+    },
+    "Changes in %@" : {
+      "comment" : "%@ is the path of a file whose diff a block shows",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wijzigingen in %@"
+          }
+        }
+      }
+    },
+    "Could not read this diff" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kon deze diff niet lezen"
+          }
+        }
+      }
+    },
+    "Descending" : {
+      "comment" : "VoiceOver value of a table column sorted from large to small",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aflopend"
+          }
+        }
+      }
+    },
+    "For:" : {
+      "comment" : "VoiceOver reads this before a point for an option",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voor:"
+          }
+        }
+      }
+    },
+    "Highlighted" : {
+      "comment" : "VoiceOver value of a marked line of code",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemarkeerd"
+          }
+        }
+      }
+    },
+    "Loading diff" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diff laden"
+          }
+        }
+      }
+    },
+    "mark at %@" : {
+      "comment" : "VoiceOver: where the mark of a meter stands",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "markering bij %@"
+          }
+        }
+      }
+    },
+    "Meter" : {
+      "comment" : "VoiceOver label of a meter without a label of its own",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meter"
+          }
+        }
+      }
+    },
+    "No changes" : {
+      "comment" : "In place of a diff that holds no change",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geen wijzigingen"
+          }
+        }
+      }
+    },
+    "of %@" : {
+      "comment" : "After a meter's value: of its maximum",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "van %@"
+          }
+        }
+      }
+    },
+    "Only the first lines are shown." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alleen de eerste regels staan hier."
+          }
+        }
+      }
+    },
+    "Open the whole diff" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hele diff openen"
+          }
+        }
+      }
+    },
+    "Parts of the whole" : {
+      "comment" : "VoiceOver label of a bar divided in parts",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delen van het geheel"
+          }
+        }
+      }
+    },
+    "Recommended" : {
+      "comment" : "Tag on the option an agent recommends",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aanbevolen"
+          }
+        }
+      }
+    },
+    "Sorts the table by this column" : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sorteert de tabel op deze kolom"
+          }
+        }
+      }
+    },
+    "The machine does not show diffs in blocks." : {
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De machine toont geen diffs in blokken."
+          }
+        }
+      }
+    },
+    "Tree" : {
+      "comment" : "VoiceOver label of a tree of folders and files",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boom"
+          }
+        }
+      }
+    },
+    "Trend from %@ to %@" : {
+      "comment" : "VoiceOver label of the small line under a value: its first and last value",
+      "localizations" : {
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verloop van %1$@ naar %2$@"
+          }
+        }
+      }
+    },
     "Show all %@ rows" : {
       "comment" : "%@ is the number of rows of a table",
       "localizations" : {

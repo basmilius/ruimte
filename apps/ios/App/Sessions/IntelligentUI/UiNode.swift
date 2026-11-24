@@ -103,8 +103,20 @@ enum UiCatalog {
     /// and sent text are that same string.
     static let literalParents: Set<String> = [
         "CodeBlock", "Tag", "Choice", "Item", "Switch", "Slider", "Segmented", "Option", "Column", "Button",
-        "TextField", "Select",
+        "TextField", "Select", "Leaf",
     ]
+    /// The links that stand as a chip, in a sentence or with their description beside them.
+    static let chips: Set<String> = ["File", "Diff", "Commit", "Node"]
+
+    /// Whether the daemon holds a target for this node: a chip, or a component the catalog links as one.
+    static func hasLinkTarget(_ node: UiNode) -> Bool {
+        switch node.type {
+        case "Change": true
+        case "Leaf": node.string("path") != nil
+        case "CodeBlock": node.string("file").map { !$0.isEmpty } == true
+        default: chips.contains(node.type)
+        }
+    }
 
     /// Which `$text` nodes of a block the agent wrote out; the value of an expression is data and stays as it is.
     static func writtenTexts(_ nodes: [JSONValue]) -> Set<String> {
@@ -139,7 +151,10 @@ enum UiCatalog {
     /// Whether a node flows inside a paragraph rather than standing as a row of its own.
     static func isInline(_ node: UiNode) -> Bool {
         if node.isText { return true }
-        return node.error == nil && (node.type == "Tag" || (links.contains(node.type) && node.children.isEmpty))
+        guard node.error == nil else { return false }
+        // An open Diff is a tile of its own, also while the machine has not answered or never will.
+        let chip = chips.contains(node.type) && node.children.isEmpty && !UiOpenDiff.asks(node)
+        return node.type == "Tag" || node.type == "Keys" || chip
     }
 }
 

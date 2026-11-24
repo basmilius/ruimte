@@ -187,6 +187,7 @@ struct ChatLinkRouting: ViewModifier {
 
     private var host: UiHost {
         var host = UiHost(projectID: context.workspace?.projectID, connected: context.connected)
+        host.readsDiffs = (context.client as? MachineFeatures)?.answers(.uiDiff) == true
         if context.workspace != nil {
             host.open = { destination in
                 if case .diff(let cwd, _, _, true) = destination {

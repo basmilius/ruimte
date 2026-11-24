@@ -4375,14 +4375,18 @@ public struct ChatUiBlockDiagnosticsItem: Codable, Sendable, Equatable {
     public let `start`: Int64
     public let `end`: Int64
     public let `nodeId`: String?
+    public let `component`: String?
+    public let `prop`: String?
     public let `severity`: String?
 
-    public init(`code`: String, `message`: String, `start`: Int64, `end`: Int64, `nodeId`: String? = nil, `severity`: String? = nil) {
+    public init(`code`: String, `message`: String, `start`: Int64, `end`: Int64, `nodeId`: String? = nil, `component`: String? = nil, `prop`: String? = nil, `severity`: String? = nil) {
         self.`code` = `code`
         self.`message` = `message`
         self.`start` = `start`
         self.`end` = `end`
         self.`nodeId` = `nodeId`
+        self.`component` = `component`
+        self.`prop` = `prop`
         self.`severity` = `severity`
     }
 
@@ -4393,6 +4397,8 @@ public struct ChatUiBlockDiagnosticsItem: Codable, Sendable, Equatable {
         `start` = try container.decode(Int64.self, forKey: .`start`)
         `end` = try container.decode(Int64.self, forKey: .`end`)
         `nodeId` = try container.decodeIfPresent(String.self, forKey: .`nodeId`)
+        `component` = try container.decodeIfPresent(String.self, forKey: .`component`)
+        `prop` = try container.decodeIfPresent(String.self, forKey: .`prop`)
         `severity` = try container.decodeIfPresent(String.self, forKey: .`severity`)
     }
 
@@ -4403,6 +4409,8 @@ public struct ChatUiBlockDiagnosticsItem: Codable, Sendable, Equatable {
         try container.encode(`start`, forKey: .`start`)
         try container.encode(`end`, forKey: .`end`)
         try container.encodeIfPresent(`nodeId`, forKey: .`nodeId`)
+        try container.encodeIfPresent(`component`, forKey: .`component`)
+        try container.encodeIfPresent(`prop`, forKey: .`prop`)
         try container.encodeIfPresent(`severity`, forKey: .`severity`)
     }
 
@@ -4412,6 +4420,8 @@ public struct ChatUiBlockDiagnosticsItem: Codable, Sendable, Equatable {
         case `start` = "start"
         case `end` = "end"
         case `nodeId` = "nodeId"
+        case `component` = "component"
+        case `prop` = "prop"
         case `severity` = "severity"
     }
 }
@@ -4623,8 +4633,9 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
     public let `detail`: String?
     public let `code`: String?
     public let `reason`: String?
+    public let `status`: String?
 
-    public init(`state`: ChatUiQueryStateBlocksValueLinksValueState, `target`: ChatUiQueryStateBlocksValueLinksValueTarget? = nil, `cwd`: String? = nil, `viewId`: String? = nil, `projectId`: String? = nil, `staged`: Bool? = nil, `conflicted`: Bool? = nil, `relativePath`: String? = nil, `label`: String? = nil, `detail`: String? = nil, `code`: String? = nil, `reason`: String? = nil) {
+    public init(`state`: ChatUiQueryStateBlocksValueLinksValueState, `target`: ChatUiQueryStateBlocksValueLinksValueTarget? = nil, `cwd`: String? = nil, `viewId`: String? = nil, `projectId`: String? = nil, `staged`: Bool? = nil, `conflicted`: Bool? = nil, `relativePath`: String? = nil, `label`: String? = nil, `detail`: String? = nil, `code`: String? = nil, `reason`: String? = nil, `status`: String? = nil) {
         self.`state` = `state`
         self.`target` = `target`
         self.`cwd` = `cwd`
@@ -4637,6 +4648,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         self.`detail` = `detail`
         self.`code` = `code`
         self.`reason` = `reason`
+        self.`status` = `status`
     }
 
     public init(from decoder: Decoder) throws {
@@ -4653,6 +4665,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         `detail` = try container.decodeIfPresent(String.self, forKey: .`detail`)
         `code` = try container.decodeIfPresent(String.self, forKey: .`code`)
         `reason` = try container.decodeIfPresent(String.self, forKey: .`reason`)
+        `status` = try container.decodeIfPresent(String.self, forKey: .`status`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -4669,6 +4682,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         try container.encodeIfPresent(`detail`, forKey: .`detail`)
         try container.encodeIfPresent(`code`, forKey: .`code`)
         try container.encodeIfPresent(`reason`, forKey: .`reason`)
+        try container.encodeIfPresent(`status`, forKey: .`status`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -4684,6 +4698,7 @@ public struct ChatUiQueryStateBlocksValueLinksValue: Codable, Sendable, Equatabl
         case `detail` = "detail"
         case `code` = "code"
         case `reason` = "reason"
+        case `status` = "status"
     }
 }
 

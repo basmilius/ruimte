@@ -9,6 +9,7 @@ import {
     GitOperationSchema,
     TaskSchema,
     type ChatInfo,
+    type GitDiffResult,
     type GitFileState,
     type GitLogResult,
     type GitStatus,
@@ -20,8 +21,9 @@ import { checkCwd } from '../canvas/project-paths.ts';
 import { UI_SOURCE_ARGS } from '../context/ui-source-args.ts';
 import type { AgentDatabases, DatabasePlace } from '../database/agent-databases.ts';
 import { realOrNull } from '../disk/real-path.ts';
+import type { FileChangeOptions } from '../git/diff.ts';
 import { UiSourceAccessSchema } from './ui-access.ts';
-import { resolveUiProjectLink } from './ui-links.ts';
+import { readUiProjectDiff, resolveUiProjectLink } from './ui-links.ts';
 
 interface UiLaunch {
     launchId: string;
@@ -38,6 +40,8 @@ export interface UiSourceHosts {
     worktreePaths(folder: string): Promise<string[]>;
     gitStatus(cwd: string): Promise<GitStatus>;
     gitLog(cwd: string, limit: number): Promise<GitLogResult>;
+    // `path` is relative to the root of the checkout `root`.
+    gitDiff(root: string, path: string, options: FileChangeOptions): Promise<Pick<GitDiffResult, 'diff' | 'omitted'>>;
     launches(projectId: string): Promise<UiLaunch[]>;
     tasks(chatId: string): Task[];
     databases(): Pick<AgentDatabases, 'captureUiAccess' | 'authorizeUiRead' | 'query'>;
@@ -225,6 +229,7 @@ export function ruimteUiSources(host: UiSourceHosts): ChatUiHost {
     return {
         sources,
         link: (info, access, target) => resolveUiProjectLink(host, info, access, target),
+        diff: (info, access, request) => readUiProjectDiff(host, info, access, request),
         capture: async (info) => {
             const current = place(info);
             const [access, databases] = await Promise.all([capturePlace(info, current), host.databases().captureUiAccess(current)]);

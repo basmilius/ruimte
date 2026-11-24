@@ -469,6 +469,7 @@
     "tunnel.state",
     "tunnel.unlink",
     "tunnel.update",
+    "ui.diff",
     "ui.link",
     "ui.query",
     "usage.count",

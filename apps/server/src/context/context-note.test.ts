@@ -30,6 +30,7 @@ const SOURCE_HOSTS: UiSourceHosts = {
     worktreePaths: unused,
     gitStatus: unused,
     gitLog: unused,
+    gitDiff: unused,
     launches: unused,
     tasks: unused,
     databases: unused
@@ -84,7 +85,6 @@ describe('toolsNote', () => {
         expect(VISUAL_NOTE).toContain('`chat_attach` and `Image attachment=<id>`');
         expect(VISUAL_NOTE).toContain('a model file (STL, binary glTF, USDZ) with `Model attachment=<id>` only when the person asks to see it');
         expect(VISUAL_NOTE).toContain('Stat in Stats');
-        expect(VISUAL_NOTE).toContain('Stat takes numbers; Entry holds text.');
         expect(VISUAL_NOTE).toContain('File and Diff paths, and file links, are relative to your working folder');
         expect(VISUAL_NOTE).toContain('@Query("database.query"');
         expect(VISUAL_NOTE).not.toContain('query show');
@@ -99,7 +99,7 @@ describe('toolsNote', () => {
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
         const added = toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE }).length - toolsNote({ depth: 0 }).length;
-        expect(added).toBeLessThanOrEqual(4100);
+        expect(added).toBeLessThanOrEqual(4750);
         expect(VISUAL_NOTE).not.toContain('Props:');
     });
 

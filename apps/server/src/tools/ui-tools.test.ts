@@ -9,12 +9,17 @@ async function catalog(group: string): Promise<string[]> {
 
 test('a group prints what it is for, its rules and a row per component with its props', async () => {
     const lines = await catalog('data');
-    expect(lines[0]).toBe('about\tCompare values and records. Components: Stats, Stat, EntityList, Entry, Table, Column, Chart');
-    expect(lines).toContain('component\tStat\tlabel, value, previous?, unit?, tone?\tA labeled value and optional previous value.');
+    expect(lines[0]).toBe('about\tCompare values and records. Components: Stats, Stat, Meter, Parts, Part, EntityList, Entry, Table, Column, Chart');
+    expect(lines).toContain(
+        'component\tStat\tlabel, value: number|text, previous?: number, unit?, tone?: tone, trend?: list\tA labeled number with an optional previous number, or a value in words.'
+    );
     expect(lines.find((line) => line.startsWith('rules\t'))).toContain('Give numbers as numbers');
     expect(lines.filter((line) => line.startsWith('component\t')).map((line) => line.split('\t')[1])).toEqual([
         'Stats',
         'Stat',
+        'Meter',
+        'Parts',
+        'Part',
         'EntityList',
         'Entry',
         'Table',
@@ -25,8 +30,7 @@ test('a group prints what it is for, its rules and a row per component with its 
 
 test('the data reference shows formatted durations in entries that compile and evaluate', async () => {
     const lines = await catalog('data');
-    expect(lines.find((line) => line.startsWith('rules\t'))).toContain('Stat value and previous take numbers');
-    const example = lines.find((line) => line.startsWith('example\t'))?.slice('example\t'.length);
+    const example = lines.find((line) => line.startsWith('example\t<EntityList>'))?.slice('example\t'.length);
     expect(example).toBeDefined();
 
     const block = compileUiBlock(example!, { id: 'duration-example', final: true, now: () => 0 });
@@ -61,7 +65,7 @@ test('the places group tells agents to give lat and lon since Ruimte looks up no
     expect(lines.find((line) => line.startsWith('rules\t'))).toBe(
         'rules\tGive lat and lon in decimal degrees for every Place. Never a tile or map URL. The host chooses the map.'
     );
-    expect(lines).toContain('component\tPlace\tlat?, lon?, detail?, value?\tOne place by lat and lon. Children are the name.');
+    expect(lines).toContain('component\tPlace\tlat?: number, lon?: number, detail?, value?: scalar\tOne place by lat and lon. Children are the name.');
     expect(lines.join('\n')).not.toContain('address');
 });
 

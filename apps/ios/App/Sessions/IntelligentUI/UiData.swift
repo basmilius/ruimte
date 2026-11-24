@@ -152,14 +152,16 @@ struct UiEventTime: Equatable {
 }
 
 struct UiTableColumn: Equatable {
-    enum Kind: String { case text, number, bytes, duration, date, file, tag }
+    enum Kind: String { case text, number, bytes, duration, date, file, tag, percent }
 
     let key: String
     let title: String
     let unit: String?
     let kind: Kind
+    /// The tone of a tag cell, by the text it shows.
+    var tones: [String: UiTone] = [:]
 
-    var numeric: Bool { [.number, .bytes, .duration].contains(kind) }
+    var numeric: Bool { [.number, .bytes, .duration, .percent].contains(kind) }
 
     static let rowsShown = 50
     /// The Column children whose key some row has, each key once. A table without columns takes the keys of its
@@ -176,7 +178,10 @@ struct UiTableColumn: Equatable {
                 seen.insert(key)
                 return Self(
                     key: key, title: column.string("title") ?? key, unit: column.string("unit"),
-                    kind: column.string("as").flatMap(Kind.init(rawValue:)) ?? .text)
+                    kind: column.string("as").flatMap(Kind.init(rawValue:)) ?? .text,
+                    tones: (column.props["tones"]?.objectValue ?? [:]).compactMapValues {
+                        $0.stringValue.flatMap(UiTone.init(rawValue:))
+                    })
             }
         }
         var keys: [String] = []
@@ -202,11 +207,12 @@ enum UiTableCell: Equatable {
     case file(String)
     case tag(String)
 
-    /// A duration is in milliseconds and a date is milliseconds since the epoch or an ISO string.
+    /// A duration is in milliseconds, a percent is the number before the sign and a date is milliseconds since the
+    /// epoch or an ISO string.
     static func of(_ value: JSONValue?, column: UiTableColumn) -> Self {
         guard let value, value != .null, value != .string("") else { return .empty }
         switch column.kind {
-        case .number, .bytes, .duration:
+        case .number, .bytes, .duration, .percent:
             if let number = numberOf(value) { return .number(number, column.kind) }
             return .text(textOf(value))
         case .date:
@@ -253,6 +259,168 @@ enum UiTableCell: Equatable {
 
     private static func parseDate(_ string: String) -> Date? {
         ISO8601Parsing.date(string) ?? ISO8601Parsing.dateOnly.date(from: string)
+    }
+
+    /// The value of an Entry as a cell of its `as`, or nil where it stands as written: without a kind, and for text
+    /// the kind cannot read.
+    static func of(entry: UiNode) -> (cell: Self, column: UiTableColumn)? {
+        guard let kind = entry.string("as").flatMap(UiTableColumn.Kind.init(rawValue:)), kind != .text else {
+            return nil
+        }
+        let column = UiTableColumn(key: "value", title: entry.string("label") ?? "", unit: nil, kind: kind)
+        let written = entry.label
+        // A date in milliseconds arrives here as its digits, which a table would get as a number.
+        let digits = kind == .date && written.wholeMatch(of: /[0-9]+/) != nil
+        let cell = of(digits ? Double(written).map(JSONValue.number) : .string(written), column: column)
+        switch cell {
+        case .empty, .text: return nil
+        default: return (cell, column)
+        }
+    }
+
+    /// What the cell reads as, to a person and to VoiceOver.
+    func text(column: UiTableColumn) -> String {
+        switch self {
+        case .empty: ""
+        case .text(let text), .file(let text), .tag(let text): text
+        case .number(let value, let kind):
+            switch kind {
+            case .bytes: Format.bytes(value)
+            case .duration: Format.duration(milliseconds: value)
+            case .percent: Format.percent(value)
+            default: UiFormat.withUnit(UiFormat.number(value), column.unit)
+            }
+        case .date(let at): Format.moment(UiFormat.moment(milliseconds: at))
+        }
+    }
+}
+
+/// The order of a table: one of its columns, the largest first when `descending`.
+struct UiTableSort: Equatable {
+    let key: String
+    let descending: Bool
+
+    /// What `sort` on a Table asks for: a column key, with ` desc` behind it for the largest first. Nil for a key the
+    /// table draws no column of.
+    static func of(_ sort: String?, columns: [UiTableColumn]) -> Self? {
+        guard let written = sort?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        func drawn(_ key: String) -> Bool { columns.contains { $0.key == key } }
+        // A key that itself ends in a direction is that key.
+        if drawn(written) { return Self(key: written, descending: false) }
+        guard let match = written.wholeMatch(of: /(.*?)\s+(asc|desc)/.ignoresCase()), drawn(String(match.1)) else {
+            return nil
+        }
+        return Self(key: String(match.1), descending: match.2.lowercased() == "desc")
+    }
+
+    private enum Value {
+        case number(Double)
+        case text(String)
+
+        init?(_ cell: UiTableCell) {
+            switch cell {
+            case .empty: return nil
+            case .number(let value, _), .date(let value): self = .number(value)
+            case .text(let text), .file(let text), .tag(let text): self = .text(text)
+            }
+        }
+    }
+
+    /// The places of `rows` in the order of one column, so a row keeps the index live readings address it by.
+    /// Numbers and dates order by value and text by the reader's language. In either direction a number stands
+    /// before text and an empty cell last, and equal rows keep their order.
+    static func order(_ rows: [[String: JSONValue]], column: UiTableColumn, descending: Bool) -> [Int] {
+        let values = rows.map { Value(UiTableCell.of($0[column.key], column: column)) }
+        func ascends(_ left: Int, _ right: Int) -> Bool {
+            let ordered: ComparisonResult
+            switch (values[left], values[right]) {
+            case (nil, nil): ordered = .orderedSame
+            case (nil, _): return false
+            case (_, nil): return true
+            case (.number, .text): return true
+            case (.text, .number): return false
+            case (.number(let first), .number(let second)):
+                ordered = first == second ? .orderedSame : first < second ? .orderedAscending : .orderedDescending
+            case (.text(let first), .text(let second)):
+                ordered = first.compare(
+                    second, options: [.caseInsensitive, .diacriticInsensitive, .numeric], locale: .current)
+            }
+            if ordered == .orderedSame { return left < right }
+            return (ordered == .orderedAscending) != descending
+        }
+        return rows.indices.sorted(by: ascends)
+    }
+}
+
+/// What a Stat shows beside its label. A value in words stands as written and compares with nothing.
+struct UiStatFigure: Equatable {
+    enum Direction: Equatable { case up, down, level }
+
+    struct Change: Equatable {
+        let direction: Direction
+        /// The change as a signed percentage, or what it changed from where that was zero.
+        let text: String
+        let said: String
+    }
+
+    let value: String
+    /// A unit that stands apart from its number and smaller. A percent sign hugs the number inside `value`.
+    let unit: String?
+    let change: Change?
+
+    /// Nil for a Stat without a value, which draws its fallback.
+    init?(_ node: UiNode) {
+        guard let number = node.number("value") else {
+            guard let words = node.string("value") else { return nil }
+            value = words
+            unit = nil
+            change = nil
+            return
+        }
+        let written = node.string("unit")
+        let apart = written.map { !$0.isEmpty && $0 != "%" } == true
+        value = apart ? UiFormat.number(number) : UiFormat.withUnit(UiFormat.number(number), written)
+        unit = apart ? written : nil
+        guard let previous = node.number("previous") else {
+            change = nil
+            return
+        }
+        let difference = number - previous
+        let from = UiFormat.withUnit(UiFormat.number(previous), written)
+        // A change from zero has no percentage.
+        let percent = previous == 0 ? nil : Format.percent(abs(difference / previous * 100))
+        change = Change(
+            direction: difference == 0 ? .level : difference > 0 ? .up : .down,
+            text: percent.map { (difference == 0 ? "" : difference > 0 ? "+" : "-") + $0 } ?? from,
+            said: percent.map { String(localized: "\($0) from \(from)") } ?? String(localized: "from \(from)"))
+    }
+}
+
+/// The course of a Stat as points in a unit square, on a scale of its own; one that never moves is a level line.
+enum UiTrend {
+    static func points(_ values: [Double]) -> [CGPoint] {
+        guard values.count >= 2, let low = values.min(), let high = values.max() else { return [] }
+        let span = high - low
+        return values.enumerated().map { index, value in
+            CGPoint(x: Double(index) / Double(values.count - 1), y: span == 0 ? 0.5 : 1 - (value - low) / span)
+        }
+    }
+}
+
+enum UiNumberInput {
+    /// What a person typed as a number, or nil for text that is none or lies outside the field's range. A comma
+    /// reads as the decimal mark, which is what a decimal pad types in most regions.
+    static func parse(_ text: String, min: Double?, max: Double?) -> Double? {
+        let written = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(written), value.isFinite, min.map({ value >= $0 }) ?? true,
+            max.map({ value <= $0 }) ?? true
+        else { return nil }
+        return value
+    }
+
+    /// One step up or down from `value`, kept inside the range.
+    static func stepped(_ value: Double, by step: Double, min: Double?, max: Double?) -> Double {
+        Swift.max(min ?? -.infinity, Swift.min(max ?? .infinity, value + step))
     }
 }
 
@@ -443,6 +611,7 @@ enum UiReason {
         case "access-unavailable": String(localized: "The chat that wrote this no longer has access.")
         case "block-stale": String(localized: "This block changed since it was drawn.")
         case "busy": String(localized: "Too many live blocks read at once.")
+        case "diffs-unsupported": String(localized: "The machine does not show diffs in blocks.")
         case "link-unchecked": String(localized: "This link has to be checked again.")
         case "link-unsupported": String(localized: "This is not a link the machine can open.")
         case "links-unsupported": String(localized: "The machine does not open links from blocks.")

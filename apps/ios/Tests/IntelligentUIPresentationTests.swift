@@ -25,6 +25,219 @@ final class IntelligentUIPresentationTests: XCTestCase {
     func testTheRendererOnlyNamesComponentsTheCatalogHas() {
         XCTAssertTrue(UiCatalog.literalParents.isSubset(of: UiCatalog.components))
         XCTAssertTrue(UiCatalog.links.isSubset(of: UiCatalog.components))
+        XCTAssertTrue(UiCatalog.chips.isSubset(of: UiCatalog.links))
+    }
+
+    func testKeysStandInASentenceAndAnOpenDiffDoesNot() throws {
+        XCTAssertTrue(UiCatalog.isInline(try node(#"{"id":"k","type":"Keys","props":{}}"#)))
+        XCTAssertTrue(UiCatalog.isInline(try node(#"{"id":"d","type":"Diff","props":{"path":"a.ts"}}"#)))
+        XCTAssertFalse(UiCatalog.isInline(try node(#"{"id":"d","type":"Diff","props":{"path":"a.ts","open":true}}"#)))
+        XCTAssertFalse(UiCatalog.isInline(try node(#"{"id":"c","type":"Changes","props":{}}"#)))
+    }
+
+    func testANodeHasALinkTargetWhereTheCatalogLinksIt() throws {
+        XCTAssertTrue(UiCatalog.hasLinkTarget(try node(#"{"id":"c","type":"Change","props":{"path":"a.ts"}}"#)))
+        XCTAssertTrue(UiCatalog.hasLinkTarget(try node(#"{"id":"l","type":"Leaf","props":{"path":"a.ts"}}"#)))
+        XCTAssertFalse(UiCatalog.hasLinkTarget(try node(#"{"id":"l","type":"Leaf","props":{}}"#)))
+        XCTAssertTrue(UiCatalog.hasLinkTarget(try node(#"{"id":"b","type":"CodeBlock","props":{"file":"a.ts"}}"#)))
+        XCTAssertFalse(UiCatalog.hasLinkTarget(try node(#"{"id":"b","type":"CodeBlock","props":{}}"#)))
+        XCTAssertFalse(UiCatalog.hasLinkTarget(try node(#"{"id":"c","type":"Changes","props":{}}"#)))
+        let block = try node(#"{"id":"b","type":"CodeBlock","props":{"file":"src/total.ts","start":12}}"#)
+        XCTAssertEqual(UiLinkFace(block, label: nil).full, "src/total.ts:12")
+        XCTAssertEqual(UiLinkFace(block, label: nil).name, "total.ts")
+    }
+
+    func testKeyCapsPrintAsThePlatformDoes() {
+        XCTAssertEqual(UiKeyCaps.caps("mod+K"), ["⌘", "K"])
+        XCTAssertEqual(UiKeyCaps.caps("mod+K", apple: false), ["Ctrl", "K"])
+        XCTAssertEqual(UiKeyCaps.caps("Mod + shift + p", apple: false), ["Ctrl", "Shift", "P"])
+        XCTAssertEqual(UiKeyCaps.caps("ctrl+alt+shift+cmd+enter"), ["⌃", "⌥", "⇧", "⌘", "↩"])
+        XCTAssertEqual(UiKeyCaps.caps("esc"), ["Esc"])
+        XCTAssertEqual(UiKeyCaps.caps("mod++", apple: false), ["Ctrl", "+"])
+        XCTAssertEqual(UiKeyCaps.caps("g+g"), ["g", "g"])
+        XCTAssertEqual(UiKeyCaps.caps("mod+PageDown"), ["⌘", "PageDown"])
+        XCTAssertEqual(UiKeyCaps.caps("f5"), ["F5"])
+        XCTAssertEqual(UiKeyCaps.caps("  "), [])
+        XCTAssertEqual(UiKeyCaps.spoken(["⇧", "⌘", "K"]), "Shift Command K")
+    }
+
+    private let patch = [
+        "diff --git a/a.ts b/a.ts", "--- a/a.ts", "+++ b/a.ts", "@@ -1,3 +1,4 @@ function one() {", " keep", "-old",
+        "+new", "+more", " tail", "@@ -20,2 +21,2 @@", " context", "-gone", "+back", "",
+    ].joined(separator: "\n")
+
+    func testAPatchIsCutToItsFirstLinesAndStillReadsAsAWholeOne() {
+        XCTAssertEqual(UiPatch.clip(patch, limit: 200).patch, patch)
+        XCTAssertFalse(UiPatch.clip(patch, limit: 8).clipped)
+        let inside = UiPatch.clip(patch, limit: 3)
+        XCTAssertTrue(inside.clipped)
+        XCTAssertEqual(
+            inside.patch.components(separatedBy: "\n"),
+            [
+                "diff --git a/a.ts b/a.ts", "--- a/a.ts", "+++ b/a.ts", "@@ -1,2 +1,2 @@ function one() {", " keep",
+                "-old", "+new",
+            ])
+        let between = UiPatch.clip(patch, limit: 5)
+        XCTAssertTrue(between.clipped)
+        XCTAssertEqual(between.patch.components(separatedBy: "\n").last, " tail")
+        XCTAssertTrue(between.patch.contains("@@ -1,3 +1,4 @@ function one() {"))
+        XCTAssertFalse(between.patch.contains("@@ -20"))
+        let added = ["@@ -5,2 +5,4 @@", "+one", "+two", " three", " four"].joined(separator: "\n")
+        XCTAssertEqual(UiPatch.clip(added, limit: 2).patch.components(separatedBy: "\n").first, "@@ -4,0 +5,2 @@")
+    }
+
+    func testABlockAsksForItsFirstEightOpenDiffsThatClosed() throws {
+        let diffs = (0..<10).map { #"{"id":"d\#($0)","type":"Diff","props":{"path":"a.ts","open":true},"complete":true}"# }
+        let pane = try node(
+            #"""
+            {"id":"p","type":"Pane","props":{},"complete":true,"children":[
+            {"id":"closed","type":"Diff","props":{"path":"a.ts"},"complete":true},
+            {"id":"writing","type":"Diff","props":{"path":"a.ts","open":true},"complete":false},
+            \#(diffs.joined(separator: ","))]}
+            """#)
+        XCTAssertEqual(UiOpenDiff.wanted([pane]), (0..<8).map { "d\($0)" })
+    }
+
+    func testAnOpenDiffShowsItsPatchOrWhyItStaysAChip() {
+        XCTAssertEqual(UiOpenDiff.of(wanted: false, reading: .object(["state": .string("patch")])), .chip)
+        XCTAssertEqual(UiOpenDiff.of(wanted: true, reading: nil), .reading)
+        XCTAssertEqual(
+            UiOpenDiff.of(wanted: true, reading: .object(["state": .string("patch"), "patch": .string(patch)])),
+            .patch(patch, partial: false))
+        XCTAssertEqual(
+            UiOpenDiff.of(
+                wanted: true,
+                reading: .object(["state": .string("patch"), "patch": .string(patch), "truncated": .bool(true)])),
+            .patch(patch, partial: true))
+        let long = "@@ -1,300 +1,300 @@\n" + Array(repeating: " line", count: 300).joined(separator: "\n")
+        guard
+            case .patch(let cut, let partial) = UiOpenDiff.of(
+                wanted: true, reading: .object(["state": .string("patch"), "patch": .string(long)]))
+        else { return XCTFail("a long patch is still a patch") }
+        XCTAssertTrue(partial)
+        XCTAssertEqual(cut.components(separatedBy: "\n").count, UiOpenDiff.lines + 1)
+        XCTAssertEqual(
+            UiOpenDiff.of(
+                wanted: true, reading: .object(["state": .string("refused"), "reason": .string("No such revision")])),
+            .refused("No such revision"))
+        XCTAssertEqual(
+            UiOpenDiff.of(wanted: true, reading: .object(["state": .string("patch")])),
+            .refused(String(localized: "Could not read this diff")))
+    }
+
+    func testAStatInWordsStandsAsWrittenAndANumberSplitsItsUnit() throws {
+        let words = try XCTUnwrap(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"CI","value":"green","unit":"min","previous":3}}"#)))
+        XCTAssertEqual(words, UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"CI","value":"green"}}"#)))
+        XCTAssertEqual(words.value, "green")
+        XCTAssertNil(words.unit)
+        XCTAssertNil(words.change)
+        XCTAssertEqual(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"n","value":"42"}}"#))?.value, "42")
+        XCTAssertNil(UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"CI"}}"#)))
+        let apart = try XCTUnwrap(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"CI","value":21,"unit":"min","previous":28}}"#)))
+        XCTAssertEqual(apart.value, UiFormat.number(21))
+        XCTAssertEqual(apart.unit, "min")
+        XCTAssertEqual(apart.change?.direction, .down)
+        XCTAssertEqual(apart.change?.text, "-" + Format.percent(25))
+        let hugging = try XCTUnwrap(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"Share","value":12,"unit":"%","previous":10}}"#)))
+        XCTAssertEqual(hugging.value, UiFormat.number(12) + "%")
+        XCTAssertNil(hugging.unit)
+        XCTAssertEqual(hugging.change?.text, "+" + Format.percent(20))
+        let fromZero = try XCTUnwrap(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"New","value":4,"previous":0}}"#)))
+        XCTAssertEqual(fromZero.change?.direction, .up)
+        XCTAssertEqual(fromZero.change?.text, UiFormat.number(0))
+        let level = try XCTUnwrap(
+            UiStatFigure(try node(#"{"id":"s","type":"Stat","props":{"label":"Same","value":4,"previous":4}}"#)))
+        XCTAssertEqual(level.change?.direction, .level)
+        XCTAssertEqual(level.change?.text, Format.percent(0))
+    }
+
+    func testATrendIsDrawnOnAScaleOfItsOwn() {
+        XCTAssertEqual(
+            UiTrend.points([10, 30, 20]), [CGPoint(x: 0, y: 1), CGPoint(x: 0.5, y: 0), CGPoint(x: 1, y: 0.5)])
+        XCTAssertEqual(UiTrend.points([5, 5]), [CGPoint(x: 0, y: 0.5), CGPoint(x: 1, y: 0.5)])
+        XCTAssertEqual(UiTrend.points([5]), [])
+    }
+
+    func testATableSortsByAColumnAndKeepsEveryRowsPlace() throws {
+        let table = try node(
+            #"""
+            {"id":"t","type":"Table","props":{"sort":"ms desc","rows":[
+            {"job":"unit","ms":200,"state":"passed"},{"job":"Dom","ms":"n/a"},{"job":"build","ms":900,"state":"failed"},
+            {"job":"apply"},{"job":"e2e 10","ms":200},{"job":"e2e 9","ms":50}]},"children":[
+            {"id":"c1","type":"Column","props":{"key":"job"}},
+            {"id":"c2","type":"Column","props":{"key":"ms","as":"duration"}},
+            {"id":"c3","type":"Column","props":{"key":"state","as":"tag","tones":{"passed":"success","failed":"danger","odd":"loud"}}}]}
+            """#)
+        let columns = UiTableColumn.of(table)
+        let rows = table.props["rows"]?.arrayValue?.compactMap(\.objectValue) ?? []
+        XCTAssertEqual(columns[2].tones, ["passed": .success, "failed": .danger])
+        XCTAssertEqual(UiTableSort.of("ms desc", columns: columns), UiTableSort(key: "ms", descending: true))
+        XCTAssertEqual(UiTableSort.of(" job ", columns: columns), UiTableSort(key: "job", descending: false))
+        XCTAssertEqual(UiTableSort.of("job ASC", columns: columns), UiTableSort(key: "job", descending: false))
+        XCTAssertNil(UiTableSort.of("missing desc", columns: columns))
+        XCTAssertNil(UiTableSort.of(nil, columns: columns))
+        // A number stands before text and an empty cell last in either direction, and equal rows keep their order.
+        XCTAssertEqual(UiTableSort.order(rows, column: columns[1], descending: true), [2, 0, 4, 5, 1, 3])
+        XCTAssertEqual(UiTableSort.order(rows, column: columns[1], descending: false), [5, 0, 4, 2, 1, 3])
+        XCTAssertEqual(UiTableSort.order(rows, column: columns[0], descending: false), [3, 2, 1, 5, 4, 0])
+    }
+
+    func testAPercentCellIsANumberAndAnEntryReadsItsKind() throws {
+        let percent = UiTableColumn(key: "share", title: "Share", unit: nil, kind: .percent)
+        XCTAssertTrue(percent.numeric)
+        XCTAssertEqual(UiTableCell.of(.number(12.5), column: percent), .number(12.5, .percent))
+        XCTAssertEqual(UiTableCell.of(.number(12.5), column: percent).text(column: percent), Format.percent(12.5))
+        let text = #"{"id":"t","type":"$text","props":{"text":"262000"}}"#
+        let duration = try XCTUnwrap(
+            UiTableCell.of(entry: try node(#"{"id":"e","type":"Entry","props":{"label":"ci","as":"duration"},"children":[\#(text)]}"#)))
+        XCTAssertEqual(duration.cell, .number(262000, .duration))
+        let date = try XCTUnwrap(
+            UiTableCell.of(entry: try node(#"{"id":"e","type":"Entry","props":{"label":"at","as":"date"},"children":[\#(text)]}"#)))
+        XCTAssertEqual(date.cell, .date(262000))
+        XCTAssertNil(UiTableCell.of(entry: try node(#"{"id":"e","type":"Entry","props":{"label":"ci"},"children":[\#(text)]}"#)))
+        let words = #"{"id":"t","type":"$text","props":{"text":"soon"}}"#
+        XCTAssertNil(
+            UiTableCell.of(entry: try node(#"{"id":"e","type":"Entry","props":{"label":"ci","as":"bytes"},"children":[\#(words)]}"#)))
+    }
+
+    func testANumberFieldTakesOnlyANumberInsideItsRange() {
+        XCTAssertEqual(UiNumberInput.parse(" 12 ", min: 1, max: 500), 12)
+        XCTAssertEqual(UiNumberInput.parse("0,5", min: nil, max: nil), 0.5)
+        XCTAssertEqual(UiNumberInput.parse("-3", min: nil, max: 0), -3)
+        XCTAssertNil(UiNumberInput.parse("", min: nil, max: nil))
+        XCTAssertNil(UiNumberInput.parse("12a", min: nil, max: nil))
+        XCTAssertNil(UiNumberInput.parse("0", min: 1, max: 500))
+        XCTAssertNil(UiNumberInput.parse("501", min: 1, max: 500))
+        XCTAssertEqual(UiNumberInput.stepped(495, by: 10, min: 1, max: 500), 500)
+        XCTAssertEqual(UiNumberInput.stepped(5, by: -10, min: 1, max: 500), 1)
+        XCTAssertEqual(UiNumberInput.stepped(5, by: -10, min: nil, max: nil), -5)
+    }
+
+    func testCodeIsNumberedFromItsStartAndMarkedByThoseNumbers() throws {
+        let lined = try XCTUnwrap(
+            UiCodeBlockView.lines(try node(#"{"id":"c","type":"CodeBlock","props":{"start":98,"highlight":[99,100]}}"#)))
+        XCTAssertEqual(lined.number(at: 0), 98)
+        XCTAssertEqual((0..<3).map(lined.isMarked), [false, true, true])
+        XCTAssertEqual(lined.digits(lines: 3), 3)
+        let marked = try XCTUnwrap(
+            UiCodeBlockView.lines(try node(#"{"id":"c","type":"CodeBlock","props":{"highlight":[2]}}"#)))
+        XCTAssertEqual((0..<2).map(marked.isMarked), [false, true])
+        XCTAssertNil(marked.digits(lines: 2))
+        XCTAssertNil(UiCodeBlockView.lines(try node(#"{"id":"c","type":"CodeBlock","props":{"language":"ts"}}"#)))
+        XCTAssertEqual(
+            CodeLines.split(AttributedString("one\n\ntwo\n")).map { String($0.characters) }, ["one", "", "two", ""])
+        XCTAssertEqual(UiCodeBlockView.language(ofFile: "src/Total.TS"), "ts")
+        XCTAssertNil(UiCodeBlockView.language(ofFile: "Makefile"))
+    }
+
+    func testANodeChipShowsOnlyAStatusItKnows() {
+        XCTAssertEqual(UiNodeStatus(rawValue: "needsYou"), .needsYou)
+        XCTAssertNil(UiNodeStatus(rawValue: "paused"))
     }
 
     private func choice(itemID: String, blockID: String, revision: String) -> ChatUserItemUiChoice {
@@ -544,7 +757,10 @@ final class IntelligentUIPresentationTests: XCTestCase {
                         UiTableColumn(
                             key: $0["key"]?.stringValue ?? "", title: $0["title"]?.stringValue ?? "",
                             unit: $0["unit"]?.stringValue,
-                            kind: UiTableColumn.Kind(rawValue: $0["as"]?.stringValue ?? "") ?? .text)
+                            kind: UiTableColumn.Kind(rawValue: $0["as"]?.stringValue ?? "") ?? .text,
+                            tones: ($0["tones"]?.objectValue ?? [:]).compactMapValues {
+                                $0.stringValue.flatMap(UiTone.init(rawValue:))
+                            })
                     }
                     if node.children(of: "Column").isEmpty {
                         // Derived columns follow the rows' key order on the desktop; that order does not reach the app.

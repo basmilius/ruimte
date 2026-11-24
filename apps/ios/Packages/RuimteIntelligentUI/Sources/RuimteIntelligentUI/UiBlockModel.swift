@@ -22,6 +22,8 @@ public final class UiBlockModel {
     public private(set) var connected = false
     public private(set) var queryInputsDirty = false
     public private(set) var resolvedLinks: [String: JSONValue] = [:]
+    /// What the machine read for each open Diff, by node id, dropped with the links when an input changes the block.
+    public private(set) var diffs: [String: JSONValue] = [:]
     /// When each query last read successfully, in milliseconds since the epoch; a failed read leaves it as it was.
     public private(set) var lastReadAt: [String: Double] = [:]
     /// The values a live read changed, by `litKey`, each with the read that lit it, so a view lights up once per change.
@@ -134,6 +136,7 @@ public final class UiBlockModel {
             lastRead = nil
             result = .object([:])
             resolvedLinks = [:]
+            diffs = [:]
             lastReadAt = [:]
             lit = [:]
         }
@@ -217,6 +220,23 @@ public final class UiBlockModel {
         return response
     }
 
+    /// Reads the change an open Diff shows, which the daemon takes from git for the path of its stored node. A read
+    /// that fails on an open link stands as a refusal; one a dropped link ended is asked again on the next link.
+    public func readDiff(nodeID: String) async {
+        guard complete, connected else { return }
+        let current = generation
+        var response: JSONValue?
+        do {
+            response = try await request(.uiDiff, payload(["nodeId": .string(nodeID)]))
+        } catch is CancellationError {
+            return
+        } catch {
+            if connected { response = .object(["state": .string("refused")]) }
+        }
+        guard current == generation, let response else { return }
+        diffs[nodeID] = response
+    }
+
     public func refresh() async {
         guard visible, connected, complete, !reading, !queries.isEmpty else { return }
         let now = ContinuousClock.now
@@ -262,7 +282,10 @@ public final class UiBlockModel {
         }
         await evaluate()
         light(since: before)
-        if previousQueryValues != queryValues { resolvedLinks = [:] }
+        if previousQueryValues != queryValues {
+            resolvedLinks = [:]
+            diffs = [:]
+        }
         if allFresh, queriedValues == values { queryInputsDirty = false }
     }
 
@@ -347,6 +370,7 @@ public final class UiBlockModel {
         // A change the interpreter refuses leaves the block as it was; only a block that cannot be read says so.
         guard await evaluate(change: change, action: action, reportsFailure: false), previous != values else { return }
         resolvedLinks = [:]
+        diffs = [:]
         guard !queries.isEmpty else { return }
         queryInputsDirty = true
         inputRead?.cancel()

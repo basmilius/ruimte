@@ -1774,6 +1774,7 @@
     "request.template.list.result #/properties/personal/properties/postfix/items/properties/expression": ["any", "statement"],
     "request.template.list.result #/properties/project/anyOf/0/properties/postfix/items/properties/expression": ["any", "statement"],
     "request.template.save.result #/oneOf/1/properties/template/properties/expression": ["any", "statement"],
+    "request.ui.diff.result #/properties/state": ["patch", "refused"],
     "request.ui.link.result #/properties/state": ["chip", "plain"],
     "request.ui.query.result #/properties/state": ["failed", "fresh", "refused"],
     "request.usage.limits.result #/properties/providers/items/properties/source": ["event", "probe"],
