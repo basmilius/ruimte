@@ -201,6 +201,20 @@ expect(start.steps.map((step) => step.title)).toEqual(['Build the image', 'Start
 
 Pass `{ signal }` to stop the start while the source describes it. `start` rejects for a description the machine would not take.
 
+`uiSource(id)` reads a UI source as the machine reads it for a block, and holds the answer to the same size:
+
+```ts
+const source = machine.uiSource('checks');
+
+expect(source.name).toBe('acme.builds/checks');
+expect(await source.read({ change: '42' })).toEqual([
+    {
+        name: 'unit',
+        state: 'passed'
+    }
+]);
+```
+
 `notificationChannel(id)` hands a channel one notification, as the machine does once it decided one goes out. What you leave out is filled in:
 
 ```ts

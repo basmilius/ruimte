@@ -67,6 +67,7 @@ Ruimte reads the list without starting the server part, so a provider shows befo
 | `problemSources` | [`defineProblemSource`](/docs/extensions/server#problems) | `problems.provide` |
 | `machineSources` | [`defineMachineSource`](/docs/extensions/server#machine-sources) | `machines.provide` |
 | `notificationChannels` | [`defineNotificationChannel`](/docs/extensions/server#notification-channels) | `notifications.provide` |
+| `uiSources` | [`defineUiSource`](/docs/extensions/server#live-data-for-a-chat) | `ui.provide` |
 
 ## Proposed parts
 
@@ -86,6 +87,7 @@ The machine decides this on where it knows an extension came from, never on the 
 | `problemSources` | `provides.problemSources`, `defineProblemSource` and `problems` |
 | `machineSources` | `provides.machineSources` and `defineMachineSource` |
 | `notificationChannels` | `provides.notificationChannels` and `defineNotificationChannel` |
+| `uiSources` | `provides.uiSources` and `defineUiSource` |
 
 ## The mark
 
@@ -126,6 +128,7 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `problems.provide` | Report problems that show with the editor's own. |
 | `machines.provide` | List places where Ruimte can start a machine, each started only after the person approved what runs. |
 | `notifications.provide` | Deliver what Ruimte tells the person about their agents, once they turned the channel on. |
+| `ui.provide` | Give the blocks an agent writes in a chat live data to draw. |
 | `projects.read` | Hear when a project opens and closes. |
 | `routines.read` | List routines. |
 | `routines.run` | Run, pause and resume routines. |
