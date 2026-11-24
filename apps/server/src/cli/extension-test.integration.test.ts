@@ -42,9 +42,10 @@ describe('ruimte extension test', () => {
 
     test.each<[string, readonly string[]]>([
         ['limits', []],
-        ['poc/server', []],
-        ['poc/agents', []],
-        ['poc/workspace', []],
+        ['dev/trackline', []],
+        ['dev/boardwalk', []],
+        ['dev/beacon', []],
+        ['dev/pulseboard', []],
         ...CONTRACT_RUNS.map((files): [string, readonly string[]] => ['poc/contract', files])
     ])('runs the tests of extensions/%s %p against the test host', async (name, files) => {
         const { code, output } = await extensionTest(join(EXTENSIONS, name), files);
