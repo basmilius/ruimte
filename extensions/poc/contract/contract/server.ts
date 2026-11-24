@@ -43,6 +43,31 @@ export function serverContract(open: OpenServerWorld): void {
             expect(await refused.logs()).toContain('chat.event needs the permission chats.read in manifest.json');
         });
 
+        test('hears no more of an event once it stops following it', async () => {
+            const world = await open({ 'chats.read': 'Hears' });
+
+            // A first call, so `server/` runs and follows the event before it is fired.
+            expect(await world.call('heard')).toEqual({ ok: true, value: [] });
+
+            world.fire('chat.event', { chatId: 'chat-1' });
+
+            expect(await world.call('heard')).toEqual({ ok: true, value: ['chat-1'] });
+            expect(await world.call('deaf')).toEqual({ ok: true, value: null });
+
+            world.fire('chat.event', { chatId: 'chat-2' });
+
+            expect(await world.call('heard')).toEqual({ ok: true, value: ['chat-1'] });
+        });
+
+        test('reads a key it deleted as one it never wrote', async () => {
+            const world = await open({});
+
+            expect(await world.call('keep', 'count', 2)).toEqual({ ok: true, value: null });
+            expect(await world.call('kept', 'count')).toEqual({ ok: true, value: 2 });
+            expect(await world.call('forget', 'count')).toEqual({ ok: true, value: null });
+            expect(await world.call('kept', 'count')).toEqual({ ok: true, value: null });
+        });
+
         test('reads no key it never wrote, also one every object has', async () => {
             const world = await open({});
 

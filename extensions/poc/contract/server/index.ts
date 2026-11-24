@@ -6,7 +6,7 @@ const loads = ((await storage.get<number>('loads')) ?? 0) + 1;
 
 await storage.set('loads', loads);
 
-onEvent('chat.event', ({ chatId }) => hear(chatId));
+const stopHearing = onEvent('chat.event', ({ chatId }) => hear(chatId));
 
 defineAgentTool<{ text: string }>({
     id: 'echo',
@@ -18,6 +18,9 @@ defineAgentTool<{ text: string }>({
 const api = defineServer({
     async heard() {
         return heard();
+    },
+    async deaf() {
+        stopHearing();
     },
     async loads() {
         return [loads, await storage.get<number>('loads')];
@@ -31,6 +34,9 @@ const api = defineServer({
     },
     async kept(key: string) {
         return (await storage.get<number>(key)) ?? null;
+    },
+    async forget(key: string) {
+        await storage.delete(key);
     },
     // What an extension prints is its own, also a line that reads as JSON.
     async prints() {

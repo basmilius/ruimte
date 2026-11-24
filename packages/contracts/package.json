@@ -8,6 +8,7 @@
         "./extension-actions": "./src/extension-actions.ts",
         "./extension-client": "./src/extension-client.ts",
         "./extension-context": "./src/extension-context.ts",
+        "./extension-inventory": "./src/extension-inventory.ts",
         "./extension-permissions": "./src/extension-permissions.ts",
         "./extension-results": "./src/extension-results.ts",
         "./node-defaults": "./src/node-defaults.ts",
