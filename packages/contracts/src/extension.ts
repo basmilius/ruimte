@@ -143,6 +143,19 @@ export function clashingPackPath(paths: readonly string[]): string | null {
 export const ExtensionStatusSchema = z.enum(['idle', 'running', 'crashed', 'disabled']);
 export type ExtensionStatus = z.infer<typeof ExtensionStatusSchema>;
 
+/*
+ * Where an extension came from, as the machine or the client that holds it knows, never as its manifest says: a pack a
+ * person installed, a folder `ruimte extension dev` linked, a development extension of Ruimte's own repository, or one
+ * that ships inside the client.
+ */
+export const EXTENSION_PROVENANCES = ['installed', 'dev-link', 'development', 'built-in'] as const;
+export type ExtensionProvenance = (typeof EXTENSION_PROVENANCES)[number];
+
+/* What a machine said of an extension, or undefined for nothing and for a value this Ruimte does not know. */
+export function extensionProvenanceOf(value: string | undefined): ExtensionProvenance | undefined {
+    return EXTENSION_PROVENANCES.find((provenance) => provenance === value);
+}
+
 export const ExtensionInfoSchema = z.object({
     manifest: ExtensionManifestSchema,
     hash: z.string().min(1),
@@ -153,6 +166,8 @@ export const ExtensionInfoSchema = z.object({
     // Linked from a folder by `ruimte extension dev`, which is where a client on this machine reads it from.
     devFolder: z.string().optional(),
     revision: z.number().int().nonnegative().optional(),
+    // One of `EXTENSION_PROVENANCES`, absent from a machine of before it. Open on the wire, so a value a later machine adds never fails the list.
+    provenance: z.string().max(40).optional(),
     // Why its files could not be read. It does not run, and its manifest only names it by its id, so a person can remove it.
     error: z.string().optional()
 });

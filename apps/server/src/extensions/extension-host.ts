@@ -25,6 +25,7 @@ import {
     startsWithMachine,
     type Refusal
 } from './policy.ts';
+import { extensionProvenance } from './provenance.ts';
 import { ExtensionRefusal, extensionFailureOf } from './refusal.ts';
 import { ownValue, parseKeyValues } from './server-api.ts';
 import { isDamaged, manifestOfPack, type DamagedExtension, type ExtensionStore, type StoredExtension } from './store.ts';
@@ -146,6 +147,8 @@ export interface ExtensionHostOptions {
     now?: () => number;
     spawnProcess?: typeof spawn;
     files?: ExtensionHostFiles;
+    // The folders of the checkout that hold Ruimte's own development extensions; none in a compiled daemon.
+    developmentRoots?: readonly string[];
 }
 
 /* The files a start, a storage write and a log touch, handed in so a test can hold each step. */
@@ -265,6 +268,7 @@ export class ExtensionHost {
             hasServer: this.options.store.serverEntry(extension) !== null,
             hasClient: existsSync(join(extension.folder, 'client', 'index.js')),
             status: this.statusOf(extension),
+            provenance: extensionProvenance(extension, this.options.developmentRoots ?? []),
             ...(extension.devFolder === undefined ? {} : { devFolder: extension.devFolder, revision: extension.revision ?? 0 })
         };
     }
@@ -434,8 +438,8 @@ export class ExtensionHost {
      * A save in dev: a fresh process over what was just built, and word so a client loads it again. The link and the
      * run it is `owner`'s are one change of the store, so an unlink of another run never comes between them.
      */
-    async linked(folder: string, owner?: string): Promise<string> {
-        const { id } = await this.options.store.link(folder, owner);
+    async linked(folder: string, owner?: string, startsOff = false): Promise<string> {
+        const { id } = await this.options.store.link(folder, owner, startsOff);
 
         await this.commit(
             id,

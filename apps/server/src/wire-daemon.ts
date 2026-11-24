@@ -87,7 +87,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     let servedPort: number | null = null;
     provide('actions', createServerActions(AGENT_FEATURES));
     const catalog = buildCatalog(AGENT_TOOLKITS);
-    const extensions = provide('extensions', wireExtensions(home, later));
+    const extensions = provide('extensions', wireExtensions(home, seams.developmentExtensions, later));
 
     const machineModel = seams.machine.model();
     const machine = provide('machine', await wireMachine(config, later));

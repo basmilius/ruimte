@@ -65,8 +65,9 @@ import type { VoiceBundle } from './voice.ts';
 // Where a client of before account-only paired and signed for a ticket over HTTP; each answers that pairing links are gone.
 const LEGACY_PAIRING_PATHS = ['/auth/pair', '/auth/pairing-token', '/auth/challenge', '/auth/ticket'];
 const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
-// `owner` is the token of one `extension dev` run, so its Ctrl-C ends only the link it set itself.
-const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional() });
+// `owner` is the token of one `extension dev` run, so its Ctrl-C ends only the link it set itself. `startsOff` leaves an
+// extension not linked before off until a person turns it on.
+const ExtensionLinkSchema = z.object({ folder: z.string().min(1), owner: z.string().min(1).optional(), startsOff: z.boolean().optional() });
 const ExtensionUnlinkSchema = z.object({ id: z.string().min(1), owner: z.string().min(1).optional() });
 
 // Past anything a hook or a tool call sends, a visual of 16 MiB with its JSON escaping included, and what any other request may declare.
@@ -204,7 +205,7 @@ function daemonRoutes(input: HttpInput): Route<SocketData>[] {
                     if (url.pathname === EXTENSION_LINK_PATH) {
                         const parsed = ExtensionLinkSchema.safeParse(body);
                         return parsed.success
-                            ? Response.json({ id: await extensions.linked(parsed.data.folder, parsed.data.owner) })
+                            ? Response.json({ id: await extensions.linked(parsed.data.folder, parsed.data.owner, parsed.data.startsOff === true) })
                             : new Response('Expected a folder', { status: 400 });
                     }
                     const parsed = ExtensionUnlinkSchema.safeParse(body);

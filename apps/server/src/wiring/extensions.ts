@@ -28,7 +28,7 @@ type ExtensionsLater = Later<Pick<DaemonBundles, 'agents' | 'providers' | 'proje
  * The extension host with everything it asks of the machine, built before the machine is up: each
  * ask reaches the bundle that answers it through `later`, so none is patched in after the start.
  */
-export function wireExtensions(home: string, later: ExtensionsLater): ExtensionsBundle {
+export function wireExtensions(home: string, developmentRoots: readonly string[], later: ExtensionsLater): ExtensionsBundle {
     const index = () => later.projects().store.index;
     const readChat = async (chatId: string): Promise<string> =>
         (await later.agents().context.answerSource('extension', { id: chatId, kind: 'chat', title: chatId }, null, null)).text ?? '';
@@ -59,6 +59,7 @@ export function wireExtensions(home: string, later: ExtensionsLater): Extensions
         })(...args);
     const host = new ExtensionHost({
         store: new ExtensionStore(home),
+        developmentRoots,
         asks: () => asks,
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {

@@ -116,6 +116,9 @@ export interface DaemonSeams {
         model(): Promise<string | null>;
         sessionFs(): Promise<SessionFs>;
     };
+    /* The folders of the checkout whose extensions are Ruimte's own development extensions; none in a compiled daemon. */
+    developmentExtensions: readonly string[];
+
     /* The links to other machines, which a test replaces by one it controls. */
     remote: {
         connections(real: RemoteConnections): Pick<RemoteConnections, 'link'>;

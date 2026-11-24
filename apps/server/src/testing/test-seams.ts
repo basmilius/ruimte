@@ -198,6 +198,7 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         voiceLive: openAiLive(),
         power: NO_POWER,
         machine: { model: async () => null, sessionFs: nodeSessionFs },
+        developmentExtensions: [],
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,
         observers: {
