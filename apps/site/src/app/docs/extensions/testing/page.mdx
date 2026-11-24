@@ -201,6 +201,16 @@ expect(start.steps.map((step) => step.title)).toEqual(['Build the image', 'Start
 
 Pass `{ signal }` to stop the start while the source describes it. `start` rejects for a description the machine would not take.
 
+`notificationChannel(id)` hands a channel one notification, as the machine does once it decided one goes out. What you leave out is filled in:
+
+```ts
+const channel = machine.notificationChannel('room');
+
+expect(await channel.deliver({ title: 'Import', reason: 'limit' })).toBe(true);
+```
+
+It answers false for a `deliver` that threw, with the reason in `logs`.
+
 A test server runs your extension as `ruimte extension dev` does, so a [proposed part](/docs/extensions/manifest#proposed-parts) works. With `provenance: 'installed'` it runs it as an extension a person installed, and `createTestServer` rejects with what that person reads in Settings. In a test host, `terminals` lists what `terminals.open` opened and what was typed into each.
 
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.

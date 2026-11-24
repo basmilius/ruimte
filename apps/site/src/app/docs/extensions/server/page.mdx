@@ -313,6 +313,39 @@ defineMachineSource({
 - A source lists at most 16 places, and a start has at most 16 steps. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
 - `defineMachineSource` throws for an id the manifest does not list, so call it as the module loads.
 
+## Notification channels
+
+A notification channel delivers what Ruimte tells a person about their agents somewhere else, such as a chat room or a pager. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `notificationChannels` under `proposed`, list the id under `provides.notificationChannels` and ask for `notifications.provide`.
+
+```ts
+defineNotificationChannel({
+    id: 'room',
+    title: 'Team room',
+    async deliver({ title, body, reason }) {
+        const hook = await secrets.get('hook');
+
+        if (hook === undefined) {
+            throw new Error('Connect the team room first');
+        }
+
+        await post(hook, {
+            text: `${title}: ${body}`,
+            urgent: reason !== 'done'
+        });
+    }
+});
+```
+
+Ruimte decides when, and your channel only delivers.
+
+- **Off until a person turns it on.** The channel shows under Settings, Notifications of the app on the computer that runs the machine, as "Notify through" and its `title`. Nothing reaches `deliver` before that.
+- **The same quiet as a phone.** `deliver` runs when a phone would get the push. While the person is at a desktop a wait holds for a minute and an approval for ten seconds, and each goes out only if it is still unread then. A finished turn that came due at the desk goes nowhere, and neither does a node the person snoozed.
+- `reason` says why: `needsYou` for a wait, a question or an approval, `done` for a finished turn and `limit` for a chat that stopped on a usage limit, told once per limit.
+- A notification names its `project` and its `node`, the chat or terminal it is about. It carries no way to answer: an approval is answered in Ruimte.
+- A `deliver` that throws or does not settle in time loses that one notification. Ruimte writes the reason to your log and tries the next one as if nothing happened. No other channel and no phone waits for yours.
+- A device's own quiet hours and what it follows stay that device's. A channel gets every notification of the machine, so filter on `reason` or `project` if yours should say less.
+- `defineNotificationChannel` throws for an id the manifest does not list, so call it as the module loads.
+
 ## Problems
 
 A problem source reports what a linter or a scanner found. Its problems show with the editor's own in the Problems panel, under the title of the source, and agents read them with `language_problems`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `problemSources` under `proposed`, list the id under `provides.problemSources` and ask for `problems.provide`.
