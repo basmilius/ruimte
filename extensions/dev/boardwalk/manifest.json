@@ -1,0 +1,15 @@
+{
+    "id": "dev.boardwalk",
+    "name": "Boardwalk",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Planning",
+    "description": "A planning board on the canvas: cards in columns, boards from your Boardwalk account, and board files you can read.",
+    "color": "#d97706",
+    "permissions": {
+        "canvas.write": "Adds cards to the canvas, lays them out and links them",
+        "views.write": "Makes and renames a canvas for a board",
+        "files.write": "Writes a board to a file in the project when you ask"
+    }
+}

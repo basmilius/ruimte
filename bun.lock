@@ -272,6 +272,62 @@
         "wrangler": "^4.163.0",
       },
     },
+    "extensions/dev/beacon": {
+      "name": "@ruimte/extension-dev-beacon",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.4",
+        "@types/react": "^19.3.0",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/boardwalk": {
+      "name": "@ruimte/extension-dev-boardwalk",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.4",
+        "@types/react": "^19.3.0",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/pulseboard": {
+      "name": "@ruimte/extension-dev-pulseboard",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.4",
+        "@types/react": "^19.3.0",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/trackline": {
+      "name": "@ruimte/extension-dev-trackline",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.4",
+        "@types/react": "^19.3.0",
+        "react-dom": "^19.3.1",
+      },
+    },
     "extensions/limits": {
       "name": "@ruimte/extension-limits",
       "version": "0.0.0",
@@ -1337,6 +1393,14 @@
     "@ruimte/desktop-bridge": ["@ruimte/desktop-bridge@workspace:packages/desktop-bridge"],
 
     "@ruimte/extension": ["@ruimte/extension@workspace:packages/extension"],
+
+    "@ruimte/extension-dev-beacon": ["@ruimte/extension-dev-beacon@workspace:extensions/dev/beacon"],
+
+    "@ruimte/extension-dev-boardwalk": ["@ruimte/extension-dev-boardwalk@workspace:extensions/dev/boardwalk"],
+
+    "@ruimte/extension-dev-pulseboard": ["@ruimte/extension-dev-pulseboard@workspace:extensions/dev/pulseboard"],
+
+    "@ruimte/extension-dev-trackline": ["@ruimte/extension-dev-trackline@workspace:extensions/dev/trackline"],
 
     "@ruimte/extension-limits": ["@ruimte/extension-limits@workspace:extensions/limits"],
 

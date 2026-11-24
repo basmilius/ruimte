@@ -1,0 +1,9 @@
+{
+    "connect": "Connect your account with Connect Trackline in the command palette.",
+    "none": "No issues to show.",
+    "open_one": "{{count}} open issue",
+    "open_other": "{{count}} open issues",
+    "pick": "Add an issue from the canvas menu.",
+    "place": "Put on the canvas",
+    "working": "a chat is working on it"
+}

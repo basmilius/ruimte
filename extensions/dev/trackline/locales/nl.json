@@ -1,0 +1,9 @@
+{
+    "connect": "Koppel je account met Connect Trackline in het opdrachtenpalet.",
+    "none": "Geen issues om te tonen.",
+    "open_one": "{{count}} open issue",
+    "open_other": "{{count}} open issues",
+    "pick": "Voeg een issue toe vanuit het canvasmenu.",
+    "place": "Op het canvas zetten",
+    "working": "een chat werkt eraan"
+}

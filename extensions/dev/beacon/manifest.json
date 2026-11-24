@@ -1,0 +1,18 @@
+{
+    "id": "dev.beacon",
+    "name": "Beacon",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Testing",
+    "description": "Checks the page in a browser or the screen of a device against the rules of your Beacon account, and keeps a report in Output.",
+    "color": "#e11d48",
+    "permissions": {
+        "browser.control": "Reads the page of a browser you check, and takes a picture of it",
+        "devices.control": "Reads the state of a device you check, and takes a picture of its screen",
+        "artifacts.write": "Keeps each report in Output",
+        "agents.run": "Asks one of your agents to sum up the findings",
+        "chats.send": "Sends the last report to a chat when you ask",
+        "database.read": "Checks that the databases of the project answer"
+    }
+}

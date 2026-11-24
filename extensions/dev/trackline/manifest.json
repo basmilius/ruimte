@@ -1,0 +1,17 @@
+{
+    "id": "dev.trackline",
+    "name": "Trackline",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Issues",
+    "description": "The issues of your Trackline account beside your work: on the canvas, in a chat and for your agents.",
+    "color": "#4f46e5",
+    "permissions": {
+        "agents.start": "Starts a chat on an issue when you ask",
+        "agents.tools": "Lets your agents look up an issue",
+        "canvas.write": "Puts an issue on the canvas and links its chat to it",
+        "chats.read": "Shows which issues a chat is working on",
+        "clock": "Checks your account for new issues every five minutes"
+    }
+}
