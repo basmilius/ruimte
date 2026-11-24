@@ -8,8 +8,6 @@ interface PanelTraits {
     readonly sessionOnly?: true;
     /* A kind the file does not know: it is stored as the files panel plus this key. */
     readonly storedAs?: StoredPanelFlag;
-    /* In the rail only while its feature offers it for the project on screen (`offered-panels.ts`). */
-    readonly onOffer?: true;
 }
 
 /*
@@ -20,7 +18,6 @@ interface PanelTraits {
 const PANEL_TRAITS: Readonly<Record<string, PanelTraits>> = {
     files: { hiddenInScratch: true },
     git: { hiddenInScratch: true },
-    issues: { hiddenInScratch: true, sessionOnly: true, onOffer: true },
     devices: { hiddenInScratch: true },
     launches: { hiddenInScratch: true, storedAs: 'launchesPanel' },
     databases: { hiddenInScratch: true, storedAs: 'databasesPanel' },

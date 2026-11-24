@@ -28,6 +28,5 @@ export const NAMESPACES = [
     'databases',
     'inline-edit',
     'output',
-    'routines',
-    'issues'
+    'routines'
 ] as const;

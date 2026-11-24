@@ -2,7 +2,6 @@ import { RUNTIME_MODES } from '@adecore/agents-react/chat';
 import { useChatRow } from '@adecore/agents-react/state';
 import type { ProjectViewKind, RuntimeMode } from '@ruimte/contracts';
 import { useDictation } from '@/dictation/controller';
-import { hasHostFacts, useChatHostFacts } from '@/issues/chat-facts';
 import { useHasPlans } from '@/plan/plans';
 import { isFileTab } from '@/state/files';
 import { isLooseView, type CellView } from '@/surface/cell-view';
@@ -29,7 +28,6 @@ export function useHasViewToolbar(view: CellView | null): boolean {
     const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const forked = useIsFork(view);
     const planned = useHasPlans(chatIdOf(view));
-    const hosted = hasHostFacts(useChatHostFacts(chatIdOf(view)));
     const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');
     // A file's controls are portaled into the bar; a database or an artifact tab draws its own toolbar in the body.
     if (isLooseView(view)) {
@@ -39,7 +37,7 @@ export function useHasViewToolbar(view: CellView | null): boolean {
         return false;
     }
     if (view.kind === 'chat') {
-        return forked || planned || hosted;
+        return forked || planned;
     }
     return view.kind !== 'terminal' || dictationEnabled || ports !== null || modeOf(host) !== undefined;
 }

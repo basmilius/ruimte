@@ -57,7 +57,6 @@
             "files": "Files",
             "output": "Output",
             "git": "Git",
-            "issues": "Issues",
             "databases": "Databases",
             "devices": "Devices",
             "processes": "Processes",
