@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, useState } from 'react';
+import { useExpandingCommands } from '@/extensions/chat-commands';
 import { useExtensionReferables } from '@/extensions/chat-references';
-import { useExpandingCommands } from '@/extensions/chat-seams';
 import { useContributions } from '@/state/extension-registry';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { buttonWithText, everything } from '../../testing/dom-helpers';

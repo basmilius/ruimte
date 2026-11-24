@@ -21,6 +21,7 @@ import { useDesignTaskRow } from '@/design/design-task-row';
 import { DesignComposerHeader } from '@/design/DesignChats';
 import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { dictationPreview, dictationRange } from '@/dictation/editor';
+import { useExpandingCommands } from '@/extensions/chat-commands';
 import { saveToOutputActions } from '@/output/save';
 import { useOutputThreadCards } from '@/output/thread-cards';
 import { useChatPlace } from '@/project/use-chat-place';
@@ -43,6 +44,7 @@ import { isComposerShortcut } from '@/surface/terminal-keymap';
  * view of a Model block, and the new chat a send opens beside its own. The workspace hands it to the chat views under it, a layer over `CHAT_HOST`.
  */
 export const WORKSPACE_CHAT_HOST: ChatHostLayer = {
+    useExpandingCommands,
     intelligentUi: { openLink: openUiLink, openUrl: openUiUrl },
     isAppShortcut: (event) => isComposerShortcut(event, isApplePlatform()),
     ReadImage,
