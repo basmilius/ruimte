@@ -60,6 +60,23 @@ test('the system prompt names visuals while the machine has them on, and never t
     expect(claude.started[1]!.argv.some((arg) => arg.startsWith('--add-dir='))).toBe(false);
 });
 
+test('a hidden agent hears nothing about visuals, and an agent on a canvas at the same depth does', async () => {
+    const visuals = new VisualStore(home, attachments);
+    manager = await remake(manager, { visuals, visualReplies: () => true, depthOf: () => 1, standalone: (id) => id === 'chat-hidden' });
+    await open(manager, 'chat-hidden');
+    await manager.core.send('chat-hidden', 'system?');
+    await recorder.untilIdle();
+    expect(recorder.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 1, standalone: true }));
+
+    const node = new ChatRecorder();
+    manager.core.subscribe('c2', node.sink());
+    await manager.core.create({ chatId: 'chat-node', cwd: home });
+    manager.core.attach('chat-node', 'c2');
+    await manager.core.send('chat-node', 'system?');
+    await node.until(() => node.ofKind('assistant').length === 1 && node.info?.activeTurnId === null);
+    expect(node.ofKind('assistant')[0]?.text).toBe(toolsNote({ depth: 1, visuals: true, uiFence: RUIMTE_UI_FENCE }));
+});
+
 test('the system prompt names the tools always and the linked sources by name when there are some', async () => {
     await open(manager, 'chat-sys');
     await manager.core.send('chat-sys', 'system?');

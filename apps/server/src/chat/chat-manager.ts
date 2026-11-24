@@ -405,13 +405,24 @@ export class ChatManager {
             depth: this.facts.depthOf(chatId),
             standalone: this.facts.standalone(chatId),
             computer: this.facts.computer(),
-            // An inline edit answers with one replacement block, which a page above it would only contradict.
-            visuals: this.facts.visualReplies() && !this.facts.inlineChat(chatId),
+            visuals: this.tellsVisuals(chatId),
             databases: !this.facts.inlineChat(chatId) && this.facts.databases(chatId),
             reach: !this.facts.inlineChat(chatId) && this.facts.reachOpenProjects(),
             uiFence: this.core.uiFence,
             design: this.facts.design(chatId)
         };
+    }
+
+    /*
+     * An inline edit answers with one replacement block, which a page above it would only contradict. A hidden
+     * agent answers the chat that started it in text, and a page stays in a thread nobody has open.
+     */
+    private tellsVisuals(chatId: string): boolean {
+        if (!this.facts.visualReplies() || this.facts.inlineChat(chatId)) {
+            return false;
+        }
+
+        return !(this.facts.standalone(chatId) && this.facts.depthOf(chatId) > 0);
     }
 
     private instructionsFor(chatId: string): string {
@@ -433,7 +444,7 @@ export class ChatManager {
 
     private resumeNoteFor(chatId: string): string | null {
         const context = contextPrompt(this.facts.contextSources(chatId));
-        const visuals = this.facts.visualReplies() && !this.facts.inlineChat(chatId) ? VISUAL_RESUME_NOTE : null;
+        const visuals = this.tellsVisuals(chatId) ? VISUAL_RESUME_NOTE : null;
         return [context, visuals].filter((part) => part !== null).join(' ') || null;
     }
 
