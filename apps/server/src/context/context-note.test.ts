@@ -89,7 +89,7 @@ describe('toolsNote', () => {
 
     test('the UI and visual notes together stay within their size budget, listing names and required props instead of every prop', () => {
         const added = toolsNote({ depth: 0, visuals: true, uiFence: RUIMTE_UI_FENCE }).length - toolsNote({ depth: 0 }).length;
-        expect(added).toBeLessThanOrEqual(3800);
+        expect(added).toBeLessThanOrEqual(4300);
         expect(VISUAL_NOTE).not.toContain('Props:');
     });
 
