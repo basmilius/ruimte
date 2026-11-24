@@ -564,13 +564,19 @@ struct ChatSelectionSwitchRule: View {
     let from: ChatTurnItemSelection
     let to: ChatTurnItemSelection
     let models: [ProviderModel]
+    var provider: String?
 
     var body: some View {
         if let text = ChatSelectionSwitch.text(from: from, to: to, models: models) {
             HStack(spacing: 12) {
                 line
-                Text(verbatim: "\(text.from) → \(text.to)")
-                    .font(.caption).foregroundStyle(MobileStyle.faint).lineLimit(1).layoutPriority(1)
+                HStack(spacing: 6) {
+                    if let provider {
+                        ChatProviderMark(provider: provider, size: 12).accessibilityHidden(true)
+                    }
+                    Text(verbatim: "\(text.from) → \(text.to)").font(.caption).lineLimit(1)
+                }
+                .foregroundStyle(MobileStyle.faint).layoutPriority(1)
                 line
             }
             .accessibilityElement(children: .combine)
