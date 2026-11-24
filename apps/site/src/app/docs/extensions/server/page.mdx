@@ -108,6 +108,55 @@ const started = await machine.run(project, 'launch.start', {
 });
 ```
 
+## Terminals
+
+`terminals.read`, `terminals.open` and `terminals.write` work as in [the client](/docs/extensions/machine#terminals), with the same permissions. The server part names the project. With `near` the terminal stands beside that node on its canvas, and without it the terminal is a view of its own:
+
+```ts
+const opened = await terminals.open({
+    project: {
+        id: projectId
+    },
+    profile: 'service-shell',
+    title: 'Shell in web'
+});
+
+if (opened.ok) {
+    await terminals.write(opened.value, 'ls\n');
+}
+```
+
+## Terminal profiles
+
+A terminal profile is a kind of terminal your extension adds to the menu of a new terminal. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `terminalProfiles` under `proposed`, list the id under `provides.terminalProfiles` and ask for `terminals.profiles`.
+
+```ts
+defineTerminalProfile({
+    id: 'service-shell',
+    title: 'Shell in web',
+    icon: 'container',
+    available: (project) => project.folder.endsWith('/shop'),
+    spawn: ({ project, cwd }) => ({
+        command: 'docker',
+        args: ['compose', 'exec', 'web', 'sh'],
+        env: {
+            COMPOSE_PROJECT_NAME: project.name
+        },
+        cwd
+    })
+});
+```
+
+Your extension describes the program and Ruimte runs it. The terminal, its scrollback, its status and its stop stay Ruimte's, and `spawn` never reads what the program writes. The program starts without asking the person, since installing the extension was the approval.
+
+- The menu lists a profile from the manifest, so it shows before the server part ran, under the extension's name. Once the server part runs, the row takes the profile's `title` and `icon`.
+- Picking a profile starts the server part and calls `spawn`. `project` is the project the terminal is in, and `cwd` the folder the terminal starts in.
+- `available` hides a profile in a project where it has nothing to open. Ruimte asks it only while the server part runs, and again when a person picks the profile.
+- `cwd` in what `spawn` answers stays inside the project folder or one of its worktrees.
+- `defineTerminalProfile` throws for an id the manifest does not list, so call it as the module loads.
+
+A terminal a person opened with your profile is theirs: `terminals.write` refuses it. Turning the extension off takes the profile out of the menu. A terminal that already runs keeps running, and starts as a plain shell the next time, with a line that says why.
+
 ## Language servers
 
 With `languages.servers`, an extension adds a language server for a language Ruimte does not know:

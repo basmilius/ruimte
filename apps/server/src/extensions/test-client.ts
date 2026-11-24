@@ -8,6 +8,7 @@ import { extensionWord, lazyComponentProblem, shortcutProblem } from '@ruimte/co
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
+import { terminalProfileRefusal, terminalWriteRefusal } from './policy.ts';
 import { callHandler, MissingHandler } from './server-api.ts';
 import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
 import { formatModule, nodeContextOf, react } from './test-react.ts';
@@ -735,13 +736,47 @@ export function clientApi(host: TestHost) {
         terminals: {
             read: (terminal: NodeRef) =>
                 host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id, 'terminal'))),
-            open: (options: { title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
-                host.attempt('terminals.open', [options], () =>
-                    host.addNode('terminal', host.beside(options.near), {
-                        ...(options.title === undefined ? {} : { title: options.title }),
-                        ...(options.cwd === undefined ? {} : { path: options.cwd })
-                    })
-                )
+            open: (options: { profile?: string; title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
+                host.settle('terminals.open', [options], () => {
+                    const { profile, title, cwd } = options;
+                    // A test host runs an author's own code, where a proposed part works.
+                    const refused = profile === undefined ? null : terminalProfileRefusal(host.manifest, profile, true);
+
+                    if (refused !== null) {
+                        throw new Refused(refused.code, refused.message);
+                    }
+
+                    const opened = host.addNode('terminal', host.beside(options.near), {
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { path: cwd })
+                    });
+
+                    host.terminals.push({
+                        id: opened.id,
+                        openedBy: 'extension',
+                        needsYou: false,
+                        written: [],
+                        ...(profile === undefined ? {} : { profile }),
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { cwd })
+                    });
+
+                    return opened;
+                }),
+            write: (terminal: NodeRef, text: string) =>
+                host.settle('terminals.write', [terminal, text], () => {
+                    const opened = host.terminals.find((candidate) => candidate.id === terminal.id);
+                    const record = opened === undefined ? null : { openedBy: opened.openedBy === 'extension' ? host.id : undefined };
+                    const refused = terminalWriteRefusal(host.id, terminal.id, record, opened?.needsYou === true);
+
+                    if (refused !== null) {
+                        throw new Refused(refused.code, refused.message);
+                    }
+
+                    opened?.written.push(text);
+
+                    return undefined;
+                })
         },
         database: {
             connections: () => host.settle('database.connections', [], () => host.scripted<{ id: string; name: string }[]>('database.connections', [])),

@@ -39,6 +39,8 @@ const server = {
     defineAgentTool: through('defineAgentTool'),
     schedule: through('schedule'),
     defineLanguageServer: through('defineLanguageServer'),
+    defineTerminalProfile: through('defineTerminalProfile'),
+    terminals: forwarded('terminals'),
     agents: forwarded('agents'),
     chats: forwarded('chats'),
     storage: forwarded('storage'),

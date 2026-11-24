@@ -45,6 +45,7 @@ export const EXTENSION_CLIENT_PERMISSIONS: Readonly<Record<string, string>> = {
     'git.log': 'git.read',
     'terminals.read': 'terminals.read',
     'terminals.open': 'canvas.write',
+    'terminals.write': 'terminals.write',
     'database.connections': 'database.read',
     'database.query': 'database.read',
     'chats.list': 'chats.read',

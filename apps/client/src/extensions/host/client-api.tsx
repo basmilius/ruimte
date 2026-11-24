@@ -1523,15 +1523,47 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 settle('terminals.read', () => {
                     return readNodeText(terminal.id, 'terminal');
                 }),
-            // Opens a shell and types nothing: only a person types in a terminal.
-            open: (options?: { title?: string; cwd?: string; near?: { id: string }[] }) =>
-                attempt('terminals.open', () => {
-                    return createdNode(
-                        canvasInFront().addNode('terminal', besideNode(options?.near?.[0]?.id), {
-                            ...(options?.title === undefined ? {} : { title: options.title }),
-                            ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
-                        })
-                    );
+            // The machine makes and starts it, and writes down that this extension opened it: that record is what `write` goes by.
+            open: (options?: { profile?: string; title?: string; cwd?: string; near?: { id: string }[] }) =>
+                settle('terminals.open', async () => {
+                    const canvas = canvasInFront();
+                    const { link } = callScope();
+                    const beside = options?.near?.[0]?.id;
+
+                    if (!machineAnswers(link.connection, 'extension.terminalOpen')) {
+                        if (options?.profile !== undefined) {
+                            throw new Refused('unavailable', 'This machine starts no terminal profiles');
+                        }
+
+                        return createdNode(
+                            canvas.addNode('terminal', besideNode(beside), {
+                                ...(options?.title === undefined ? {} : { title: options.title }),
+                                ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                            })
+                        );
+                    }
+
+                    const { nodeId } = await extensionRequest(link, 'extension.terminalOpen', {
+                        id,
+                        projectId: currentProjectId(),
+                        ...(canvas.viewId === null ? {} : { viewId: canvas.viewId }),
+                        ...(beside === undefined ? {} : { beside }),
+                        ...(options?.profile === undefined ? {} : { profile: options.profile }),
+                        ...(options?.title === undefined ? {} : { title: options.title }),
+                        ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                    });
+
+                    return { id: nodeId };
+                }),
+            write: (terminal: { id: string }, text: string) =>
+                settle('terminals.write', async () => {
+                    const { link } = callScope();
+
+                    if (!machineAnswers(link.connection, 'extension.terminalWrite')) {
+                        throw new Refused('unavailable', 'This machine types into no terminal for an extension');
+                    }
+
+                    await extensionRequest(link, 'extension.terminalWrite', { id, nodeId: terminal.id, text });
                 })
         },
         database: {

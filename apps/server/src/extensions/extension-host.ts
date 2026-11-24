@@ -4,7 +4,21 @@ import { appendFile, mkdir, readFile, rename, writeFile } from 'node:fs/promises
 import { dirname, join } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isNotFound } from '@adecore/utils/errors';
-import { ANSWER_TIMEOUT_MS, EXTENSION_API_VERSION, type ExtensionActionName, type ExtensionInfo, type ExtensionStatus } from '@ruimte/contracts';
+import {
+    allowsProposed,
+    ANSWER_TIMEOUT_MS,
+    EXTENSION_API_VERSION,
+    EXTENSION_TERMINAL_TEXT_MAX,
+    ExtensionProvidedIdSchema,
+    providedIds,
+    proposedRefusal,
+    providerRefusal,
+    type ExtensionActionName,
+    type ExtensionInfo,
+    type ExtensionManifest,
+    type ExtensionStatus,
+    type ExtensionTerminalProfile
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import { bestEffort } from '../best-effort.ts';
 import { ClientSinks } from '../client-sinks.ts';
@@ -23,6 +37,7 @@ import {
     permissionsOf,
     SendLimit,
     startsWithMachine,
+    terminalProfileRefusal,
     type Refusal
 } from './policy.ts';
 import { extensionProvenance } from './provenance.ts';
@@ -45,6 +60,7 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('tool'), name: z.string(), description: z.string(), parameters: z.unknown().optional() }),
     z.object({ type: z.literal('ready') }),
     z.object({ type: z.literal('subscribe'), name: z.string() }),
+    z.object({ type: z.literal('profile'), id: z.string(), title: z.string().min(1).max(80), icon: z.string().max(60).optional(), available: z.boolean() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -96,6 +112,11 @@ interface Running {
     failStart(reason: Error): void;
     pending: Map<number, Pending>;
     permissions: ReadonlySet<string>;
+    // The manifest it started with, and whether a proposed part works for where it came from.
+    manifest: ExtensionManifest;
+    proposedAllowed: boolean;
+    // The terminal profiles its module defined, by id.
+    profiles: Map<string, DefinedProfile>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -110,9 +131,63 @@ interface Starting {
     attempt: { cancelled: boolean };
 }
 
+interface DefinedProfile {
+    title: string;
+    icon?: string | undefined;
+    // Whether it has a say in which project it shows in.
+    available: boolean;
+}
+
+/* A project as a provider of an extension is asked about it. */
+export interface ExtensionProject {
+    id: string;
+    name: string;
+    folder: string;
+}
+
+const SpawnDescriptionSchema = z.object({
+    command: z.string().min(1),
+    args: z.array(z.string()).max(256).optional(),
+    env: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string()).optional(),
+    cwd: z.string().min(1).optional()
+});
+export type SpawnDescription = z.infer<typeof SpawnDescriptionSchema>;
+
+const TerminalOpenAskSchema = z.object({
+    projectId: z.string().min(1),
+    profile: ExtensionProvidedIdSchema.optional(),
+    title: z.string().min(1).max(200).optional(),
+    cwd: z.string().min(1).optional(),
+    beside: z.string().min(1).optional()
+});
+const TerminalWriteAskSchema = z.tuple([z.string().min(1), z.string().min(1).max(EXTENSION_TERMINAL_TEXT_MAX)]);
+
+interface ExtensionTerminalStart {
+    projectId: string;
+    profile?: string | undefined;
+    picked?: boolean | undefined;
+    title?: string | undefined;
+    cwd?: string | undefined;
+    viewId?: string | undefined;
+    beside?: string | undefined;
+    at?: { x: number; y: number } | undefined;
+}
+
+/* The terminals of the machine, as far as an extension reaches them. */
+export interface ExtensionTerminalPort {
+    // `check` throws once the extension was turned off, changed or removed since it was granted.
+    open(extensionId: string, start: ExtensionTerminalStart, check: () => void): Promise<{ nodeId: string }>;
+    /* Types into a terminal, or refuses with what the machine itself keeps of who opened it. */
+    write(extensionId: string, nodeId: string, text: string): Promise<void>;
+    read(nodeId: string): Promise<string>;
+}
+
 /* What an extension may do as the store held it once no change of what runs was under way. */
 interface Grant {
     permissions: ReadonlySet<string>;
+    // Null for an extension that is gone.
+    manifest: ExtensionManifest | null;
+    proposedAllowed: boolean;
     // Throws once a change of what runs came after the grant, for a side effect that follows an await of its own.
     check(): void;
 }
@@ -139,6 +214,7 @@ export interface ExtensionHostOptions {
     // `check` throws once the extension was turned off, changed or removed since it was granted, so call it after every await before the chat starts.
     startChat?: (extensionId: string, start: ExtensionChatStart, check: () => void) => Promise<{ nodeId: string }>;
     runAction?: (extensionId: string, projectId: string, action: ExtensionActionName, input: unknown) => Promise<unknown>;
+    terminals?: () => ExtensionTerminalPort;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
     // Stops what runs of them also when the change cannot be saved, and then rejects.
     removeLanguageServers?: (extensionId: string) => Promise<void>;
@@ -260,15 +336,30 @@ export class ExtensionHost {
         return extensions.map((extension) => (isDamaged(extension) ? damagedInfo(extension) : this.infoOf(extension)));
     }
 
+    private provenanceOf(extension: StoredExtension) {
+        return extensionProvenance(extension, this.options.developmentRoots ?? []);
+    }
+
+    /*
+     * Why an extension whose files are fine does not run here: it names or uses a proposed part and a person installed
+     * it. Decided on where the machine knows it came from, so a manifest cannot talk its way past it.
+     */
+    private refusedReason(extension: StoredExtension): string | null {
+        return proposedRefusal(extension.manifest, this.provenanceOf(extension));
+    }
+
     private infoOf(extension: StoredExtension): ExtensionInfo {
+        const refused = this.refusedReason(extension);
+
         return {
+            ...(refused === null ? {} : { refused }),
             manifest: extension.manifest,
             hash: extension.hash,
             enabled: extension.enabled,
             hasServer: this.options.store.serverEntry(extension) !== null,
             hasClient: existsSync(join(extension.folder, 'client', 'index.js')),
             status: this.statusOf(extension),
-            provenance: extensionProvenance(extension, this.options.developmentRoots ?? []),
+            provenance: this.provenanceOf(extension),
             ...(extension.devFolder === undefined ? {} : { devFolder: extension.devFolder, revision: extension.revision ?? 0 })
         };
     }
@@ -688,6 +779,12 @@ export class ExtensionHost {
             throw new ExtensionRefusal('unavailable', `${id} crashed ${MAX_CRASHES} times in a row and stays off until a person turns it on again`);
         }
 
+        const refused = this.refusedReason(extension);
+
+        if (refused !== null) {
+            throw new ExtensionRefusal('unavailable', refused);
+        }
+
         return this.start(extension);
     }
 
@@ -747,13 +844,16 @@ export class ExtensionHost {
         }
 
         const runtime = bunRuntime();
+        const proposedAllowed = allowsProposed(this.provenanceOf(extension));
         const child = spawnProcess(runtime.command, [...runtime.args, runtimePath, entry, dataFolder], {
             cwd: dataFolder,
             env: {
                 ...process.env,
                 ...runtime.env,
                 RUIMTE_EXTENSION_ID: id,
-                RUIMTE_EXTENSION_PERMISSIONS: JSON.stringify(Object.keys(extension.manifest.permissions ?? {}))
+                RUIMTE_EXTENSION_PERMISSIONS: JSON.stringify(Object.keys(extension.manifest.permissions ?? {})),
+                RUIMTE_EXTENSION_PROVIDES: JSON.stringify({ provides: extension.manifest.provides ?? {}, proposed: extension.manifest.proposed ?? [] }),
+                RUIMTE_EXTENSION_PROPOSED: proposedAllowed ? '1' : '0'
             },
             stdio: 'pipe'
         }) as ChildProcessWithoutNullStreams;
@@ -774,6 +874,9 @@ export class ExtensionHost {
             },
             pending: new Map(),
             permissions: new Set(Object.keys(extension.manifest.permissions ?? {})),
+            manifest: extension.manifest,
+            proposedAllowed,
+            profiles: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -853,6 +956,8 @@ export class ExtensionHost {
             markReady();
         } else if (message.type === 'subscribe') {
             this.followEvent(id, running, message.name);
+        } else if (message.type === 'profile') {
+            this.defineProfile(id, running, message);
         } else if (message.type === 'emit') {
             this.sinks.emit({ event: 'extension.message', payload: { id, name: message.name, payload: message.payload } });
         } else {
@@ -882,6 +987,146 @@ export class ExtensionHost {
         }
 
         void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${reason}\n`));
+    }
+
+    /* The process's own runtime refuses the same, so this only meets one that speaks the pipe by hand. */
+    private defineProfile(id: string, running: Running, profile: DefinedProfile & { id: string }): void {
+        const refused =
+            missingPermission(id, 'terminals.profiles', running.permissions)?.message ??
+            providerRefusal(running.manifest, 'defineTerminalProfile', profile.id, running.proposedAllowed);
+
+        if (refused === null) {
+            running.profiles.set(profile.id, { title: profile.title, icon: profile.icon, available: profile.available });
+
+            return;
+        }
+
+        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${refused}\n`));
+    }
+
+    /*
+     * The terminal profiles the extensions of this machine supply, from their manifests, so the menu of a new terminal
+     * lists one before its `server/` ran. A process that runs is asked whether its profile shows in this project, and
+     * names it; one that does not run is not started for a list.
+     */
+    async terminalProfiles(project: ExtensionProject): Promise<ExtensionTerminalProfile[]> {
+        const listed = await this.options.store.list();
+        const profiles: ExtensionTerminalProfile[] = [];
+
+        for (const extension of listed) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id, name } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'terminalProfiles', allowsProposed(this.provenanceOf(extension)));
+            const running = this.running.get(id);
+
+            for (const profile of ids) {
+                const defined = running?.profiles.get(profile);
+
+                if (running !== undefined && defined?.available === true && !(await this.profileShows(id, running, profile, project))) {
+                    continue;
+                }
+
+                profiles.push({
+                    extension: id,
+                    id: profile,
+                    title: defined?.title ?? (ids.length === 1 ? name : `${name}: ${profile}`),
+                    ...(defined?.icon === undefined ? {} : { icon: defined.icon })
+                });
+            }
+        }
+
+        return profiles;
+    }
+
+    /* A profile whose answer fails or never comes still shows: picking it says what is wrong. */
+    private async profileShows(id: string, running: Running, profile: string, project: ExtensionProject): Promise<boolean> {
+        try {
+            return (await this.send(running, { type: 'profile', profile, method: 'available', input: project }, `${id} profile ${profile}`)) !== false;
+        } catch {
+            return true;
+        }
+    }
+
+    /*
+     * What a terminal profile starts, asked of the extension's own process, which starts for it. The extension only
+     * describes: the session that runs the program is the machine's.
+     */
+    async profileSpawn(id: string, profile: string, context: { project: ExtensionProject; cwd: string }): Promise<SpawnDescription> {
+        const grant = await this.grantedTo(id);
+
+        if (grant.manifest === null) {
+            throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
+        }
+
+        refuse(terminalProfileRefusal(grant.manifest, profile, grant.proposedAllowed));
+
+        const running = await this.runningFor(id);
+        const defined = running.profiles.get(profile);
+
+        if (defined === undefined) {
+            throw new ExtensionRefusal('not-found', `${id} lists the terminal profile ${profile} and did not define it`);
+        }
+
+        if (defined.available && !(await this.profileShows(id, running, profile, context.project))) {
+            throw new ExtensionRefusal('refused', `${defined.title} is not available in this project`);
+        }
+
+        const described = SpawnDescriptionSchema.safeParse(
+            await this.send(running, { type: 'profile', profile, method: 'spawn', input: context }, `${id} profile ${profile}`)
+        );
+
+        if (!described.success) {
+            throw new ExtensionRefusal('failed', `${defined.title} described nothing to start: ${described.error.issues[0]?.message ?? 'invalid'}`);
+        }
+
+        return described.data;
+    }
+
+    /* A terminal for a client: one its extension opens, or with `picked` one whose profile a person chose from a menu. */
+    async openTerminal(id: string, start: ExtensionTerminalStart): Promise<{ nodeId: string }> {
+        return this.openTerminalWith(id, await this.grantedTo(id), start);
+    }
+
+    private async openTerminalWith(id: string, grant: Grant, start: ExtensionTerminalStart): Promise<{ nodeId: string }> {
+        // A person's own pick asks nothing of the extension but the profile itself.
+        if (start.picked !== true) {
+            refuse(missingPermission(id, 'canvas.write', grant.permissions));
+        }
+
+        if (start.profile !== undefined) {
+            if (grant.manifest === null) {
+                throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
+            }
+
+            refuse(terminalProfileRefusal(grant.manifest, start.profile, grant.proposedAllowed));
+        } else if (start.picked === true) {
+            throw new ExtensionRefusal('invalid-input', 'A person picks a profile, so the terminal names one');
+        }
+
+        return this.terminalPort().open(id, start, grant.check);
+    }
+
+    /* Typed only into a terminal this extension opened, which the port decides on the machine's own record. */
+    async writeTerminal(id: string, nodeId: string, text: string): Promise<void> {
+        return this.writeTerminalWith(id, await this.grantedTo(id), nodeId, text);
+    }
+
+    private async writeTerminalWith(id: string, grant: Grant, nodeId: string, text: string): Promise<void> {
+        refuse(missingPermission(id, 'terminals.write', grant.permissions));
+        await this.terminalPort().write(id, nodeId, text);
+    }
+
+    private terminalPort(): ExtensionTerminalPort {
+        const port = this.options.terminals?.();
+
+        if (port === undefined) {
+            throw new ExtensionRefusal('unavailable', 'This machine opens no terminals for an extension');
+        }
+
+        return port;
     }
 
     /* Whoever asks, client or `server/`: a chat the person sees, behind the same permission. */
@@ -948,7 +1193,18 @@ export class ExtensionHost {
             throw new ExtensionRefusal('unavailable', `${id} is turned off`);
         }
 
-        return { permissions: permissionsOf(extension?.manifest), check };
+        const refused = extension === null ? null : this.refusedReason(extension);
+
+        if (refused !== null) {
+            throw new ExtensionRefusal('unavailable', refused);
+        }
+
+        return {
+            permissions: permissionsOf(extension?.manifest),
+            manifest: extension?.manifest ?? null,
+            proposedAllowed: extension !== null && allowsProposed(this.provenanceOf(extension)),
+            check
+        };
     }
 
     /* What a client with no shell of its own loads. Not its server part, which only runs here. */
@@ -1002,6 +1258,30 @@ export class ExtensionHost {
 
         if (method === 'agents.start') {
             return this.startChatWith(id, grant, args[0] as ExtensionChatStart);
+        }
+
+        if (method === 'terminals.open') {
+            const start = TerminalOpenAskSchema.safeParse(args[0]);
+
+            if (!start.success) {
+                throw new ExtensionRefusal('invalid-input', `terminals.open takes another shape: ${start.error.issues[0]?.message ?? 'invalid'}`);
+            }
+
+            return this.openTerminalWith(id, grant, start.data);
+        }
+
+        if (method === 'terminals.write') {
+            const written = TerminalWriteAskSchema.safeParse(args);
+
+            if (!written.success) {
+                throw new ExtensionRefusal('invalid-input', `terminals.write takes a terminal and text of at most ${EXTENSION_TERMINAL_TEXT_MAX} characters`);
+            }
+
+            return this.writeTerminalWith(id, grant, ...written.data);
+        }
+
+        if (method === 'terminals.read') {
+            return this.terminalPort().read(String(args[0]));
         }
 
         const run = this.options.asks?.()[method];

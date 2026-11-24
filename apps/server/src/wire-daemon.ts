@@ -94,6 +94,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const { identity } = machine;
     seams.redactions.secret(machine.access.localSecret);
     const stores = provide('stores', await loadAgentStores(home, seams.clock));
+    stores.lifecycle.on('placed', (projectId, ids) => extensions.terminals.places(projectId, ids));
     const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
     const providers = provide('providers', await wireProviders(config, () => computer.start(), stats.flush, seams));

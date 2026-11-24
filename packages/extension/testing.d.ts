@@ -26,9 +26,11 @@ import type {
     MachineInput,
     MachineOutput,
     NodeRef,
+    ProjectInfo,
     ProjectRef,
     Result,
     ServerEvents,
+    SpawnDescription,
     ViewRef
 } from './server';
 
@@ -114,7 +116,7 @@ export interface TestHostAnswers {
 
 export interface TestHostOptions {
     /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */
-    manifest?: { id?: string; name?: string; permissions?: Record<string, string> };
+    manifest?: { id?: string; name?: string; permissions?: Record<string, string>; provides?: Record<string, string[]>; proposed?: string[] };
     /** `client/index.ts` by default, loaded afresh for this host. */
     entry?: string;
     /** The open project, with its views and nodes; the first view is in front. Null for no open project. */
@@ -265,6 +267,8 @@ export interface TestHost {
     agents: { calls: TestCall[] };
     /** Every call that answered a Result, in order. */
     calls: TestCall[];
+    /** Each terminal `terminals.open` opened, with what `terminals.write` typed into it. Any other terminal refuses a write. */
+    terminals: TestTerminal[];
     /** What `useStorage` holds per scope now, changed in place. */
     storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };
     settings: Record<string, boolean | string>;
@@ -299,12 +303,39 @@ export interface TestServerAnswers {
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.read'?(chatId: string): Answer<string>;
     'chats.send'?(chatId: string, text: string): Answer<void>;
+    'terminals.read'?(terminal: NodeRef): Answer<string>;
     'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };
+}
+
+/** A terminal of the machine of a test. */
+export interface TestTerminal {
+    id: string;
+    /** `extension` for one `terminals.open` opened, the only kind `terminals.write` types into. */
+    openedBy: 'extension' | 'person';
+    /** Set it to true for an agent in the terminal that waits for the person, which refuses a write. */
+    needsYou: boolean;
+    /** What `terminals.write` typed, in order. */
+    written: string[];
+    /** The terminal profile it runs, by id. */
+    profile?: string;
+    /** What that profile's `spawn` described when the terminal opened, in a test server. */
+    spawn?: SpawnDescription;
+    title?: string;
+    cwd?: string;
 }
 
 export interface TestServerOptions {
     /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */
-    manifest?: { id?: string; permissions?: Record<string, string> };
+    manifest?: { id?: string; permissions?: Record<string, string>; provides?: Record<string, string[]>; proposed?: string[] };
+    /**
+     * Where the extension came from. `dev-link` by default, as under `ruimte extension dev`; with `installed`, one that uses a
+     * proposed part does not load, and `createTestServer` rejects with what a person reads in Settings.
+     */
+    provenance?: 'dev-link' | 'installed';
+    /** The project a terminal profile is asked about. */
+    project?: Partial<ProjectInfo>;
+    /** Terminals that are there already, opened by a person unless one says otherwise. */
+    terminals?: (Pick<TestTerminal, 'id'> & Partial<TestTerminal>)[];
     /** `server/index.ts` by default. */
     entry?: string;
     storage?: Record<string, Json>;
@@ -314,7 +345,17 @@ export interface TestServerOptions {
 
 /** A call of `server/` to the machine, with what it was answered. */
 export interface TestAsk {
-    method: 'agents.run' | 'agents.start' | 'chats.list' | 'chats.read' | 'chats.send' | 'machine.run' | 'defineLanguageServer';
+    method:
+        | 'agents.run'
+        | 'agents.start'
+        | 'chats.list'
+        | 'chats.read'
+        | 'chats.send'
+        | 'terminals.read'
+        | 'terminals.open'
+        | 'terminals.write'
+        | 'machine.run'
+        | 'defineLanguageServer';
     args: Json[];
     result: Result<unknown>;
 }
@@ -341,6 +382,15 @@ export interface TestServer<Api> {
     languageServers: object[];
     /** What `log` wrote, and every refusal, as `ruimte extension dev` prints it. */
     logs: string[];
+    /** The terminals of the machine: those the options gave, and each one `terminals.open` opened, with what was typed into it. */
+    terminals: TestTerminal[];
+    /** A terminal profile `defineTerminalProfile` named, asked as the machine asks it. Throws for one it did not define. */
+    profile(id: string): {
+        title: string;
+        icon?: string;
+        available(project?: Partial<ProjectInfo>): Promise<boolean>;
+        spawn(context?: { project?: Partial<ProjectInfo>; cwd?: string }): Promise<SpawnDescription>;
+    };
     /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */
     tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };
     /** What an agent reads of a node of this type along a line. */

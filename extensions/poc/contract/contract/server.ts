@@ -21,11 +21,51 @@ export interface ServerWorld {
     logs(): Promise<string[]>;
     /* What `emit` said, as a client hears it. */
     emitted(): Promise<{ name: string; payload?: unknown }[]>;
+    /* A terminal a person opened, which shows `The screen`. */
+    personTerminal: string;
+    /* What was typed into a terminal, in order. */
+    typed(terminal: string): Promise<string>;
+    /* A variable the program of a terminal started with. */
+    variable(terminal: string, name: string): Promise<string | undefined>;
+    /* An agent in this terminal asks the person something, as its hook reports it. */
+    waits(terminal: string): Promise<void>;
 }
 
-export type OpenServerWorld = (permissions: Record<string, string>) => Promise<ServerWorld>;
+/* What a scenario puts in the manifest beside its permissions, and where the extension came from: a dev link unless it says installed. */
+export interface WorldManifest {
+    provides?: Record<string, string[]>;
+    proposed?: string[];
+    provenance?: 'installed';
+}
+
+export type OpenServerWorld = (permissions: Record<string, string>, manifest?: WorldManifest) => Promise<ServerWorld>;
 
 const SENDS = { 'chats.send': 'Says hello' };
+const TERMINALS = { 'canvas.write': 'Opens', 'terminals.write': 'Types', 'terminals.profiles': 'Adds a shell' };
+const PROFILE: WorldManifest = { provides: { terminalProfiles: ['probe-shell'] }, proposed: ['terminalProfiles'] };
+const NOT_FINAL =
+    'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
+
+function denied(permission: string): Server.Result<unknown> {
+    return {
+        ok: true,
+        value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission ${permission} in its manifest` } }
+    };
+}
+
+function refusedWith(message: string): Server.Result<unknown> {
+    return { ok: true, value: { ok: false, error: { code: 'refused', message } } };
+}
+
+function terminalOf(opened: Server.Result<unknown>): string {
+    const answer = opened.ok ? (opened.value as Server.Result<Server.NodeRef>) : opened;
+
+    if (!answer.ok) {
+        throw new Error(answer.error.message);
+    }
+
+    return answer.value.id;
+}
 
 export function serverContract(open: OpenServerWorld): void {
     describe('the server contract', () => {
@@ -125,10 +165,6 @@ export function serverContract(open: OpenServerWorld): void {
         test('asks an agent and lists the chats, each only with its permission', async () => {
             const allowed = await open({ 'agents.run': 'Asks', 'chats.read': 'Lists' });
             const refused = await open({});
-            const denied = (permission: string): Server.Result<unknown> => ({
-                ok: true,
-                value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission ${permission} in its manifest` } }
-            });
 
             expect(await allowed.call('asks', 'Hi')).toEqual({ ok: true, value: { ok: true, value: { text: 'Answer to Hi' } } });
             expect(await allowed.call('chatIds')).toEqual({ ok: true, value: ['chat-1'] });
@@ -159,6 +195,79 @@ export function serverContract(open: OpenServerWorld): void {
                 ok: true,
                 value: { ok: false, error: { code: 'permission-denied', message: `${ID} did not ask for the permission agents.start in its manifest` } }
             });
+        });
+
+        test('opens a terminal with its profile, and types only into a terminal it opened itself', async () => {
+            const world = await open(TERMINALS, PROFILE);
+            const opened = await world.call('opensShell', world.project);
+
+            expect(opened).toEqual({ ok: true, value: { ok: true, value: { id: expect.any(String) } } });
+
+            const shell = terminalOf(opened);
+            const plain = terminalOf(await world.call('opensPlain', world.project));
+
+            expect(await world.variable(shell, 'PROBE_PROJECT')).toBe(world.project);
+            expect(await world.variable(plain, 'PROBE_PROJECT')).toBeUndefined();
+            expect(await world.call('types', shell, 'ls\n')).toEqual({ ok: true, value: { ok: true, keys: ['ok', 'value'], value: 'undefined' } });
+            expect(await world.call('types', plain, 'pwd\n')).toMatchObject({ ok: true, value: { ok: true } });
+            expect([await world.typed(shell), await world.typed(plain)]).toEqual(['ls\n', 'pwd\n']);
+            expect(await world.call('types', world.personTerminal, 'ls\n')).toEqual(
+                refusedWith(`${ID} did not open the terminal ${world.personTerminal}, so it cannot type into it`)
+            );
+            expect(await world.call('types', 'nowhere', 'ls\n')).toEqual(refusedWith(`${ID} did not open the terminal nowhere, so it cannot type into it`));
+            expect(await world.typed(world.personTerminal)).toBe('');
+        });
+
+        test('types into its own terminal no more while an agent there waits for the person', async () => {
+            const world = await open(TERMINALS, PROFILE);
+            const shell = terminalOf(await world.call('opensPlain', world.project));
+
+            await world.waits(shell);
+
+            expect(await world.call('types', shell, 'y\n')).toEqual(
+                refusedWith(`An agent in the terminal ${shell} waits for the person, so nothing is typed into it`)
+            );
+            expect(await world.typed(shell)).toBe('');
+        });
+
+        test('opens, types into and reads a terminal each only with its permission', async () => {
+            const allowed = await open({ 'terminals.read': 'Reads' });
+            const refused = await open({});
+
+            expect(await allowed.call('reads', allowed.personTerminal)).toEqual({ ok: true, value: { ok: true, value: 'The screen' } });
+            expect(await refused.call('reads', refused.personTerminal)).toEqual(denied('terminals.read'));
+            expect(await refused.call('opensPlain', refused.project)).toEqual(denied('canvas.write'));
+            expect(await refused.call('types', refused.personTerminal, 'ls\n')).toEqual(denied('terminals.write'));
+        });
+
+        test('defines a terminal profile only when its manifest asks for it, names it as proposed and lists it', async () => {
+            const allowed = await open(TERMINALS, PROFILE);
+            const unasked = await open({});
+            const unnamed = await open(TERMINALS);
+            const unlisted = await open(TERMINALS, { provides: { terminalProfiles: ['another'] }, proposed: ['terminalProfiles'] });
+
+            expect(await allowed.call('profileRefused')).toEqual({ ok: true, value: null });
+            expect(await unasked.call('profileRefused')).toEqual({
+                ok: true,
+                value: `${ID} did not ask for the permission terminals.profiles in its manifest`
+            });
+            expect(await unnamed.call('profileRefused')).toEqual({
+                ok: true,
+                value: 'defineTerminalProfile is still proposed; name terminalProfiles under proposed in manifest.json'
+            });
+            expect(await unlisted.call('profileRefused')).toEqual({
+                ok: true,
+                value: 'defineTerminalProfile got probe-shell, which manifest.json does not list under provides.terminalProfiles'
+            });
+            expect(await unlisted.call('opensShell', unlisted.project)).toEqual({
+                ok: true,
+                value: { ok: false, error: { code: 'not-found', message: `${ID} supplies no terminal profile probe-shell` } }
+            });
+        });
+
+        test('does not load with a proposed part as an extension a person installed', async () => {
+            await expect(open(TERMINALS, { ...PROFILE, provenance: 'installed' })).rejects.toThrow(NOT_FINAL);
+            await expect(open(TERMINALS, { proposed: ['terminalProfiles'], provenance: 'installed' })).rejects.toThrow(NOT_FINAL);
         });
 
         test("checks a machine action's input, and throws for one of the wrong shape", async () => {

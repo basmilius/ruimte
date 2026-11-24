@@ -1,4 +1,4 @@
-import { EXTENSION_ICON_PATH, type ExtensionInfo, type ExtensionProvenance } from '@ruimte/contracts';
+import { EXTENSION_ICON_PATH, proposedRefusal, type ExtensionInfo, type ExtensionProvenance } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
@@ -36,6 +36,15 @@ export { extensionsInSafeMode };
 
 export function extensionIconUrl(entry: InstalledClientExtension): string | null {
     return entry.hasIcon === true ? `${entry.base}${EXTENSION_ICON_PATH}` : null;
+}
+
+/*
+ * Why this window does not load an extension, in words for its row in Settings: one a person installed that names or
+ * uses a proposed part. `dev` comes from the machine's own dev links, never from the manifest, and a built-in is
+ * loaded elsewhere and always may (`built-ins.ts`).
+ */
+function notLoadedReason(entry: InstalledClientExtension): string | null {
+    return proposedRefusal(entry.manifest, entry.dev ? 'dev-link' : 'installed');
 }
 
 function failed(id: string, e: unknown): void {
@@ -134,8 +143,20 @@ export async function syncExtensions(): Promise<void> {
 
     await refreshExtensionTheme(installed);
 
+    const refused = new Map(installed.flatMap((entry) => (entry.enabled ? [[entry.manifest.id, notLoadedReason(entry)] as const] : [])));
+
+    for (const [id, reason] of refused) {
+        if (reason !== null) {
+            failed(id, reason);
+        }
+    }
+
     const wanted = installed.filter(
-        (entry) => entry.enabled && entry.hasClient && (loaded.has(entry.manifest.id) || wantsLoading(entry.manifest.id, entry.manifest.activation))
+        (entry) =>
+            entry.enabled &&
+            entry.hasClient &&
+            refused.get(entry.manifest.id) === null &&
+            (loaded.has(entry.manifest.id) || wantsLoading(entry.manifest.id, entry.manifest.activation))
     );
 
     if (installed.some((entry) => entry.manifest.activation !== undefined) && stopActivation === null) {

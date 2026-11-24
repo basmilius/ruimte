@@ -31,6 +31,10 @@ const CHAT = 'starts a chat a person sees with agents.start, and none without it
 const TOOL = 'answers an agent through its tool, and has no tool without agents.tools';
 const ASKS = 'asks an agent and lists the chats, each only with its permission';
 const SECRET = 'keeps a secret apart from what it stores, and writes what it logs';
+const OWN_TERMINAL = 'opens a terminal on the canvas in front, and types only into a terminal it opened itself';
+const PROFILE = 'opens a terminal with its profile, and types only into a terminal it opened itself';
+const EACH_TERMINAL = 'opens, types into and reads a terminal each only with its permission';
+const DEFINES = 'defines a terminal profile only when its manifest asks for it, names it as proposed and lists it';
 
 export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, ExtensionApiCoverage>>> = {
     'client/call/agents.start': { scenario: STARTS, refusal: REFUSES },
@@ -56,7 +60,9 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'client/call/storage.get': { scenario: COMPUTER },
     'client/call/storage.set': { scenario: COMPUTER },
     'client/call/storage.watch': { scenario: COMPUTER, cleanup: COMPUTER },
+    'client/call/terminals.open': { scenario: OWN_TERMINAL, refusal: REFUSES },
     'client/call/terminals.read': { scenario: OTHER_KIND, refusal: REFUSES },
+    'client/call/terminals.write': { scenario: OWN_TERMINAL, refusal: REFUSES },
     'client/call/views.createCanvas': { scenario: NEW_CANVAS, refusal: REFUSES },
     'client/call/views.focus': { scenario: KEYBOARD },
     'client/call/views.open': { scenario: IN_FRONT },
@@ -87,6 +93,8 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'manifest/contribution/id': { scenario: NOT_ASKED },
     'manifest/contribution/name': { scenario: REFUSES },
     'manifest/contribution/permissions': { scenario: REFUSES },
+    'manifest/contribution/proposed': { scenario: 'does not load with a proposed part as an extension a person installed' },
+    'manifest/contribution/provides': { scenario: DEFINES },
     'server/call/agents.run': { scenario: ASKS, refusal: ASKS },
     'server/call/agents.start': { scenario: CHAT, refusal: CHAT },
     'server/call/chats.list': { scenario: ASKS, refusal: ASKS },
@@ -100,8 +108,12 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'server/call/storage.delete': { scenario: 'reads a key it deleted as one it never wrote' },
     'server/call/storage.get': { scenario: LOADS },
     'server/call/storage.set': { scenario: LOADS },
+    'server/call/terminals.open': { scenario: PROFILE, refusal: EACH_TERMINAL },
+    'server/call/terminals.read': { scenario: EACH_TERMINAL, refusal: EACH_TERMINAL },
+    'server/call/terminals.write': { scenario: PROFILE, refusal: EACH_TERMINAL },
     'server/event/chat.event': { scenario: HEARS, refusal: HEARS },
     'server/provider/defineAgentTool': { scenario: TOOL, refusal: TOOL },
+    'server/provider/defineTerminalProfile': { scenario: PROFILE, refusal: DEFINES },
     'server/provider/defineServer': { scenario: 'goes on after its own code prints, also what reads as a message' }
 };
 
@@ -159,7 +171,6 @@ export const EXTENSION_API_KNOWN_GAPS: Readonly<Partial<Record<ExtensionApiRow, 
         'client/call/canvas.writeNote',
         'client/call/chats.list',
         'client/call/chats.send',
-        'client/call/terminals.open',
         'client/call/views.rename'
     ]),
     ...gaps('Asks a person or leaves the page, and the worlds of the suite have no person and no dialog.', [

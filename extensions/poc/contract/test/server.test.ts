@@ -3,17 +3,24 @@ import { createTestServer } from '@ruimte/extension/testing';
 import { serverContract } from '../contract/server';
 import type { ContractServer } from '../server';
 
-serverContract(async (permissions) => {
+const PERSON_TERMINAL = 'shell-1';
+
+serverContract(async (permissions, { provenance, ...manifest } = {}) => {
     const server = await createTestServer<ContractServer>({
-        manifest: { permissions },
+        manifest: { permissions, ...manifest },
+        ...(provenance === undefined ? {} : { provenance }),
+        project: { id: 'project-a' },
+        terminals: [{ id: PERSON_TERMINAL }],
         answers: {
             'agents.start': () => ({ id: 'chat-1' }),
             'chats.send': () => undefined,
             'agents.run': ({ prompt }) => ({ text: `Answer to ${prompt}` }),
             'chats.list': () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }],
+            'terminals.read': () => 'The screen',
             'machine.run': { 'launch.start': ({ launch }) => ({ id: launch, name: launch }) }
         }
     });
+    const terminal = (id: string) => server.terminals.find((candidate) => candidate.id === id);
 
     return {
         project: 'project-a',
@@ -21,7 +28,17 @@ serverContract(async (permissions) => {
         fire: (name, payload) => server.fire(name as 'chat.event', payload as { chatId: string }),
         tool: (id, input, caller) => server.tool(id).run(input, { caller }),
         logs: async () => server.logs,
-        emitted: async () => server.emitted
+        emitted: async () => server.emitted,
+        personTerminal: PERSON_TERMINAL,
+        typed: async (id) => terminal(id)?.written.join('') ?? '',
+        variable: async (id, name) => terminal(id)?.spawn?.env?.[name],
+        waits: async (id) => {
+            const waiting = terminal(id);
+
+            if (waiting !== undefined) {
+                waiting.needsYou = true;
+            }
+        }
     };
 });
 

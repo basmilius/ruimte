@@ -179,7 +179,23 @@ The same `key` adds a new version to the same artifact. Pass a `requestId` of yo
 
 ## Terminals
 
-`terminals.read(node)` answers what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.
+`terminals.read(node)` answers what a terminal shows, with `terminals.read`.
+
+`terminals.open()` opens a terminal on the canvas in front, beside the nodes you name, with `canvas.write`. The machine makes the terminal and starts it, so the call answers a promise. With `profile` it runs a [terminal profile](/docs/extensions/server#terminal-profiles) of your extension instead of a plain shell.
+
+`terminals.write(terminal, text)` types into a terminal, with `terminals.write`. The text goes in as it is, so end a line with `\n` to run it:
+
+```ts
+const opened = await terminals.open({
+    title: 'Build'
+});
+
+if (opened.ok) {
+    await terminals.write(opened.value, 'make build\n');
+}
+```
+
+An extension types only into a terminal it opened itself. The machine writes down who opened a terminal when it makes it, and goes by that record alone. `write` answers `refused` for every other terminal, also one a person opened with your profile. It answers `refused` in your own terminal as well while an agent there waits for the person, since that answer is theirs.
 
 ## Context
 

@@ -1,5 +1,20 @@
-import { agents, chats, defineAgentTool, defineServer, emit, log, machine, onEvent, secrets, storage } from '@ruimte/extension/server';
+import {
+    agents,
+    chats,
+    defineAgentTool,
+    defineServer,
+    defineTerminalProfile,
+    emit,
+    log,
+    machine,
+    onEvent,
+    secrets,
+    storage,
+    terminals
+} from '@ruimte/extension/server';
 import { hear, heard } from './heard';
+
+const SHELL = 'probe-shell';
 
 // As the module loads, as an extension that sets itself up from what it kept does.
 const loads = ((await storage.get<number>('loads')) ?? 0) + 1;
@@ -78,5 +93,40 @@ const api = defineServer({
     }
 });
 
-export type ContractServer = typeof api;
-export default api;
+// A provider registers as the module loads, where a refusal throws: kept, so a scenario reads why.
+let profileRefused: string | null = null;
+
+try {
+    defineTerminalProfile({
+        id: SHELL,
+        title: 'Probe shell',
+        spawn: ({ project }) => ({ command: 'sh', env: { PROBE_PROJECT: project.id } })
+    });
+} catch (e) {
+    profileRefused = (e as Error).message;
+}
+
+const terminalApi = defineServer({
+    async profileRefused() {
+        return profileRefused;
+    },
+    async opensShell(projectId: string) {
+        return terminals.open({ project: { id: projectId }, profile: SHELL, title: 'Probe' });
+    },
+    async opensPlain(projectId: string) {
+        return terminals.open({ project: { id: projectId } });
+    },
+    async types(terminalId: string, text: string) {
+        const typed = await terminals.write({ id: terminalId }, text);
+
+        return typed.ok ? { ok: true, keys: Object.keys(typed), value: String(typed.value) } : typed;
+    },
+    async reads(terminalId: string) {
+        return terminals.read({ id: terminalId });
+    }
+});
+
+const contract = defineServer({ ...api, ...terminalApi });
+
+export type ContractServer = typeof contract;
+export default contract;

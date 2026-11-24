@@ -40,7 +40,7 @@ afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => {
     rmSync(root, { recursive: true, force: true });
 
-    for (const [folder] of [...PRODUCTS, ...POCS]) {
+    for (const [folder] of [...PRODUCTS, ...POCS, ['dev/harbor']]) {
         rmSync(join(EXTENSIONS, folder, 'dist'), { recursive: true, force: true });
     }
 });
@@ -51,6 +51,20 @@ describe('the development extensions', () => {
         const info = await host.install(await packOf(folder));
 
         expect(info.manifest.id).toBe(id);
+    });
+
+    test('Harbor packs, and installs nowhere while it uses a proposed part, which only a link of it runs', async () => {
+        const { host } = hostIn('install-harbor');
+        const pack = await packOf('dev/harbor');
+
+        await expect(host.install(pack)).rejects.toThrow(
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+        );
+        expect(await host.list()).toEqual([]);
+
+        expect(await host.linked(join(EXTENSIONS, 'dev/harbor', 'dist'))).toBe('dev.harbor');
+        expect((await host.list())[0]).toMatchObject({ provenance: 'dev-link', enabled: true });
+        expect((await host.list())[0]?.refused).toBeUndefined();
     });
 
     test('Trackline keeps its key and its chats over a restart, and the key is private', async () => {

@@ -118,6 +118,62 @@ export const chats: {
     send(chatId: string, text: string): Promise<Result<void>>;
 };
 
+/** A project of this machine, as a provider is asked about it. */
+export interface ProjectInfo extends ProjectRef {
+    name: string;
+    folder: string;
+}
+
+/**
+ * What a provider has Ruimte start: a program and its arguments. Ruimte runs it, so the session, its scrollback, its
+ * status and its stop stay Ruimte's, and the provider never reads what the program writes.
+ */
+export interface SpawnDescription {
+    command: string;
+    args?: string[];
+    /** Variables on top of the person's own. */
+    env?: Record<string, string>;
+    /** Where it starts instead of the terminal's own folder: a folder of the project or of one of its worktrees. */
+    cwd?: string;
+}
+
+/**
+ * Needs `terminals.profiles`. Proposed: name `terminalProfiles` under `proposed` in the manifest, and the id under
+ * `provides.terminalProfiles`, which is how the menu of a new terminal lists it before `server/` runs. Picking it
+ * starts `server/` and asks `spawn`; `available` hides it in a project where it has nothing to open, asked while
+ * `server/` runs. Throws for an id the manifest does not list.
+ */
+export function defineTerminalProfile(profile: {
+    id: string;
+    title: string;
+    /** A Lucide name. */
+    icon?: string;
+    available?(project: ProjectInfo): boolean | Promise<boolean>;
+    spawn(context: { project: ProjectInfo; cwd: string }): SpawnDescription | Promise<SpawnDescription>;
+}): void;
+
+export interface OpenTerminal {
+    project: ProjectRef;
+    /** A profile of this extension, by its id. Without one it is a plain shell. */
+    profile?: string;
+    title?: string;
+    cwd?: string;
+    /** Beside the first of these, on its canvas. Without one the terminal is a view of its own. */
+    near?: NodeRef[];
+}
+
+export const terminals: {
+    /** Needs `terminals.read`. What the terminal shows now. */
+    read(terminal: NodeRef): Promise<Result<string>>;
+    /** Needs `canvas.write`. Opens a terminal and starts it, so `write` reaches it at once. */
+    open(options: OpenTerminal): Promise<Result<NodeRef>>;
+    /**
+     * Needs `terminals.write`. Types `text` as it is, so end a line with `\n` to run it. Answers `refused` for a terminal this
+     * extension did not open itself, and while an agent in it waits for the person.
+     */
+    write(terminal: NodeRef, text: string): Promise<Result<void>>;
+};
+
 export const storage: {
     get<Value>(key: string): Promise<Value | undefined>;
     set<Value>(key: string, value: Value): Promise<void>;

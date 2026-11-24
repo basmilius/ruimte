@@ -139,6 +139,8 @@ const core = createServerApi({
     dataFolder: folder,
     platform: process.platform,
     permissions: new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]),
+    provides: { id: process.env.RUIMTE_EXTENSION_ID ?? '', ...(JSON.parse(process.env.RUIMTE_EXTENSION_PROVIDES ?? '{}') as object) },
+    proposedAllowed: process.env.RUIMTE_EXTENSION_PROPOSED === '1',
     ask,
     clock: { every: (ms, run) => void setInterval(run, ms) },
     send,
@@ -174,6 +176,8 @@ interface Incoming {
     node: string;
     data: unknown;
     context: { caller: string };
+    profile: string;
+    input: unknown;
     // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
     result?: unknown;
     error?: string;
@@ -203,6 +207,12 @@ function handle(message: Incoming): void {
             await loaded;
 
             return core.runTool(message.method, message.payload, message.context);
+        });
+    } else if (message.type === 'profile') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askProfile(message.profile, message.method as 'available' | 'spawn', message.input);
         });
     } else if (message.type === 'nodeContext') {
         void answer(message.id, async () => {

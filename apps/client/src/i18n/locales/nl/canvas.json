@@ -122,7 +122,8 @@
         "design": "Design",
         "groupSelection": "Selectie groeperen",
         "zoomToFit": "Passend zoomen",
-        "extensions": "Extensies"
+        "extensions": "Extensies",
+        "profileFailed": "{{name}} is niet geopend"
     },
     "empty": {
         "pick": "Kies een agent om te beginnen",

@@ -260,6 +260,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             return personModeOf(folder === null ? null : modeApprovals.modeOf(folder, sessionId), chats.composerPreferences.terminalMode());
         },
         checkCwd: bounds.checkCwd,
+        profileFor: (sessionId, cwd) => later.extensions().profileStart(sessionId, cwd),
         claudeTitles,
         codexTitles: { forThread: async (threadId, index) => readTitle(await codexReader.forThread(threadId, index)) },
         accounts: providers.accounts,

@@ -6115,6 +6115,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "git.log": "git.read",
   "terminals.read": "terminals.read",
   "terminals.open": "canvas.write",
+  "terminals.write": "terminals.write",
   "database.connections": "database.read",
   "database.query": "database.read",
   "chats.list": "chats.read",
@@ -6241,6 +6242,58 @@ var NODE_ACCENT_COLORS = {
   rose: "#ec003f"
 };
 
+// packages/contracts/src/extension-providers.ts
+var EXTENSION_PROVIDER_POINTS = {
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true }
+};
+var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
+function pointOf(kind) {
+  return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
+}
+function providerPointOf(define) {
+  const kind = Object.keys(EXTENSION_PROVIDER_POINTS).find((each) => EXTENSION_PROVIDER_POINTS[each]?.define === define);
+  const point = kind === undefined ? null : pointOf(kind);
+  return kind === undefined || point === null ? null : { kind, point };
+}
+function proposedPartsOf(manifest) {
+  const provided = Object.keys(manifest.provides ?? {}).filter((kind) => pointOf(kind)?.proposed === true);
+  return [...new Set([...manifest.proposed ?? [], ...provided])];
+}
+function allowsProposed(provenance) {
+  return provenance === "dev-link" || provenance === "development" || provenance === "built-in";
+}
+function proposedRefusal(manifest, provenance) {
+  const parts = proposedPartsOf(manifest);
+  if (parts.length === 0 || allowsProposed(provenance)) {
+    return null;
+  }
+  return `This extension uses a part of Ruimte that is not final yet (${parts.join(", ")}). It works while its author develops it, and an installed extension cannot use it.`;
+}
+function providerRefusal(manifest, define, id, proposedAllowed) {
+  const found = providerPointOf(define);
+  if (found === null) {
+    return `${define} registers nothing this Ruimte takes from an extension`;
+  }
+  const { kind, point } = found;
+  if (point.proposed && !(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  if (point.proposed && !proposedAllowed) {
+    return `${define} is still proposed, which an installed extension cannot use`;
+  }
+  return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
+function providedIds(manifest, kind, proposedAllowed) {
+  const point = pointOf(kind);
+  if (point === null || !Object.hasOwn(manifest.permissions ?? {}, point.permission)) {
+    return [];
+  }
+  if (point.proposed && (!proposedAllowed || !(manifest.proposed ?? []).includes(kind))) {
+    return [];
+  }
+  return manifest.provides?.[kind] ?? [];
+}
+
 // packages/contracts/src/extension-results.ts
 function extensionAgentStatus(status, needsYou = false) {
   if (needsYou || status === "needs-you") {
@@ -6316,7 +6369,23 @@ function askRefusal(id, method, args, permissions) {
   if (method === "languages.add") {
     return missingPermission(id, "languages.servers", permissions);
   }
-  return missingPermission(id, method === "chats.list" || method === "chats.read" ? "chats.read" : method, permissions);
+  return missingPermission(id, extensionCallPermission(method) ?? method, permissions);
+}
+function terminalWriteRefusal(id, nodeId, record, awaitsPerson) {
+  if (record?.openedBy !== id) {
+    return { code: "refused", message: `${id} did not open the terminal ${nodeId}, so it cannot type into it` };
+  }
+  if (awaitsPerson) {
+    return { code: "refused", message: `An agent in the terminal ${nodeId} waits for the person, so nothing is typed into it` };
+  }
+  return null;
+}
+function terminalProfileRefusal(manifest, profile, proposedAllowed) {
+  const permission = missingPermission(manifest.id, "terminals.profiles", permissionsOf(manifest));
+  if (permission !== null) {
+    return permission;
+  }
+  return providedIds(manifest, "terminalProfiles", proposedAllowed).includes(profile) ? null : { code: "not-found", message: `${manifest.id} supplies no terminal profile ${profile}` };
 }
 var MAX_SENDS_PER_HOUR = 20;
 var HOUR_MS = 3600000;
@@ -6370,7 +6439,17 @@ function createServerApi(options) {
   const listeners = new Map;
   const tools = new Map;
   const nodeContexts = new Map;
+  const profiles = new Map;
   const typed = (method, args) => ask(method, args);
+  const mayDefine = (define, permission, id) => {
+    if (!permissions.has(permission)) {
+      throw new Error(missingPermissionMessage(options.provides.id, permission));
+    }
+    const refused = providerRefusal({ ...options.provides, permissions: { [permission]: "" } }, define, id, options.proposedAllowed);
+    if (refused !== null) {
+      throw new Error(refused);
+    }
+  };
   const server = {
     machine: {
       platform: options.platform,
@@ -6416,6 +6495,36 @@ function createServerApi(options) {
       list: () => typed("chats.list", []),
       read: (chatId) => typed("chats.read", [chatId]),
       send: async (chatId, text) => mapResult(await ask("chats.send", [chatId, text]), () => {
+        return;
+      })
+    },
+    defineTerminalProfile(profile) {
+      mayDefine("defineTerminalProfile", "terminals.profiles", profile.id);
+      profiles.set(profile.id, profile);
+      send({
+        type: "profile",
+        id: profile.id,
+        title: profile.title,
+        ...profile.icon === undefined ? {} : { icon: profile.icon },
+        available: profile.available !== undefined
+      });
+    },
+    terminals: {
+      read: (terminal) => typed("terminals.read", [terminal.id]),
+      async open({ project, profile, title, cwd, near }) {
+        const beside = near?.[0]?.id;
+        const opened = await typed("terminals.open", [
+          {
+            projectId: project.id,
+            ...profile === undefined ? {} : { profile },
+            ...title === undefined ? {} : { title },
+            ...cwd === undefined ? {} : { cwd },
+            ...beside === undefined ? {} : { beside }
+          }
+        ]);
+        return mapResult(opened, ({ nodeId }) => ({ id: nodeId }));
+      },
+      write: async (terminal, text) => mapResult(await ask("terminals.write", [terminal.id, text]), () => {
         return;
       })
     },
@@ -6469,6 +6578,16 @@ function createServerApi(options) {
       return tool.run(input, context);
     },
     readNodeContext: (nodeType, data) => nodeContexts.get(nodeType)?.({ data }) ?? [],
+    askProfile(id, method, input) {
+      const profile = profiles.get(id);
+      if (profile === undefined) {
+        throw new MissingHandler(`No terminal profile ${id}`);
+      }
+      if (method === "available") {
+        return profile.available?.(input) ?? true;
+      }
+      return profile.spawn(input);
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
@@ -6629,6 +6748,7 @@ function manifestIn(folder) {
     return {};
   }
 }
+var TEST_PROJECT = { id: "project-1", name: "Project", folder: "/project" };
 function memory(values, changed = () => {
   return;
 }) {
@@ -6678,8 +6798,14 @@ class TestMachine {
   asked = [];
   languageServers = [];
   logs = [];
+  terminals;
+  profiles = new Map;
+  project;
   core;
+  notRun;
   permissions;
+  manifest;
+  proposedAllowed;
   answers;
   subscriptions = new Set;
   tools = new Map;
@@ -6688,7 +6814,13 @@ class TestMachine {
   now = 0;
   constructor(options, folder) {
     const manifest = { ...manifestIn(folder), ...options.manifest };
+    const provenance = options.provenance ?? "dev-link";
     this.id = manifest.id ?? "test.extension";
+    this.manifest = { ...manifest, id: this.id };
+    this.proposedAllowed = allowsProposed(provenance);
+    this.notRun = proposedRefusal(this.manifest, provenance);
+    this.project = { ...TEST_PROJECT, ...options.project };
+    this.terminals = (options.terminals ?? []).map((terminal) => ({ openedBy: "person", needsYou: false, written: [], ...terminal }));
     this.permissions = permissionsOf(manifest);
     this.answers = options.answers ?? {};
     this.storage = wire(options.storage ?? {});
@@ -6700,6 +6832,8 @@ class TestMachine {
       dataFolder,
       platform: process.platform,
       permissions: this.permissions,
+      provides: this.manifest,
+      proposedAllowed: this.proposedAllowed,
       ask: (method, args) => this.ask(method, args),
       clock: {
         every: (every, run) => {
@@ -6753,6 +6887,8 @@ class TestMachine {
       this.emitted.push(message.payload === undefined ? { name: message.name } : { name: message.name, payload: wire(message.payload) });
     } else if (message.type === "tool") {
       this.tools.set(message.name, this.permissions.has("agents.tools"));
+    } else if (message.type === "profile") {
+      this.profiles.set(message.id, { title: message.title, ...message.icon === undefined ? {} : { icon: message.icon } });
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -6794,12 +6930,25 @@ class TestMachine {
     if (method === "agents.start") {
       return ["agents.start", [startOptions(args[0])]];
     }
+    if (method === "terminals.open") {
+      const { projectId, beside, ...rest } = args[0];
+      return ["terminals.open", [{ project: { id: projectId }, ...rest, ...beside === undefined ? {} : { near: [{ id: beside }] } }]];
+    }
+    if (method === "terminals.write" || method === "terminals.read") {
+      return [method, [{ id: args[0] }, ...args.slice(1)]];
+    }
     return [method, args];
   }
   async answer(method, args) {
     if (method === "languages.add") {
       this.languageServers.push(wire(args[0]));
       return { ok: true, value: null };
+    }
+    if (method === "terminals.open") {
+      return this.openTerminal(args[0]);
+    }
+    if (method === "terminals.write") {
+      return this.writeTerminal(String(args[0]), String(args[1]));
     }
     const answer = this.scripted(method, args);
     if (answer === null) {
@@ -6821,6 +6970,45 @@ class TestMachine {
       return this.refused(method, { code: "failed", message: e instanceof Error ? e.message : String(e) });
     }
   }
+  async openTerminal(open) {
+    const { profile, title, cwd } = open;
+    const refused = profile === undefined ? null : terminalProfileRefusal(this.manifest, profile, this.proposedAllowed);
+    if (refused !== null) {
+      return this.refused("terminals.open", refused);
+    }
+    if (profile !== undefined && !this.profiles.has(profile)) {
+      return this.refused("terminals.open", { code: "not-found", message: `${this.id} lists the terminal profile ${profile} and did not define it` });
+    }
+    const id = `terminal-${this.terminals.length + 1}`;
+    const terminal = {
+      id,
+      openedBy: "extension",
+      needsYou: false,
+      written: [],
+      ...profile === undefined ? {} : { profile },
+      ...title === undefined ? {} : { title },
+      ...cwd === undefined ? {} : { cwd }
+    };
+    if (profile !== undefined) {
+      try {
+        terminal.spawn = wire(await this.core.askProfile(profile, "spawn", { project: this.project, cwd: cwd ?? this.project.folder }));
+      } catch (e) {
+        return this.refused("terminals.open", { code: "failed", message: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    this.terminals.push(terminal);
+    return { ok: true, value: { nodeId: id } };
+  }
+  writeTerminal(nodeId, text) {
+    const terminal = this.terminals.find((candidate) => candidate.id === nodeId);
+    const record = terminal === undefined ? null : { openedBy: terminal.openedBy === "extension" ? this.id : undefined };
+    const refused = terminalWriteRefusal(this.id, nodeId, record, terminal?.needsYou === true);
+    if (refused !== null) {
+      return this.refused("terminals.write", refused);
+    }
+    terminal?.written.push(text);
+    return { ok: true, value: null };
+  }
   scripted(method, args) {
     const answers = this.answers;
     if (method === "action") {
@@ -6831,6 +7019,9 @@ class TestMachine {
     const run = answers[method];
     if (run === undefined) {
       return null;
+    }
+    if (method === "terminals.read") {
+      return () => run({ id: args[0] });
     }
     return method === "agents.start" ? () => run(startOptions(args[0])) : () => run(...wire(args));
   }
@@ -6844,6 +7035,9 @@ async function createTestServer(options = {}) {
   const folder = process.cwd();
   const machine = new TestMachine(options, folder);
   current = machine;
+  if (machine.notRun !== null) {
+    throw new Error(machine.notRun);
+  }
   const module = await loadFresh(resolve(folder, options.entry ?? join3("server", "index.ts")), { "@ruimte/extension/server": machine.core.server });
   const handlers = module.default ?? {};
   const call = async (method, ...args) => {
@@ -6863,6 +7057,21 @@ async function createTestServer(options = {}) {
     asked: machine.asked,
     languageServers: machine.languageServers,
     logs: machine.logs,
+    terminals: machine.terminals,
+    profile: (id) => {
+      const defined = machine.profiles.get(id);
+      if (defined === undefined) {
+        throw new Error(`No terminal profile ${id}. defineTerminalProfile says what there is`);
+      }
+      return {
+        ...defined,
+        available: async (project = {}) => await machine.core.askProfile(id, "available", { ...machine.project, ...project }) !== false,
+        spawn: async (context = {}) => wire(await machine.core.askProfile(id, "spawn", {
+          project: { ...machine.project, ...context.project },
+          cwd: context.cwd ?? context.project?.folder ?? machine.project.folder
+        }))
+      };
+    },
     tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? "test") }),
     nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
   };
@@ -6959,6 +7168,8 @@ class TestHost {
   panels = {};
   copied = [];
   calls = [];
+  terminals = [];
+  manifest;
   logs = [];
   storage;
   settings;
@@ -6979,6 +7190,7 @@ class TestHost {
       folder: options.project?.folder === undefined ? "/test/project" : options.project.folder
     };
     this.id = manifest.id ?? "test.extension";
+    this.manifest = { ...manifest, id: this.id };
     this.name = manifest.name ?? this.id;
     this.folder = folder;
     this.permissions = new Set(Object.keys(manifest.permissions ?? {}));
@@ -8092,10 +8304,37 @@ function clientApi(host) {
     ]),
     terminals: {
       read: (terminal) => host.settle("terminals.read", [terminal], () => host.scripted("terminals.read", [terminal], () => nodeText(host, terminal.id, "terminal"))),
-      open: (options = {}) => host.attempt("terminals.open", [options], () => host.addNode("terminal", host.beside(options.near), {
-        ...options.title === undefined ? {} : { title: options.title },
-        ...options.cwd === undefined ? {} : { path: options.cwd }
-      }))
+      open: (options = {}) => host.settle("terminals.open", [options], () => {
+        const { profile, title, cwd } = options;
+        const refused = profile === undefined ? null : terminalProfileRefusal(host.manifest, profile, true);
+        if (refused !== null) {
+          throw new Refused(refused.code, refused.message);
+        }
+        const opened = host.addNode("terminal", host.beside(options.near), {
+          ...title === undefined ? {} : { title },
+          ...cwd === undefined ? {} : { path: cwd }
+        });
+        host.terminals.push({
+          id: opened.id,
+          openedBy: "extension",
+          needsYou: false,
+          written: [],
+          ...profile === undefined ? {} : { profile },
+          ...title === undefined ? {} : { title },
+          ...cwd === undefined ? {} : { cwd }
+        });
+        return opened;
+      }),
+      write: (terminal, text) => host.settle("terminals.write", [terminal, text], () => {
+        const opened = host.terminals.find((candidate) => candidate.id === terminal.id);
+        const record = opened === undefined ? null : { openedBy: opened.openedBy === "extension" ? host.id : undefined };
+        const refused = terminalWriteRefusal(host.id, terminal.id, record, opened?.needsYou === true);
+        if (refused !== null) {
+          throw new Refused(refused.code, refused.message);
+        }
+        opened?.written.push(text);
+        return;
+      })
     },
     database: {
       connections: () => host.settle("database.connections", [], () => host.scripted("database.connections", [])),
@@ -8448,6 +8687,7 @@ function publicHost(host, api) {
       }
     },
     calls: host.calls,
+    terminals: host.terminals,
     storage: host.storage,
     settings: host.settings,
     logs: host.logs
@@ -8540,6 +8780,8 @@ var server = {
   defineAgentTool: through("defineAgentTool"),
   schedule: through("schedule"),
   defineLanguageServer: through("defineLanguageServer"),
+  defineTerminalProfile: through("defineTerminalProfile"),
+  terminals: forwarded2("terminals"),
   agents: forwarded2("agents"),
   chats: forwarded2("chats"),
   storage: forwarded2("storage"),

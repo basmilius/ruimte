@@ -116,9 +116,11 @@ export function wire<Value>(value: unknown): Value {
     return value === undefined ? (undefined as Value) : (JSON.parse(JSON.stringify(value)) as Value);
 }
 
-function manifestIn(folder: string): { id?: string; name?: string; permissions?: Record<string, string> } {
+type TestManifest = NonNullable<Options['manifest']>;
+
+function manifestIn(folder: string): TestManifest {
     try {
-        return JSON.parse(readFileSync(join(folder, 'manifest.json'), 'utf8')) as { id?: string; name?: string; permissions?: Record<string, string> };
+        return JSON.parse(readFileSync(join(folder, 'manifest.json'), 'utf8')) as TestManifest;
     } catch {
         return {};
     }
@@ -172,6 +174,8 @@ export class TestHost {
     readonly panels: PublicTesting.TestHost['panels'] = {};
     readonly copied: string[] = [];
     readonly calls: PublicTesting.TestCall[] = [];
+    readonly terminals: PublicTesting.TestTerminal[] = [];
+    readonly manifest: TestManifest & { id: string };
     readonly logs: string[] = [];
     readonly storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };
     readonly settings: Record<string, boolean | string>;
@@ -199,6 +203,7 @@ export class TestHost {
                   };
 
         this.id = manifest.id ?? 'test.extension';
+        this.manifest = { ...manifest, id: this.id };
         this.name = manifest.name ?? this.id;
         this.folder = folder;
         this.permissions = new Set(Object.keys(manifest.permissions ?? {}));

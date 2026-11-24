@@ -111,6 +111,7 @@ clientContract(async (permissions, seed = {}) => {
         notes: () => host.canvas.notes().map(({ title, text }) => ({ title, text })),
         links: () => host.canvas.links(),
         failures: () => host.notifications.flatMap(({ text, detail }) => (detail === undefined ? [] : [{ text, detail }])),
+        typed: () => host.terminals.flatMap((terminal) => terminal.written.map((text) => ({ terminal: terminal.id, text }))),
         focused: () => [...host.focused],
         // An extension under test is never one Ruimte ships, which alone gets a section of its own.
         settingsSections: () => []

@@ -7,6 +7,7 @@ import type { Point } from '@/canvas-model/math';
 import { RemoteMachineItems } from '@/canvas/RemoteMachineItems';
 import { DesignAddItem } from '@/design/DesignAddItem';
 import { ExtensionNodesSubmenu, SlotMenuItems } from '@/extensions/SlotSurfaces';
+import { TerminalProfileItems } from '@/extensions/TerminalProfileItems';
 import { RoutineAddItems } from '@/routines/RoutineAddItems';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { shownFolderOf, useProject } from '@/state/project';
@@ -65,6 +66,7 @@ export function CanvasCreateItems({ at }: { at: () => Point }) {
                 {(['terminal', 'chat', 'browser'] as const).map((kind) => (
                     <AddItem key={kind} kind={kind} at={at} />
                 ))}
+                <TerminalProfileItems place={() => ({ viewId: canvasStore.getState().viewId, at: at() })} />
                 <RoutineAddItems at={at} />
                 <DesignAddItem at={at} />
                 <AddItem kind="group" at={at} />

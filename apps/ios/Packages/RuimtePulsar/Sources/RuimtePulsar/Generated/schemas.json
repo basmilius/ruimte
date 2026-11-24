@@ -46634,6 +46634,31 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          "provides": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "additionalProperties": {
+              "maxItems": 32,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+              }
+            }
+          },
+          "proposed": {
+            "maxItems": 32,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
           }
         },
         "required": [
@@ -46678,6 +46703,9 @@
         "maxLength": 40
       },
       "error": {
+        "type": "string"
+      },
+      "refused": {
         "type": "string"
       }
     },
@@ -46768,6 +46796,31 @@
                     "type": "string",
                     "minLength": 1
                   }
+                },
+                "provides": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  },
+                  "additionalProperties": {
+                    "maxItems": 32,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+                    }
+                  }
+                },
+                "proposed": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 40
+                  }
                 }
               },
               "required": [
@@ -46812,6 +46865,9 @@
               "maxLength": 40
             },
             "error": {
+              "type": "string"
+            },
+            "refused": {
               "type": "string"
             }
           },
@@ -46939,6 +46995,156 @@
     ]
   },
   "request.extension.storageSet.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.extension.terminalOpen.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "profile": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "picked": {
+        "type": "boolean"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "beside": {
+        "type": "string",
+        "minLength": 1
+      },
+      "at": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "projectId"
+    ]
+  },
+  "request.extension.terminalOpen.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "nodeId"
+    ]
+  },
+  "request.extension.terminalProfiles.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.extension.terminalProfiles.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "profiles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "extension": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "icon": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "required": [
+            "extension",
+            "id",
+            "title"
+          ]
+        }
+      }
+    },
+    "required": [
+      "profiles"
+    ]
+  },
+  "request.extension.terminalWrite.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$"
+      },
+      "nodeId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "text": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 65536
+      }
+    },
+    "required": [
+      "id",
+      "nodeId",
+      "text"
+    ]
+  },
+  "request.extension.terminalWrite.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}

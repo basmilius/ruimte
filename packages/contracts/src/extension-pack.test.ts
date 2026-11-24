@@ -72,6 +72,36 @@ describe('a pack read whole', () => {
         });
     });
 
+    test('refuses a pack that uses a proposed part, since a pack is read to install it', async () => {
+        const proposed = {
+            permissions: { 'terminals.profiles': 'Adds a shell' },
+            provides: { terminalProfiles: ['service-shell'] },
+            proposed: ['terminalProfiles']
+        };
+
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf(proposed) }), gunzip)).toEqual({
+            ok: false,
+            code: 'pack-manifest',
+            message:
+                'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+        });
+        // The same manifest holds together, so a dev link takes it.
+        expect(extensionManifestProblem({ id: 'acme.pack', name: 'Pack', version: '0.1.0', api: EXTENSION_API_VERSION, ...proposed })).toBeNull();
+    });
+
+    test('refuses a manifest whose provides and proposed do not hold together, wherever it comes in', async () => {
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ provides: { terminalProfiles: ['shell'] } }) }), gunzip)).toEqual({
+            ok: false,
+            code: 'pack-manifest',
+            message:
+                'acme.pack: provides.terminalProfiles needs the permission terminals.profiles; provides.terminalProfiles is still proposed; name terminalProfiles under proposed'
+        });
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ proposed: ['teleport'] }) }), gunzip)).toMatchObject({
+            ok: false,
+            message: 'acme.pack: teleport is not a proposed part this Ruimte knows (terminalProfiles)'
+        });
+    });
+
     test('takes a gunzip that answers later, as a browser does', async () => {
         const reading = await readExtensionPack(packOf({ 'manifest.json': manifestOf() }), async (bytes) => gunzipSync(bytes));
 

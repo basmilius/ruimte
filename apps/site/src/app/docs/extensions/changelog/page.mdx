@@ -6,6 +6,14 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, terminals and proposed parts (November 2026)
+
+- `terminals.open` in the client now answers a promise. The machine makes the terminal and starts it, so a write right after it lands. An extension that read its answer without `await` adds one.
+- `terminals.write` types into a terminal the extension opened itself, with the new permission `terminals.write`. Every other terminal answers `refused`.
+- `terminals` is in `server/` as well, where `open` names the project.
+- The manifest takes `provides` and `proposed`. A proposed part works under `ruimte extension dev` and can change in any release. An installed extension that names one does not load.
+- `defineTerminalProfile` in `server/` adds a kind of terminal to the menu of a new terminal. It is the first proposed part, behind `terminals.profiles`.
+
 ## 1, preview, agents, the canvas and settings (November 2026)
 
 - `useAgent` reads one agent: its status, what it works on (`activity`), whether a wait was `snoozed`, and its folder and branch. Its `provider` can now be `null`. A chat or a design started on the default CLI has none until it reports which CLI it runs on. A terminal has an agent only once its CLI reported, so its `provider` is never `null`. In the test host an agent's `provider` is `null` unless the test names one, where it was `'claude'` before. `useSubagents` lists a chat's sub-agents at work, and `useProviders` the agents a person can start. The first two need `agents.status`.

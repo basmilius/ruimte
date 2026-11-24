@@ -77,6 +77,7 @@ export const EXTENSION_API_INVENTORY = {
     'client/call/storage.watch': { stops: true },
     'client/call/terminals.open': { permission: 'canvas.write' },
     'client/call/terminals.read': { permission: 'terminals.read' },
+    'client/call/terminals.write': { permission: 'terminals.write' },
     'client/call/views.createCanvas': { permission: 'views.write' },
     'client/call/views.focus': {},
     'client/call/views.open': {},
@@ -178,6 +179,8 @@ export const EXTENSION_API_INVENTORY = {
     'manifest/contribution/id': {},
     'manifest/contribution/name': {},
     'manifest/contribution/permissions': {},
+    'manifest/contribution/proposed': {},
+    'manifest/contribution/provides': {},
     'manifest/contribution/publisher': {},
     'manifest/contribution/themes': {},
     'manifest/contribution/version': {},
@@ -197,11 +200,15 @@ export const EXTENSION_API_INVENTORY = {
     'server/call/storage.delete': {},
     'server/call/storage.get': {},
     'server/call/storage.set': {},
+    'server/call/terminals.open': { permission: 'canvas.write' },
+    'server/call/terminals.read': { permission: 'terminals.read' },
+    'server/call/terminals.write': { permission: 'terminals.write' },
     'server/event/chat.event': { permission: 'chats.read' },
     'server/event/chat.status': { permission: 'chats.read' },
     'server/event/session.status': { permission: 'terminals.read' },
     'server/provider/defineAgentTool': { permission: 'agents.tools' },
     'server/provider/defineLanguageServer': { permission: 'languages.servers' },
     'server/provider/defineNodeContext': {},
-    'server/provider/defineServer': {}
+    'server/provider/defineServer': {},
+    'server/provider/defineTerminalProfile': { permission: 'terminals.profiles' }
 } as const;

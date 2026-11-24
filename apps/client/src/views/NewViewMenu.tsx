@@ -8,6 +8,7 @@ import { createViewAction } from '@/action-port/person-actions';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { agentTargetLabel } from '@/agents/nodes';
 import { ProviderRows } from '@/agents/ProviderRows';
+import { terminalProfileIcon, useTerminalProfiles } from '@/extensions/terminal-profiles';
 import { viewDialog } from '@/project/dialogs';
 import { newSubheaderView } from '@/project/views';
 import type { AgentTarget } from '@/state/agent-availability';
@@ -99,6 +100,7 @@ export function NewViewItems() {
     // A machine older than designs would keep the view and know nothing of its folder.
     const knowsDesigns = useMachineAnswers(useEndpointId(), 'artifact.saveFolder');
     const extensionViews = useContributions((state) => state.extensionViews);
+    const terminalProfiles = useTerminalProfiles();
     const newViewKey = useKeyOf('view-new');
     const pickAgent = (target: AgentTarget, provider: ProviderInfo, account?: string): void =>
         void createViewAction(target, { provider: provider.kind, account });
@@ -126,7 +128,10 @@ export function NewViewItems() {
                     },
                 itemEntry('browser', Globe, t('viewKinds.browser'), () => viewDialog.set({ kind: 'new-browser' })),
                 hasFolder && itemEntry('file', FileText, t('viewMenu.filePick'), () => useUi.getState().openFilePicker({ kind: 'view' })),
-                ...extensionViews.map((view) => itemEntry(`extension:${view.id}`, view.icon ?? Blocks, view.title, view.open))
+                ...extensionViews.map((view) => itemEntry(`extension:${view.id}`, view.icon ?? Blocks, view.title, view.open)),
+                ...terminalProfiles.profiles.map((profile) =>
+                    itemEntry(`profile:${profile.extension}:${profile.id}`, terminalProfileIcon(profile), profile.title, () => terminalProfiles.open(profile))
+                )
             ])}
             <Menu.Separator />
             {inOrder([

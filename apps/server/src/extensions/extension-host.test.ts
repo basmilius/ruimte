@@ -51,7 +51,9 @@ interface Hosted {
 
 function hostWith(
     manifest: Partial<ExtensionManifest>,
-    options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now' | 'files' | 'runAction' | 'startChat'>> = {}
+    options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now' | 'files' | 'runAction' | 'startChat' | 'terminals'>> = {},
+    // With `devFolder` it is a dev link, where a proposed part works; without, one a person installed.
+    stored: Partial<Pick<StoredExtension, 'devFolder'>> = {}
 ): Hosted {
     const folder = mkdtempSync(join(root, 'extension-'));
     const children: FakeChild[] = [];
@@ -59,7 +61,8 @@ function hostWith(
         manifest: { id: 'acme.builds', name: 'Builds', version: '0.1.0', api: 1, ...manifest },
         hash: 'hash',
         enabled: true,
-        folder
+        folder,
+        ...stored
     };
     let setups = 0;
     let held: Promise<void> | null = null;
@@ -141,6 +144,13 @@ async function runningChild({ host, children }: Hosted, whileReady: (child: Fake
 
     return child;
 }
+
+const PROJECT = { id: 'project-1', name: 'Project', folder: '/work' };
+const PROFILES: Partial<ExtensionManifest> = {
+    permissions: { 'terminals.profiles': 'Adds a shell' },
+    provides: { terminalProfiles: ['build-shell'] },
+    proposed: ['terminalProfiles']
+};
 
 afterEach(() => hosts.splice(0).forEach((host) => host.stopAll()));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
@@ -507,6 +517,95 @@ describe('ExtensionHost', () => {
         await host.storageSet('acme.builds', '__proto__', 'own');
 
         expect(await host.storageGet('acme.builds', '__proto__')).toBe('own');
+    });
+
+    test('an installed extension that uses a proposed part does not run, with the reason on its row', async () => {
+        const { host, children } = hostWith(PROFILES);
+        const reason =
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
+
+        expect((await host.list())[0]).toMatchObject({ provenance: 'installed', refused: reason, status: 'idle' });
+        await expect(host.call('acme.builds', 'add', [])).rejects.toMatchObject({ code: 'unavailable', message: reason });
+        await expect(host.runAction('acme.builds', 'project-1', 'launch.list', {})).rejects.toMatchObject({ code: 'unavailable', message: reason });
+        expect(await host.terminalProfiles(PROJECT)).toEqual([]);
+        expect(children).toEqual([]);
+    });
+
+    test('the same extension under a dev link runs, with no reason on its row', async () => {
+        const hosted = hostWith(PROFILES, {}, { devFolder: '/work/builds' });
+
+        await runningChild(hosted);
+
+        expect((await hosted.host.list())[0]).toMatchObject({ provenance: 'dev-link', status: 'running' });
+        expect((await hosted.host.list())[0]?.refused).toBeUndefined();
+    });
+
+    test('a profile is listed from the manifest, and takes the name and the say its process gives it', async () => {
+        const hosted = hostWith(PROFILES, {}, { devFolder: '/work/builds' });
+
+        expect(await hosted.host.terminalProfiles(PROJECT)).toEqual([{ extension: 'acme.builds', id: 'build-shell', title: 'Builds' }]);
+
+        const child = await runningChild(hosted, (ready) => {
+            ready.say({ type: 'profile', id: 'build-shell', title: 'Build shell', icon: 'hammer', available: true });
+            // One the manifest does not list is no profile, whatever the process says.
+            ready.say({ type: 'profile', id: 'stray', title: 'Stray', available: false });
+        });
+        const listing = hosted.host.terminalProfiles(PROJECT);
+
+        await until(() => child.told.some((message) => message.type === 'profile'));
+        child.say({ type: 'result', id: child.told.at(-1)?.id, result: false });
+
+        expect(await listing).toEqual([]);
+        await until(() => hosted.log().includes('stray'));
+        expect(hosted.log()).toContain('defineTerminalProfile got stray, which manifest.json does not list under provides.terminalProfiles');
+    });
+
+    test('what a profile describes is checked before the machine starts it', async () => {
+        const hosted = hostWith(PROFILES, {}, { devFolder: '/work/builds' });
+        const child = await runningChild(hosted, (ready) => ready.say({ type: 'profile', id: 'build-shell', title: 'Build shell', available: false }));
+        const context = { project: PROJECT, cwd: '/work' };
+        const answered = async (result: unknown): Promise<unknown> => {
+            const asked = child.told.length;
+            const spawn = hosted.host.profileSpawn('acme.builds', 'build-shell', context).catch((e: unknown) => e);
+
+            await until(() => child.told.length > asked);
+            child.say({ type: 'result', id: child.told.at(-1)?.id, result });
+
+            return spawn;
+        };
+
+        expect(await answered({ command: 'make', args: ['shell'], env: { STAGE: 'dev' } })).toEqual({
+            command: 'make',
+            args: ['shell'],
+            env: { STAGE: 'dev' }
+        });
+        expect(child.told.at(-1)).toMatchObject({ type: 'profile', profile: 'build-shell', method: 'spawn', input: context });
+        expect(await answered({ command: '' })).toMatchObject({ code: 'failed' });
+        expect(await answered({ command: 'make', env: { 'NOT A NAME': '1' } })).toMatchObject({ code: 'failed' });
+        await expect(hosted.host.profileSpawn('acme.builds', 'another', context)).rejects.toMatchObject({ code: 'not-found' });
+    });
+
+    test('a terminal opens and takes text only within the manifest, and a person picks a profile without canvas.write', async () => {
+        const opened: unknown[] = [];
+        const typed: unknown[] = [];
+        const terminals = {
+            open: async (id: string, start: object) => {
+                opened.push({ id, ...start });
+
+                return { nodeId: 'terminal-1' };
+            },
+            write: async (...args: unknown[]) => void typed.push(args),
+            read: async () => 'screen'
+        };
+        const { host } = hostWith(PROFILES, { terminals: () => terminals }, { devFolder: '/work/builds' });
+        const start = { projectId: 'project-1', profile: 'build-shell' };
+
+        await expect(host.openTerminal('acme.builds', start)).rejects.toMatchObject({ code: 'permission-denied' });
+        await expect(host.openTerminal('acme.builds', { ...start, profile: 'another', picked: true })).rejects.toMatchObject({ code: 'not-found' });
+        await expect(host.writeTerminal('acme.builds', 'terminal-1', 'ls\n')).rejects.toMatchObject({ code: 'permission-denied' });
+        expect(await host.openTerminal('acme.builds', { ...start, picked: true })).toEqual({ nodeId: 'terminal-1' });
+        expect(opened).toEqual([{ id: 'acme.builds', ...start, picked: true }]);
+        expect(typed).toEqual([]);
     });
 
     test('a line on stdout that is no message neither stops the machine nor the extension', async () => {

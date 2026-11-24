@@ -3,8 +3,9 @@
  * author's code to the same answers. Pure, so both carry it, and it imports nothing that needs zod.
  */
 import type { AgentInfo, ChatInfo, ExtensionManifest } from '@ruimte/contracts';
-import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
+import { extensionCallPermission, missingPermissionMessage } from '@ruimte/contracts/extension-client';
 import { extensionActionPermission } from '@ruimte/contracts/extension-permissions';
+import { providedIds } from '@ruimte/contracts/extension-providers';
 import { extensionAgentStatus, extensionChatOf, type ExtensionErrorCode } from '@ruimte/contracts/extension-results';
 
 /* Why the host does not do what an extension asked, under the code it reads. */
@@ -98,7 +99,45 @@ export function askRefusal(id: string, method: string, args: readonly unknown[],
         return missingPermission(id, 'languages.servers', permissions);
     }
 
-    return missingPermission(id, method === 'chats.list' || method === 'chats.read' ? 'chats.read' : method, permissions);
+    return missingPermission(id, extensionCallPermission(method) ?? method, permissions);
+}
+
+/* What the machine keeps of a terminal an extension had a hand in; null for one a person or an agent opened. */
+export interface TerminalRecord {
+    openedBy?: string | undefined;
+}
+
+/*
+ * Why an extension may not type into a terminal: it did not open that terminal itself, by the machine's own record and
+ * never by what the extension says, or an agent in it waits for the person, whose answer stays theirs.
+ */
+export function terminalWriteRefusal(id: string, nodeId: string, record: TerminalRecord | null, awaitsPerson: boolean): Refusal | null {
+    if (record?.openedBy !== id) {
+        return { code: 'refused', message: `${id} did not open the terminal ${nodeId}, so it cannot type into it` };
+    }
+
+    if (awaitsPerson) {
+        return { code: 'refused', message: `An agent in the terminal ${nodeId} waits for the person, so nothing is typed into it` };
+    }
+
+    return null;
+}
+
+/* Why a terminal cannot run a profile of an extension: one its manifest may not supply here. Null when it can. */
+export function terminalProfileRefusal(
+    manifest: Pick<ExtensionManifest, 'id' | 'permissions' | 'provides' | 'proposed'>,
+    profile: string,
+    proposedAllowed: boolean
+): Refusal | null {
+    const permission = missingPermission(manifest.id, 'terminals.profiles', permissionsOf(manifest));
+
+    if (permission !== null) {
+        return permission;
+    }
+
+    return providedIds(manifest, 'terminalProfiles', proposedAllowed).includes(profile)
+        ? null
+        : { code: 'not-found', message: `${manifest.id} supplies no terminal profile ${profile}` };
 }
 
 // A loop of an extension and a chat costs the person's plan, so a chat stops listening well before that hurts.

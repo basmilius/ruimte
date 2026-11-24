@@ -138,6 +138,7 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             }
         },
         calls: host.calls,
+        terminals: host.terminals,
         storage: host.storage,
         settings: host.settings,
         logs: host.logs

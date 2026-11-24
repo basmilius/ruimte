@@ -187,6 +187,8 @@ clientContract(async (permissions, seed = {}) => {
     const before = useToasts.getState().toasts.length;
     const nodes = [{ ...SEED.node, text: '' }, ...(seed.nodes ?? []).flatMap((node) => (node.kind === 'extension' ? [] : [node]))];
     const stops = new Map<string, () => void>();
+    const opened = new Set<string>();
+    const typed: { terminal: string; text: string }[] = [];
     const asked = Promise.withResolvers<void>();
     const start = Promise.withResolvers<void>();
     // A chat the machine runs, with or without a node, as `extension.chatRead` finds it.
@@ -243,6 +245,24 @@ clientContract(async (permissions, seed = {}) => {
         chats.set(nodeId, '');
 
         return { nodeId };
+    });
+    // The machine makes the terminal and keeps who opened it, which is all it goes by when one is typed into.
+    answer('extension.terminalOpen', ({ title }) => {
+        const nodeId = `terminal-${opened.size + 1}`;
+
+        opened.add(nodeId);
+        nodes.push({ id: nodeId, kind: 'terminal', title: title ?? 'Terminal', text: '' });
+
+        return { nodeId };
+    });
+    answer('extension.terminalWrite', ({ id, nodeId, text }) => {
+        if (!opened.has(nodeId)) {
+            throw new TransportError('refused', `${id} did not open the terminal ${nodeId}, so it cannot type into it`);
+        }
+
+        typed.push({ terminal: nodeId, text });
+
+        return {};
     });
     // As the machine's runtime calls `server/`: only a method of its own, and any throw answers `failed`.
     answer('extension.call', async ({ method, args }) => {
@@ -431,6 +451,7 @@ clientContract(async (permissions, seed = {}) => {
             focusedCanvas()
                 .getState()
                 .edges.map((edge) => ({ from: edge.from, to: edge.to })),
+        typed: () => [...typed],
         focused: () => [...focused],
         settingsSections: () =>
             useContributions

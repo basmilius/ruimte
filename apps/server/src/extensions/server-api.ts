@@ -3,6 +3,8 @@
  * daemon, its clock, where it says things and where it keeps its values. The process an extension runs in hands in
  * pipes and files (`server-runtime.ts`); `createTestServer` hands in memory and a clock a test turns.
  */
+import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
+import { providerRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { everyMs, SCHEDULE_NEEDS_CLOCK } from './policy.ts';
 
@@ -22,12 +24,17 @@ interface ServerClock {
 export type ServerMessage =
     | { type: 'tool'; name: string; description: string; parameters: unknown }
     | { type: 'subscribe'; name: string }
+    // A terminal profile it defined; `available` says whether it has a say in where the profile shows.
+    | { type: 'profile'; id: string; title: string; icon?: string; available: boolean }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
     dataFolder: string;
     platform: string;
     permissions: ReadonlySet<string>;
+    /* What its manifest lists under `provides` and `proposed`, and whether a proposed part works for where it came from. */
+    provides: { id: string; provides?: Readonly<Record<string, readonly string[]>> | undefined; proposed?: readonly string[] | undefined };
+    proposedAllowed: boolean;
     /*
      * The daemon holds what this process does not: the person's agents and chats. It checks the permission too, and
      * its refusal answers as a Result. Only an argument of the wrong shape throws, as the extension's own mistake.
@@ -47,10 +54,13 @@ export interface ServerCore {
     server: typeof PublicServer;
     runTool(name: string, input: unknown, context: { caller: string }): unknown;
     readNodeContext(nodeType: string, data: unknown): unknown;
+    /* Asks a terminal profile where it shows, or what it starts. */
+    askProfile(id: string, method: 'available' | 'spawn', input: unknown): unknown;
     deliver(name: string, payload: unknown): void;
 }
 
 type Listener = (payload: unknown) => void;
+type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
 
 interface Ref {
     id: string;
@@ -91,7 +101,21 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const listeners = new Map<string, Set<Listener>>();
     const tools = new Map<string, { run(input: unknown, context: { caller: string }): unknown }>();
     const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
+    const profiles = new Map<string, TerminalProfile>();
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
+
+    /* A provider registers at the top of the module, where a Result has nobody to read it, so one it may not register throws. */
+    const mayDefine = (define: string, permission: string, id: string): void => {
+        if (!permissions.has(permission)) {
+            throw new Error(missingPermissionMessage(options.provides.id, permission));
+        }
+
+        const refused = providerRefusal({ ...options.provides, permissions: { [permission]: '' } }, define, id, options.proposedAllowed);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
 
     const server = {
         machine: {
@@ -149,6 +173,35 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             list: () => typed<PublicServer.ChatSummary[]>('chats.list', []),
             read: (chatId: string) => typed<string>('chats.read', [chatId]),
             send: async (chatId: string, text: string) => mapResult(await ask('chats.send', [chatId, text]), () => undefined)
+        },
+        defineTerminalProfile(profile: TerminalProfile): void {
+            mayDefine('defineTerminalProfile', 'terminals.profiles', profile.id);
+            profiles.set(profile.id, profile);
+            send({
+                type: 'profile',
+                id: profile.id,
+                title: profile.title,
+                ...(profile.icon === undefined ? {} : { icon: profile.icon }),
+                available: profile.available !== undefined
+            });
+        },
+        terminals: {
+            read: (terminal: Ref) => typed<string>('terminals.read', [terminal.id]),
+            async open({ project, profile, title, cwd, near }: PublicServer.OpenTerminal) {
+                const beside = near?.[0]?.id;
+                const opened = await typed<{ nodeId: string }>('terminals.open', [
+                    {
+                        projectId: project.id,
+                        ...(profile === undefined ? {} : { profile }),
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { cwd }),
+                        ...(beside === undefined ? {} : { beside })
+                    }
+                ]);
+
+                return mapResult(opened, ({ nodeId }) => ({ id: nodeId }));
+            },
+            write: async (terminal: Ref, text: string) => mapResult(await ask('terminals.write', [terminal.id, text]), () => undefined)
         },
         defineAgentTool(tool: { id: string; description: string; parameters?: unknown; run(input: never, context: { caller: string }): unknown }): void {
             tools.set(tool.id, tool as { run(input: unknown, context: { caller: string }): unknown });
@@ -211,6 +264,19 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             return tool.run(input, context);
         },
         readNodeContext: (nodeType, data) => nodeContexts.get(nodeType)?.({ data }) ?? [],
+        askProfile(id, method, input) {
+            const profile = profiles.get(id);
+
+            if (profile === undefined) {
+                throw new MissingHandler(`No terminal profile ${id}`);
+            }
+
+            if (method === 'available') {
+                return profile.available?.(input as PublicServer.ProjectInfo) ?? true;
+            }
+
+            return profile.spawn(input as { project: PublicServer.ProjectInfo; cwd: string });
+        },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {
                 listener(payload);

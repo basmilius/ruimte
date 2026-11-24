@@ -6,9 +6,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
+import { allowsProposed, proposedRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { askRefusal, eventRefusal, permissionsOf, SendLimit, type Refusal } from './policy.ts';
+import { askRefusal, eventRefusal, permissionsOf, SendLimit, terminalProfileRefusal, terminalWriteRefusal, type Refusal } from './policy.ts';
 import { callHandler, createServerApi, MissingHandler, type KeyValues, type ServerCore, type ServerMessage } from './server-api.ts';
 import { loadFresh } from './test-loader.ts';
 
@@ -55,13 +56,17 @@ function durationMs(duration: string | number): number {
     return Number(match[1]) * (DURATION_UNITS[match[2] as string] as number);
 }
 
-function manifestIn(folder: string): { id?: string; permissions?: Record<string, string> } {
+type TestManifest = NonNullable<PublicTesting.TestServerOptions['manifest']>;
+
+function manifestIn(folder: string): TestManifest {
     try {
-        return JSON.parse(readFileSync(join(folder, 'manifest.json'), 'utf8')) as { id?: string; permissions?: Record<string, string> };
+        return JSON.parse(readFileSync(join(folder, 'manifest.json'), 'utf8')) as TestManifest;
     } catch {
         return {};
     }
 }
+
+const TEST_PROJECT: PublicServer.ProjectInfo = { id: 'project-1', name: 'Project', folder: '/project' };
 
 function memory(values: Record<string, unknown>, changed: () => void = () => undefined): KeyValues {
     return {
@@ -135,9 +140,16 @@ class TestMachine {
     readonly asked: Ask[] = [];
     readonly languageServers: object[] = [];
     readonly logs: string[] = [];
+    readonly terminals: PublicTesting.TestTerminal[];
+    readonly profiles = new Map<string, { title: string; icon?: string }>();
+    readonly project: PublicServer.ProjectInfo;
     readonly core: ServerCore;
+    // Why the machine would not run this extension at all, such as a proposed part in one a person installed.
+    readonly notRun: string | null;
 
     private readonly permissions: ReadonlySet<string>;
+    private readonly manifest: TestManifest & { id: string };
+    private readonly proposedAllowed: boolean;
     private readonly answers: Answers;
     private readonly subscriptions = new Set<string>();
     private readonly tools = new Map<string, boolean>();
@@ -148,7 +160,15 @@ class TestMachine {
     constructor(options: PublicTesting.TestServerOptions, folder: string) {
         const manifest = { ...manifestIn(folder), ...options.manifest };
 
+        // An author's own run is a dev link, where a proposed part works; a test names `installed` to see what a person gets.
+        const provenance = options.provenance ?? 'dev-link';
+
         this.id = manifest.id ?? 'test.extension';
+        this.manifest = { ...manifest, id: this.id };
+        this.proposedAllowed = allowsProposed(provenance);
+        this.notRun = proposedRefusal(this.manifest, provenance);
+        this.project = { ...TEST_PROJECT, ...options.project };
+        this.terminals = (options.terminals ?? []).map((terminal) => ({ openedBy: 'person', needsYou: false, written: [], ...terminal }));
         this.permissions = permissionsOf(manifest);
         this.answers = options.answers ?? {};
         this.storage = wire(options.storage ?? {});
@@ -162,6 +182,8 @@ class TestMachine {
             dataFolder,
             platform: process.platform,
             permissions: this.permissions,
+            provides: this.manifest,
+            proposedAllowed: this.proposedAllowed,
             ask: (method, args) => this.ask(method, args),
             clock: {
                 every: (every, run) => {
@@ -230,6 +252,8 @@ class TestMachine {
         } else if (message.type === 'tool') {
             // The machine lists a tool only with the permission, and says nothing of one without it.
             this.tools.set(message.name, this.permissions.has('agents.tools'));
+        } else if (message.type === 'profile') {
+            this.profiles.set(message.id, { title: message.title, ...(message.icon === undefined ? {} : { icon: message.icon }) });
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -291,6 +315,16 @@ class TestMachine {
             return ['agents.start', [startOptions(args[0] as Parameters<typeof startOptions>[0])]];
         }
 
+        if (method === 'terminals.open') {
+            const { projectId, beside, ...rest } = args[0] as { projectId: string; beside?: string };
+
+            return ['terminals.open', [{ project: { id: projectId }, ...rest, ...(beside === undefined ? {} : { near: [{ id: beside }] }) }]];
+        }
+
+        if (method === 'terminals.write' || method === 'terminals.read') {
+            return [method, [{ id: args[0] }, ...args.slice(1)]];
+        }
+
         return [method as Ask['method'], args];
     }
 
@@ -299,6 +333,14 @@ class TestMachine {
             this.languageServers.push(wire(args[0]));
 
             return { ok: true, value: null };
+        }
+
+        if (method === 'terminals.open') {
+            return this.openTerminal(args[0] as { projectId: string; profile?: string; title?: string; cwd?: string });
+        }
+
+        if (method === 'terminals.write') {
+            return this.writeTerminal(String(args[0]), String(args[1]));
         }
 
         const answer = this.scripted(method, args);
@@ -328,6 +370,60 @@ class TestMachine {
         }
     }
 
+    /*
+     * The machine of a test opens the terminal itself and keeps what it would: who opened it, the profile that starts
+     * it and what that profile's `spawn` described, asked as the machine asks it once the session starts.
+     */
+    private async openTerminal(open: { projectId: string; profile?: string; title?: string; cwd?: string }): Promise<Result<unknown>> {
+        const { profile, title, cwd } = open;
+        const refused = profile === undefined ? null : terminalProfileRefusal(this.manifest, profile, this.proposedAllowed);
+
+        if (refused !== null) {
+            return this.refused('terminals.open', refused);
+        }
+
+        if (profile !== undefined && !this.profiles.has(profile)) {
+            return this.refused('terminals.open', { code: 'not-found', message: `${this.id} lists the terminal profile ${profile} and did not define it` });
+        }
+
+        const id = `terminal-${this.terminals.length + 1}`;
+        const terminal: PublicTesting.TestTerminal = {
+            id,
+            openedBy: 'extension',
+            needsYou: false,
+            written: [],
+            ...(profile === undefined ? {} : { profile }),
+            ...(title === undefined ? {} : { title }),
+            ...(cwd === undefined ? {} : { cwd })
+        };
+
+        if (profile !== undefined) {
+            try {
+                terminal.spawn = wire(await this.core.askProfile(profile, 'spawn', { project: this.project, cwd: cwd ?? this.project.folder }));
+            } catch (e) {
+                return this.refused('terminals.open', { code: 'failed', message: e instanceof Error ? e.message : String(e) });
+            }
+        }
+
+        this.terminals.push(terminal);
+
+        return { ok: true, value: { nodeId: id } };
+    }
+
+    private writeTerminal(nodeId: string, text: string): Result<unknown> {
+        const terminal = this.terminals.find((candidate) => candidate.id === nodeId);
+        const record = terminal === undefined ? null : { openedBy: terminal.openedBy === 'extension' ? this.id : undefined };
+        const refused = terminalWriteRefusal(this.id, nodeId, record, terminal?.needsYou === true);
+
+        if (refused !== null) {
+            return this.refused('terminals.write', refused);
+        }
+
+        terminal?.written.push(text);
+
+        return { ok: true, value: null };
+    }
+
     private scripted(method: string, args: unknown[]): (() => unknown) | null {
         const answers = this.answers as Record<string, ((...values: unknown[]) => unknown) | undefined>;
 
@@ -344,6 +440,10 @@ class TestMachine {
 
         if (run === undefined) {
             return null;
+        }
+
+        if (method === 'terminals.read') {
+            return () => run({ id: args[0] });
         }
 
         return method === 'agents.start' ? () => run(startOptions(args[0] as Parameters<typeof startOptions>[0])) : () => run(...wire<unknown[]>(args));
@@ -368,6 +468,10 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
 
     current = machine;
 
+    if (machine.notRun !== null) {
+        throw new Error(machine.notRun);
+    }
+
     const module = await loadFresh(resolve(folder, options.entry ?? join('server', 'index.ts')), { '@ruimte/extension/server': machine.core.server });
     const handlers = (module.default ?? {}) as Record<string, unknown>;
 
@@ -390,6 +494,26 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
         asked: machine.asked,
         languageServers: machine.languageServers,
         logs: machine.logs,
+        terminals: machine.terminals,
+        profile: (id) => {
+            const defined = machine.profiles.get(id);
+
+            if (defined === undefined) {
+                throw new Error(`No terminal profile ${id}. defineTerminalProfile says what there is`);
+            }
+
+            return {
+                ...defined,
+                available: async (project = {}) => (await machine.core.askProfile(id, 'available', { ...machine.project, ...project })) !== false,
+                spawn: async (context = {}) =>
+                    wire(
+                        await machine.core.askProfile(id, 'spawn', {
+                            project: { ...machine.project, ...context.project },
+                            cwd: context.cwd ?? context.project?.folder ?? machine.project.folder
+                        })
+                    )
+            };
+        },
         tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? 'test') }),
         nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
     };

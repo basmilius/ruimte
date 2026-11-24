@@ -1,6 +1,14 @@
 import { homedir } from 'node:os';
 import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
-import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    sourceOf,
+    type ContextSource,
+    type ExtensionDatabaseValue,
+    type ExtensionTerminalProfile,
+    type ProjectNode,
+    type ProjectView
+} from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
@@ -19,6 +27,7 @@ export interface ExtensionHandlerDeps {
     folderOf(projectId: string): string | null;
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
+    terminalProfiles(projectId: string): Promise<ExtensionTerminalProfile[]>;
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
@@ -283,6 +292,14 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
     dispatcher.register('extension.clientFiles', ({ id }) => host.clientFiles(id));
 
     dispatcher.register('extension.agentStart', async ({ id, ...start }) => host.startAgent(id, start));
+
+    dispatcher.register('extension.terminalProfiles', async ({ projectId }) => ({ profiles: await deps.terminalProfiles(projectId) }));
+    dispatcher.register('extension.terminalOpen', async ({ id, ...start }) => host.openTerminal(id, start));
+    dispatcher.register('extension.terminalWrite', async ({ id, nodeId, text }) => {
+        await host.writeTerminal(id, nodeId, text);
+
+        return {};
+    });
 
     dispatcher.register('extension.agentStop', async (payload, client) => {
         streams.stop(client.id, payload.runId);

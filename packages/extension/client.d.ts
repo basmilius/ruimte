@@ -744,8 +744,16 @@ export const devices: {
 export const terminals: {
     /** Needs `terminals.read`. What the terminal shows now. */
     read(terminal: NodeRef): Promise<Result<string>>;
-    /** Needs `canvas.write`. Opens a shell and types nothing: only a person types in a terminal. */
-    open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): Result<NodeRef>;
+    /**
+     * Needs `canvas.write`. Opens a terminal on the canvas in front, beside the first of `near`, and starts it, so `write` reaches it
+     * at once. With `profile` it runs that terminal profile of this extension instead of a plain shell.
+     */
+    open(options?: { profile?: string; title?: string; cwd?: string; near?: NodeRef[] }): Promise<Result<NodeRef>>;
+    /**
+     * Needs `terminals.write`. Types `text` as it is, so end a line with `\n` to run it. Answers `refused` for a terminal this
+     * extension did not open itself, and while an agent in it waits for the person.
+     */
+    write(terminal: NodeRef, text: string): Promise<Result<void>>;
 };
 
 /**

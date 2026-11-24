@@ -54,6 +54,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "git.log": "git.read",
   "terminals.read": "terminals.read",
   "terminals.open": "canvas.write",
+  "terminals.write": "terminals.write",
   "database.connections": "database.read",
   "database.query": "database.read",
   "chats.list": "chats.read",
@@ -83,6 +84,37 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   Chat: "agents.start",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
+function missingPermissionMessage(extension, permission) {
+  return `${extension} did not ask for the permission ${permission} in its manifest`;
+}
+
+// packages/contracts/src/extension-providers.ts
+var EXTENSION_PROVIDER_POINTS = {
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true }
+};
+var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
+function pointOf(kind) {
+  return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
+}
+function providerPointOf(define) {
+  const kind = Object.keys(EXTENSION_PROVIDER_POINTS).find((each) => EXTENSION_PROVIDER_POINTS[each]?.define === define);
+  const point = kind === undefined ? null : pointOf(kind);
+  return kind === undefined || point === null ? null : { kind, point };
+}
+function providerRefusal(manifest, define, id, proposedAllowed) {
+  const found = providerPointOf(define);
+  if (found === null) {
+    return `${define} registers nothing this Ruimte takes from an extension`;
+  }
+  const { kind, point } = found;
+  if (point.proposed && !(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  if (point.proposed && !proposedAllowed) {
+    return `${define} is still proposed, which an installed extension cannot use`;
+  }
+  return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
 
 // apps/server/src/extensions/policy.ts
 var STORAGE_ASKS = new Set(["storage.get", "storage.set", "storage.delete"]);
@@ -128,7 +160,17 @@ function createServerApi(options) {
   const listeners = new Map;
   const tools = new Map;
   const nodeContexts = new Map;
+  const profiles = new Map;
   const typed = (method, args) => ask(method, args);
+  const mayDefine = (define, permission, id) => {
+    if (!permissions.has(permission)) {
+      throw new Error(missingPermissionMessage(options.provides.id, permission));
+    }
+    const refused = providerRefusal({ ...options.provides, permissions: { [permission]: "" } }, define, id, options.proposedAllowed);
+    if (refused !== null) {
+      throw new Error(refused);
+    }
+  };
   const server = {
     machine: {
       platform: options.platform,
@@ -174,6 +216,36 @@ function createServerApi(options) {
       list: () => typed("chats.list", []),
       read: (chatId) => typed("chats.read", [chatId]),
       send: async (chatId, text) => mapResult(await ask("chats.send", [chatId, text]), () => {
+        return;
+      })
+    },
+    defineTerminalProfile(profile) {
+      mayDefine("defineTerminalProfile", "terminals.profiles", profile.id);
+      profiles.set(profile.id, profile);
+      send({
+        type: "profile",
+        id: profile.id,
+        title: profile.title,
+        ...profile.icon === undefined ? {} : { icon: profile.icon },
+        available: profile.available !== undefined
+      });
+    },
+    terminals: {
+      read: (terminal) => typed("terminals.read", [terminal.id]),
+      async open({ project, profile, title, cwd, near }) {
+        const beside = near?.[0]?.id;
+        const opened = await typed("terminals.open", [
+          {
+            projectId: project.id,
+            ...profile === undefined ? {} : { profile },
+            ...title === undefined ? {} : { title },
+            ...cwd === undefined ? {} : { cwd },
+            ...beside === undefined ? {} : { beside }
+          }
+        ]);
+        return mapResult(opened, ({ nodeId }) => ({ id: nodeId }));
+      },
+      write: async (terminal, text) => mapResult(await ask("terminals.write", [terminal.id, text]), () => {
         return;
       })
     },
@@ -227,6 +299,16 @@ function createServerApi(options) {
       return tool.run(input, context);
     },
     readNodeContext: (nodeType, data) => nodeContexts.get(nodeType)?.({ data }) ?? [],
+    askProfile(id, method, input) {
+      const profile = profiles.get(id);
+      if (profile === undefined) {
+        throw new MissingHandler(`No terminal profile ${id}`);
+      }
+      if (method === "available") {
+        return profile.available?.(input) ?? true;
+      }
+      return profile.spawn(input);
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
@@ -331,6 +413,8 @@ var core = createServerApi({
   dataFolder: folder,
   platform: process.platform,
   permissions: new Set(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? "[]")),
+  provides: { id: process.env.RUIMTE_EXTENSION_ID ?? "", ...JSON.parse(process.env.RUIMTE_EXTENSION_PROVIDES ?? "{}") },
+  proposedAllowed: process.env.RUIMTE_EXTENSION_PROPOSED === "1",
   ask,
   clock: { every: (ms, run) => void setInterval(run, ms) },
   send,
@@ -372,6 +456,11 @@ function handle(message) {
     answer(message.id, async () => {
       await loaded;
       return core.runTool(message.method, message.payload, message.context);
+    });
+  } else if (message.type === "profile") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askProfile(message.profile, message.method, message.input);
     });
   } else if (message.type === "nodeContext") {
     answer(message.id, async () => {

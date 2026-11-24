@@ -151,6 +151,24 @@ test('pokes a chat at most 20 times an hour', async () => {
 
 Storage and secrets live in memory, `clock.advance('5m')` runs every `schedule` that falls due, and `fire` hands a machine event to `onEvent` only with its permission. `machine.run` checks its input as the machine does and throws for one of the wrong shape. `machine.dataFolder` is a fresh folder of each test server's own, removed once the tests are done. `emitted` lists what `emit` said; an `emit` without a payload has none there, as a client hears it.
 
+A test server opens terminals itself. `terminals` lists each one with the profile it runs, what that profile's `spawn` described and what `terminals.write` typed into it. Give `terminals` in the options for one a person opened, which refuses a write, and set `needsYou` on one for an agent that waits. `profile(id)` asks a terminal profile what the machine asks it:
+
+```ts
+const machine = await createTestServer<typeof server>();
+
+await machine.call('openShell', 'project-1');
+
+expect(machine.terminals[0]).toMatchObject({
+    profile: 'service-shell',
+    written: ['ls\n']
+});
+expect(await machine.profile('service-shell').spawn()).toMatchObject({
+    command: 'sh'
+});
+```
+
+A test server runs your extension as `ruimte extension dev` does, so a [proposed part](/docs/extensions/manifest#proposed-parts) works. With `provenance: 'installed'` it runs it as an extension a person installed, and `createTestServer` rejects with what that person reads in Settings. In a test host, `terminals` lists what `terminals.open` opened and what was typed into each.
+
 Each test host and test server loads your files afresh, so no state carries from one test to the next. A package from `node_modules` loads once.
 
 ## Packing

@@ -104,7 +104,17 @@ interface CreateSessionOptions {
     // Not on the wire: a session no node stands for, opened for one client, such as a login. Its command
     // is the daemon's own and never held, it ends when that client leaves, and Processes names it `label`.
     forClient?: ClientSession;
+    // Not on the wire: a line above the first prompt, for a profile that could not start.
+    notice?: string;
+    // Not on the wire: `exec` is a terminal profile's program, so the session counts as a terminal.
+    profiled?: boolean;
 }
+
+/*
+ * What a terminal profile starts a session with: the program an extension described, already a line for the shell, or
+ * the reason it gave none, which the plain shell that starts instead shows.
+ */
+export type ProfileStart = { exec: string; env?: Record<string, string>; cwd?: string } | { notice: string };
 
 interface ClientSession {
     clientId: string;
@@ -151,6 +161,8 @@ export interface SessionManagerOptions {
     personMode?: (sessionId: string) => RuntimeMode | null;
     // Refuses a directory this node may not start in, asked right before every spawn.
     checkCwd: (sessionId: string, cwd: string) => Promise<void>;
+    // What the terminal profile of this node starts it with, by the machine's own record of the node; null for a node without one.
+    profileFor?: (sessionId: string, cwd: string) => Promise<ProfileStart | null>;
     // The accounts a launch may name; without them only a CLI's default account starts.
     accounts?: AccountLaunches;
     // The account a first launch takes, given the one it named: the project's choice, else the top account of the CLI. Throws to refuse it.
@@ -226,6 +238,7 @@ export class SessionManager {
     private readonly modeCeiling: (sessionId: string) => RuntimeMode | null;
     private readonly personMode: (sessionId: string) => RuntimeMode | null;
     private readonly checkCwd: (sessionId: string, cwd: string) => Promise<void>;
+    private readonly profileFor: (sessionId: string, cwd: string) => Promise<ProfileStart | null>;
     private readonly accounts: AccountLaunches | null;
     private readonly openingAccount: (sessionId: string, kind: AgentKind, named: string | undefined) => string | undefined;
     private readonly providers: SessionManagerOptions['providers'];
@@ -262,6 +275,7 @@ export class SessionManager {
         this.modeCeiling = options.modeCeiling;
         this.personMode = options.personMode ?? (() => null);
         this.checkCwd = options.checkCwd;
+        this.profileFor = options.profileFor ?? (() => Promise.resolve(null));
         this.accounts = options.accounts ?? null;
         this.openingAccount = options.openingAccount ?? ((_sessionId, _kind, named) => named);
         this.providers = options.providers;
@@ -314,7 +328,38 @@ export class SessionManager {
      * the prompt and lost from the map.
      */
     create(options: CreateSessionOptions): Promise<SessionInfo> {
-        return this.creating.run(options.sessionId, () => this.createNow(options));
+        return this.creating.run(options.sessionId, async () => this.createNow(await this.withProfile(options)));
+    }
+
+    /*
+     * A node with a terminal profile starts the program its extension describes instead of a bare shell. That program
+     * comes from an extension a person installed and never from a project file, so nothing holds it for approval. A node
+     * that names a command or an agent keeps those, and a session that already runs is left alone.
+     */
+    private async withProfile(options: CreateSessionOptions): Promise<CreateSessionOptions> {
+        const plain = options.command === undefined && options.agent === undefined && options.exec === undefined && options.forClient === undefined;
+
+        if (!plain || this.sessions.get(options.sessionId)?.exited === false) {
+            return options;
+        }
+
+        const profile = await this.profileFor(options.sessionId, options.cwd ?? this.env.HOME ?? homedir());
+
+        if (profile === null) {
+            return options;
+        }
+
+        if ('notice' in profile) {
+            return { ...options, notice: profile.notice };
+        }
+
+        return {
+            ...options,
+            exec: profile.exec,
+            profiled: true,
+            ...(profile.env === undefined ? {} : { env: { ...options.env, ...profile.env } }),
+            ...(profile.cwd === undefined ? {} : { cwd: profile.cwd })
+        };
     }
 
     private async createNow(options: CreateSessionOptions): Promise<SessionInfo> {
@@ -372,10 +417,13 @@ export class SessionManager {
         if (unoffered !== null) {
             session.notice(`Ruimte: ${unoffered} is not available on this machine, so this terminal started without it.`);
         }
+        if (options.notice !== undefined) {
+            session.notice(options.notice);
+        }
         session.handedBack = command !== undefined && this.handsBack();
         this.sessions.set(session.id, session);
         // A launch runs its command through `exec` and counts as a launch, not as a terminal.
-        if (options.exec === undefined) {
+        if (options.exec === undefined || options.profiled === true) {
             countUsage('terminals.started');
         }
         this.announce(session, 'created');
@@ -661,6 +709,13 @@ export class SessionManager {
         }
         session.detach(clientId);
         this.broadcastListChanged();
+    }
+
+    /* Whether an agent in this session waits for the person, as far as its hooks said so: a question or an approval. */
+    awaitsPerson(sessionId: string): boolean {
+        const agent = this.sessions.get(sessionId)?.agent;
+
+        return (this.waiting.get(sessionId)?.size ?? 0) > 0 || agent?.status === 'needs-you' || (agent?.requests?.length ?? 0) > 0;
     }
 
     /* A client that leaves; the sessions opened for it alone go with it, since no node will ever end them. */

@@ -106,6 +106,8 @@ export interface ClientWorld {
     links(): { from: string; to: string }[];
     /* What a person was shown of a failed action: its title and why. */
     failures(): { text: string; detail: string }[];
+    /* What the machine typed into a terminal for the extension, in order. */
+    typed(): { terminal: string; text: string }[];
     /* Each view `views.focus` handed the keyboard to. */
     focused(): string[];
     /* The sections of their own this extension has in the settings navigation. */
@@ -128,6 +130,7 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'git.log': (api) => api.git.log(),
     'terminals.read': (api) => api.terminals.read(REF),
     'terminals.open': (api) => api.terminals.open(),
+    'terminals.write': (api) => api.terminals.write(REF, 'ls\n'),
     'database.connections': (api) => api.database.connections(),
     'database.query': (api) => api.database.query('main', 'select 1'),
     'chats.list': (api) => api.chats.list(),
@@ -360,6 +363,26 @@ export function clientContract(open: OpenClientWorld): void {
                 error: { code: 'not-found', message: 'No terminal chat-1 in this project' }
             });
             expect(await api.chats.read('shell-1')).toMatchObject({ ok: false });
+        });
+
+        test('opens a terminal on the canvas in front, and types only into a terminal it opened itself', async () => {
+            const world = await open(
+                { 'canvas.write': 'Opens', 'terminals.write': 'Types' },
+                { nodes: [{ id: 'shell-1', kind: 'terminal', title: 'Shell', text: 'The screen' }] }
+            );
+            const opened = await world.api.terminals.open({ title: 'Build', near: [{ id: 'shell-1' }] });
+
+            expect(opened).toStrictEqual({ ok: true, value: { id: expect.any(String) } });
+
+            const terminal = opened.ok ? opened.value : { id: '' };
+
+            expect(await world.api.terminals.write(terminal, 'ls\n')).toStrictEqual({ ok: true, value: undefined });
+            expect(world.typed()).toEqual([{ terminal: terminal.id, text: 'ls\n' }]);
+            expect(await world.api.terminals.write({ id: 'shell-1' }, 'rm -rf .\n')).toStrictEqual({
+                ok: false,
+                error: { code: 'refused', message: 'poc.contract did not open the terminal shell-1, so it cannot type into it' }
+            });
+            expect(world.typed()).toHaveLength(1);
         });
 
         test('starts an agent as a node on the canvas in front, and as a view of its own with no canvas there', async () => {
