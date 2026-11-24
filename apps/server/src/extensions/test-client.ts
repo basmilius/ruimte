@@ -795,7 +795,8 @@ export function clientApi(host: TestHost) {
             send: (chatId: string, text: string) =>
                 host.settle('chats.send', [chatId, text], async () => {
                     await host.scripted<void>('chats.send', [chatId, text]);
-                })
+                }),
+            ...(machineCalls(host, 'chats', ['chat.inspect']) as unknown as Pick<typeof PublicClient.chats, 'inspect'>)
         },
         views: {
             open(view: { id: string }): void {

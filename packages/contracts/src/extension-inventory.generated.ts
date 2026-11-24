@@ -31,6 +31,7 @@ export const EXTENSION_API_INVENTORY = {
     'client/call/canvas.unlink': { permission: 'canvas.write' },
     'client/call/canvas.update': { permission: 'canvas.write' },
     'client/call/canvas.writeNote': { permission: 'canvas.write' },
+    'client/call/chats.inspect': { permission: 'chats.read' },
     'client/call/chats.list': { permission: 'chats.read' },
     'client/call/chats.read': { permission: 'chats.read' },
     'client/call/chats.send': { permission: 'chats.send' },

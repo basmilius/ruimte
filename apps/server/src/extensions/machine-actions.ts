@@ -158,7 +158,23 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
         output: ({ nodeId, path, width, height }) => ({ node: { id: nodeId }, path, width, height })
     }),
     'device.tap': entry('device.tap', { input: (input) => ({ ...node(input), x: input.x, y: input.y }), output: ({ nodeId }) => ({ node: { id: nodeId } }) }),
-    'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) })
+    'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) }),
+    // Counts and a kind only: the words of a question, an approval or a queued message are for who may answer them.
+    'chat.inspect': entry('chat.inspect', {
+        input: ({ chat }) => ({ chatId: chat }),
+        output: (output) => ({
+            id: output.chatId,
+            title: output.chat,
+            provider: output.provider,
+            model: output.model,
+            mode: output.runtimeMode,
+            working: output.working,
+            queued: output.queue.length,
+            waitsOn: output.approvals.length > 0 ? 'approval' : output.questions.length > 0 ? 'question' : null,
+            subagents: output.subagents.length,
+            background: output.tasks.length
+        })
+    })
 };
 
 export function outputOf<Action extends ActionName>(result: ActionResult<Action>): ActionOutput<Action> {

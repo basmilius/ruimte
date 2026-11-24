@@ -11,7 +11,7 @@
     "permissions": {
         "agents.status": "Shows which agents work and which wait for you",
         "usage.read": "Shows how much of each plan window you have used",
-        "chats.read": "Counts the turns your chats start",
+        "chats.read": "Counts the turns your chats start, and shows whether a waiting chat wants an approval or an answer",
         "terminals.read": "Counts the turns the agents in your terminals start"
     }
 }

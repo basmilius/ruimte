@@ -36,6 +36,42 @@ describe('Pulseboard', () => {
         await card.until(() => card.find('Search waits for you') !== null);
     });
 
+    test('says what a waiting chat waits on once the machine told, and nothing more without chats.read', async () => {
+        const asked: unknown[] = [];
+        const inspect = (input: unknown) => {
+            asked.push(input);
+
+            return {
+                id: 'chat-3',
+                title: 'Report',
+                provider: 'claude',
+                model: 'sonnet',
+                mode: 'supervised',
+                working: true,
+                queued: 0,
+                waitsOn: 'approval' as const,
+                subagents: 0,
+                background: 0
+            };
+        };
+        const { host } = await hostWith({ answers: { 'machine.run': { 'chat.inspect': inspect } } });
+        const card = await host.render(host.card('now'));
+
+        await card.until(() => card.find('Report waits for your approval') !== null);
+
+        // Only the one that waits is asked about.
+        expect(asked).toEqual([{ chat: 'chat-3' }]);
+
+        const refused = await hostWith({
+            manifest: { permissions: { 'agents.status': 'Shows agents' } },
+            answers: { 'machine.run': { 'chat.inspect': inspect } }
+        });
+        const plain = await refused.host.render(refused.host.card('now'));
+
+        expect(plain.text()).toBe('Report waits for youSearch worksImport is done');
+        expect(asked).toHaveLength(1);
+    });
+
     test('fails its card without agents.status, as Ruimte does', async () => {
         const { host } = await hostWith({ manifest: { permissions: {} } });
 

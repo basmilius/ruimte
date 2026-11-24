@@ -55,6 +55,10 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     },
     'client/call/canvas.link': { scenario: NOTE, refusal: REFUSES },
     'client/call/canvas.remove': { scenario: 'removes only what is on the canvas in front, and leaves nothing selected', refusal: REFUSES },
+    'client/call/chats.inspect': {
+        scenario: 'reads what a chat runs on and that something waits in it through the machine, which is handed the chat it named',
+        refusal: REFUSES
+    },
     'client/call/chats.read': { scenario: 'reads a chat it started in a view of its own', refusal: REFUSES },
     'client/call/context.read': {
         scenario: 'reads the nodes it names and those on the view it names, each once, and nothing when it names neither',

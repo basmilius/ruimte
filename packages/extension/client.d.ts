@@ -568,12 +568,14 @@ export const git: {
     log(options?: { repository?: string; limit?: number }): Promise<Result<GitCommit[]>>;
 };
 
-/** `list` and `read` need `chats.read`, `send` needs `chats.send`. */
+/** `list`, `read` and `inspect` need `chats.read`, `send` needs `chats.send`. */
 export const chats: {
     list(): Promise<Result<ChatSummary[]>>;
     /** The thread as text, as an agent reads it. */
     read(chatId: string): Promise<Result<string>>;
     send(chatId: string, text: string): Promise<Result<void>>;
+    /** The machine's `chat.inspect`, for a chat of the project in front. */
+    inspect(input: MachineInput<'chat.inspect'>): Promise<Result<MachineOutput<'chat.inspect'>>>;
 };
 
 export interface LaunchSummary {
@@ -717,6 +719,25 @@ export interface MachineActions {
     'device.tap': { input: { node: NodeRef; x: number; y: number }; output: { node: NodeRef } };
     /** `app` is a bundle id on iOS or a package name on Android. */
     'device.launch': { input: { node: NodeRef; app: string }; output: { node: NodeRef } };
+    /**
+     * What a chat of the project runs on and whether something waits in it. Needs `chats.read`. `waitsOn` says that the agent asked
+     * a question or wants an approval, never what it asked: answering is the person's. `mode` is its permission mode, `queued` the
+     * messages that wait for its turn to end, `background` the commands it left running.
+     */
+    'chat.inspect': { input: { chat: string }; output: ChatState };
+}
+
+export interface ChatState {
+    id: string;
+    title: string;
+    provider: string;
+    model: string;
+    mode: string;
+    working: boolean;
+    queued: number;
+    waitsOn: 'approval' | 'question' | null;
+    subagents: number;
+    background: number;
 }
 
 export type MachineActionName = keyof MachineActions;

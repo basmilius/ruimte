@@ -1600,7 +1600,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             send: (chatId: string, text: string) =>
                 settle('chats.send', async () => {
                     await callScope().link.request('chat.send', { chatId, text });
-                })
+                }),
+            ...machineActions(['chat.inspect'])
         },
         views: {
             open: whileLive((view: { id: string }) => {

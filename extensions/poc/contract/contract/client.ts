@@ -185,7 +185,8 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'devices.inspect': (api) => api.devices.inspect({ node: REF }),
     'devices.screenshot': (api) => api.devices.screenshot({ node: REF }),
     'devices.tap': (api) => api.devices.tap({ node: REF, x: 1, y: 1 }),
-    'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' })
+    'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' }),
+    'chats.inspect': (api) => api.chats.inspect({ chat: 'chat-1' })
 };
 const HOOKS = new Set(['useAgents', 'useAgent', 'useSubagents', 'useUsageLimits', 'Chat']);
 
@@ -952,6 +953,37 @@ export function clientContract(open: OpenClientWorld): void {
             expect(await world.api.launches.create(added)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
             expect(await world.api.launches.edit(changed)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
             expect(asked).toEqual([added, changed]);
+        });
+
+        test('reads what a chat runs on and that something waits in it through the machine, which is handed the chat it named', async () => {
+            const asked: unknown[] = [];
+            const state = {
+                id: 'chat-1',
+                title: 'Import',
+                provider: 'claude',
+                model: 'sonnet',
+                mode: 'supervised',
+                working: false,
+                queued: 1,
+                waitsOn: 'approval' as const,
+                subagents: 0,
+                background: 2
+            };
+            const world = await open(
+                { 'chats.read': 'Reads' },
+                {
+                    actions: {
+                        'chat.inspect': (input) => {
+                            asked.push(input);
+
+                            return state;
+                        }
+                    }
+                }
+            );
+
+            expect(await world.api.chats.inspect({ chat: 'chat-1' })).toEqual({ ok: true, value: state });
+            expect(asked).toEqual([{ chat: 'chat-1' }]);
         });
 
         test('tells a watch of a folder that a file under it changed, until it stops', async () => {

@@ -60,7 +60,8 @@ export const EXTENSION_ACTION_INPUTS = {
     'device.inspect': nodeInput,
     'device.screenshot': nodeInput,
     'device.tap': nodeInput.extend({ x: z.number().min(0), y: z.number().min(0) }),
-    'device.launch': nodeInput.extend({ app: z.string().trim().min(1).max(256) })
+    'device.launch': nodeInput.extend({ app: z.string().trim().min(1).max(256) }),
+    'chat.inspect': z.object({ chat: z.string().min(1) })
 } as const;
 
 export type ExtensionActionName = keyof typeof EXTENSION_ACTION_INPUTS;
@@ -154,6 +155,20 @@ export interface ExtensionDeviceState {
     can: { shot: boolean; input: boolean; type: boolean; launch: boolean };
 }
 
+/* What a chat runs on and whether something waits in it, without a word of what waits: answering stays the person's. */
+export interface ExtensionChatState {
+    id: string;
+    title: string;
+    provider: string;
+    model: string;
+    mode: string;
+    working: boolean;
+    queued: number;
+    waitsOn: 'approval' | 'question' | null;
+    subagents: number;
+    background: number;
+}
+
 export interface ExtensionActionOutputs {
     'launch.list': { launches: ExtensionLaunchSummary[] };
     'launch.read': { id: string; name: string; text: string | null };
@@ -186,6 +201,7 @@ export interface ExtensionActionOutputs {
     'device.screenshot': { node: NodeRef; path: string; width: number; height: number };
     'device.tap': { node: NodeRef };
     'device.launch': { node: NodeRef };
+    'chat.inspect': ExtensionChatState;
 }
 
 export type ExtensionActionOutput<Name extends ExtensionActionName> = ExtensionActionOutputs[Name];

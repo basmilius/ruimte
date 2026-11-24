@@ -6525,7 +6525,8 @@ var EXTENSION_ACTION_INPUTS = {
   "device.inspect": nodeInput,
   "device.screenshot": nodeInput,
   "device.tap": nodeInput.extend({ x: number2().min(0), y: number2().min(0) }),
-  "device.launch": nodeInput.extend({ app: string2().trim().min(1).max(256) })
+  "device.launch": nodeInput.extend({ app: string2().trim().min(1).max(256) }),
+  "chat.inspect": object({ chat: string2().min(1) })
 };
 function parseExtensionActionInput(name, input) {
   const parsed = EXTENSION_ACTION_INPUTS[name].safeParse(input ?? {});
@@ -6561,7 +6562,8 @@ var EXTENSION_ACTIONS = {
   "device.inspect": "devices.control",
   "device.screenshot": "devices.control",
   "device.tap": "devices.control",
-  "device.launch": "devices.control"
+  "device.launch": "devices.control",
+  "chat.inspect": "chats.read"
 };
 function extensionActionPermission(action) {
   return Object.hasOwn(EXTENSION_ACTIONS, action) ? EXTENSION_ACTIONS[action] ?? null : null;
@@ -6616,7 +6618,8 @@ var MACHINE_AREAS = {
   routine: "routines",
   artifact: "artifacts",
   browser: "browser",
-  device: "devices"
+  device: "devices",
+  chat: "chats"
 };
 function extensionActionCall(action) {
   const dot = action.indexOf(".");
@@ -9188,7 +9191,8 @@ function clientApi(host) {
       read: (chatId) => host.settle("chats.read", [chatId], () => host.scripted("chats.read", [chatId], () => nodeText(host, chatId, "chat"))),
       send: (chatId, text) => host.settle("chats.send", [chatId, text], async () => {
         await host.scripted("chats.send", [chatId, text]);
-      })
+      }),
+      ...machineCalls(host, "chats", ["chat.inspect"])
     },
     views: {
       open(view) {

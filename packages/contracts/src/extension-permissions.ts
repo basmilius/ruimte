@@ -29,7 +29,8 @@ export const EXTENSION_ACTIONS: Readonly<Record<ExtensionActionName, string>> = 
     'device.inspect': 'devices.control',
     'device.screenshot': 'devices.control',
     'device.tap': 'devices.control',
-    'device.launch': 'devices.control'
+    'device.launch': 'devices.control',
+    'chat.inspect': 'chats.read'
 };
 
 /* Every permission a manifest may ask for, beside `net:<host>`. Each opens something; a name not here opens nothing. */

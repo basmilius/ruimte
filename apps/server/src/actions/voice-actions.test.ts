@@ -3,7 +3,7 @@ import type { ActionOutput } from '@ruimte/actions';
 import type { AgentInfo, ChatInfo, ChatItem, ProjectContent } from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/host.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { serverActionCall, voiceActionCall, type VoiceCaller, type VoiceFollowHost } from './context.ts';
+import { extensionActionCall, serverActionCall, voiceActionCall, type VoiceCaller, type VoiceFollowHost } from './context.ts';
 import { serverActions } from './server-actions-test-helpers.ts';
 
 const PLACE: IndexedPlace = { projectId: 'project-1', folder: '/work/app', canvasId: 'main' };
@@ -368,6 +368,34 @@ describe('chat.inspect for Voice', () => {
         });
         expect(JSON.stringify(result)).not.toContain('sk-secret-value');
         expect(JSON.stringify(result)).not.toContain('sk-background-secret');
+    });
+
+    test('an extension inspects a chat of the project its call came from, one elsewhere is not found, and it reads nothing else this way', async () => {
+        infos.set('chat-node', info('chat-node', { status: 'idle' }));
+
+        const call = extensionActionCall(host(), PLACE, 'acme.board');
+
+        expect(await serverActions.execute('chat.inspect', { chatId: 'chat-node' }, call)).toMatchObject({
+            status: 'completed',
+            output: { chatId: 'chat-node', chat: 'Builder', provider: 'claude', working: false }
+        });
+        expect(await serverActions.execute('chat.inspect', { chatId: 'elsewhere' }, call)).toMatchObject({
+            status: 'failed',
+            error: { code: 'not-found', message: 'elsewhere is no chat of this project on this machine' }
+        });
+
+        bound.add('chat-node');
+
+        expect(await serverActions.execute('chat.inspect', { chatId: 'chat-node' }, call)).toMatchObject({ status: 'failed', error: { code: 'not-found' } });
+
+        for (const [name, input] of [
+            ['chat.read', { chatId: 'chat-node', limit: null }],
+            ['chat.send', { chatId: 'chat-node', prompt: 'Hi', delivery: null }],
+            ['chat.clear', { chatId: 'chat-node' }],
+            ['agents.inspect', {}]
+        ] as const) {
+            expect(await serverActions.execute(name, input as never, call)).toMatchObject({ status: 'failed', error: { code: 'forbidden-action' } });
+        }
     });
 
     test('a chat that never started has nothing to inspect, and one of another project is refused', async () => {

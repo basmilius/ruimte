@@ -31,7 +31,8 @@ var EXTENSION_ACTIONS = {
   "device.inspect": "devices.control",
   "device.screenshot": "devices.control",
   "device.tap": "devices.control",
-  "device.launch": "devices.control"
+  "device.launch": "devices.control",
+  "chat.inspect": "chats.read"
 };
 
 // packages/contracts/src/extension-client.ts
@@ -40,7 +41,8 @@ var MACHINE_AREAS = {
   routine: "routines",
   artifact: "artifacts",
   browser: "browser",
-  device: "devices"
+  device: "devices",
+  chat: "chats"
 };
 function extensionActionCall(action) {
   const dot = action.indexOf(".");

@@ -21,7 +21,8 @@ const MACHINE_AREAS: Readonly<Record<string, string>> = {
     routine: 'routines',
     artifact: 'artifacts',
     browser: 'browser',
-    device: 'devices'
+    device: 'devices',
+    chat: 'chats'
 };
 
 /* The client API's call of a machine action, by its path. */
