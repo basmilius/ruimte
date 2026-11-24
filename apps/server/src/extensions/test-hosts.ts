@@ -4,6 +4,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { projectSettingKey } from '@ruimte/contracts/extension-providers';
 import type * as PublicClient from '../../../../packages/extension/client';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { clientApi, type ClientApi } from './test-client.ts';
@@ -76,6 +77,10 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
         select: (ids) => host.select(ids),
         setSetting(key, value) {
             host.settings[key] = value;
+            host.changed();
+        },
+        setProjectSetting(key, value) {
+            host.storage.machine[projectSettingKey(host.project?.id ?? '', key)] = value;
             host.changed();
         },
         setAgent: (id, agent) => host.setAgent(id, agent),

@@ -53,6 +53,7 @@ const server = {
     agents: forwarded('agents'),
     chats: forwarded('chats'),
     storage: forwarded('storage'),
+    projectSettings: forwarded('projectSettings'),
     secrets: forwarded('secrets'),
     machine: forwarded('machine'),
     log: forwarded('log')

@@ -33,6 +33,21 @@ export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProvide
     slashCommands: { define: 'defineSlashCommand', permission: 'composer.provide', proposed: true }
 };
 
+/* One part of `@ruimte/extension/client` that is still proposed: a function a manifest names under `proposed` before it may call it. */
+export interface ExtensionClientPoint {
+    /* The function of `@ruimte/extension/client` that registers one. */
+    readonly define: string;
+    readonly proposed: boolean;
+}
+
+/*
+ * The parts of the client that are held like a provider point, by the name `proposed` takes. The client lists nothing
+ * before its code runs, so a part here has no ids under `provides` and no permission of its own.
+ */
+export const EXTENSION_CLIENT_POINTS: Readonly<Record<string, ExtensionClientPoint>> = {
+    projectSettings: { define: 'defineProjectSettings', proposed: true }
+};
+
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
 export const MAX_SOURCED_LAUNCHES = 64;
 
@@ -66,9 +81,15 @@ export function sourcedLaunchId(extension: string, source: string, launch: strin
 }
 
 /* The names a manifest may list under `proposed`. */
-export const EXTENSION_PROPOSED_PARTS: readonly string[] = Object.keys(EXTENSION_PROVIDER_POINTS).filter(
-    (kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true
-);
+export const EXTENSION_PROPOSED_PARTS: readonly string[] = [
+    ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true),
+    ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed === true)
+];
+
+/* The key a project's setting of an extension is kept under in what that extension stores on the machine, which `server/` reads too. */
+export function projectSettingKey(projectId: string, key: string): string {
+    return `project:${projectId}:setting.${key}`;
+}
 
 interface ProvidingManifest {
     readonly id?: string | undefined;
@@ -174,6 +195,24 @@ export function providerRefusal(manifest: ProvidingManifest, define: string, id:
     }
 
     return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
+
+/*
+ * Why the client may not call `define`: it is still proposed and the manifest does not name it, or the extension came a
+ * way a proposed part does not work for. Null when it may, and for a function that is no proposed part.
+ */
+export function clientPointRefusal(manifest: ProvidingManifest, define: string, proposedAllowed: boolean): string | null {
+    const kind = Object.keys(EXTENSION_CLIENT_POINTS).find((each) => EXTENSION_CLIENT_POINTS[each]?.define === define);
+
+    if (kind === undefined || EXTENSION_CLIENT_POINTS[kind]?.proposed !== true) {
+        return null;
+    }
+
+    if (!(manifest.proposed ?? []).includes(kind)) {
+        return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+    }
+
+    return proposedAllowed ? null : `${define} is still proposed, which an installed extension cannot use`;
 }
 
 /* The ids of one kind a manifest may supply here: listed, with the permission, and proposed only where that works. */

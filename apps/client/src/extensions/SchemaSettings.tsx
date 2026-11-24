@@ -22,17 +22,30 @@ function Field({ id, field }: { id: string; field: SettingField }) {
         }
     };
 
+    return <SettingFieldRow field={field} value={value} onChange={write} />;
+}
+
+interface SettingFieldRowProps {
+    field: SettingField;
+    value: boolean | string;
+    onChange(next: boolean | string): void;
+    searchId?: string;
+}
+
+/* One field an extension named, as the row of a setting, wherever its value is kept. */
+export function SettingFieldRow({ field, value, onChange, searchId }: SettingFieldRowProps) {
     return (
         <SettingsRow
             label={field.label}
+            {...(searchId === undefined ? {} : { searchId })}
             {...(field.description === undefined ? {} : { description: field.description })}
             control={
                 field.type === 'boolean' ? (
-                    <Switch checked={value === true} label={field.label} onCheckedChange={write} />
+                    <Switch checked={value === true} label={field.label} onCheckedChange={onChange} />
                 ) : field.type === 'select' ? (
-                    <Select value={String(value)} label={field.label} align="end" items={[...(field.options ?? [])]} onValueChange={write} />
+                    <Select value={String(value)} label={field.label} align="end" items={[...(field.options ?? [])]} onValueChange={onChange} />
                 ) : (
-                    <Input aria-label={field.label} value={String(value)} onChange={(event) => write(event.target.value)} />
+                    <Input aria-label={field.label} value={String(value)} onChange={(event) => onChange(event.target.value)} />
                 )
             }
         />

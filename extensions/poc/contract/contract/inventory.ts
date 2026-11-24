@@ -43,6 +43,9 @@ const NO_REPORT = 'reports no problem without its permission, outside the projec
 const FILES = 'reads and lists the files of a project, and hears a file change until it stops following it';
 const NO_FILES = 'reads, lists and follows no file without files.read, and none outside the project';
 const FOLLOWS = 'hears a launch change and a project open and close in a shape of its own, each only with its permission';
+const PROJECT_SETTING = "puts a section in a project's settings, whose field a surface reads for the project in front";
+const NO_PROJECT_SETTING = "puts no section in a project's settings while its manifest does not name the part as proposed";
+const CHOSEN = "reads what a person chose in a project's settings, and nothing while its manifest does not name the part";
 
 export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, ExtensionApiCoverage>>> = {
     'client/call/agents.start': { scenario: STARTS, refusal: REFUSES },
@@ -87,6 +90,7 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'client/hook/useInView': { scenario: ON_SCREEN },
     'client/hook/useNode': { scenario: NODE },
     'client/hook/useNodeData': { scenario: NODE },
+    'client/hook/useProjectSetting': { scenario: PROJECT_SETTING },
     'client/hook/useProviders': { scenario: 'lists the agents the machine can start' },
     'client/hook/useSelection': { scenario: NEW_NOTE },
     'client/hook/useServer': { scenario: 'asks server/ again for what .use() kept after reload, and after the connection to the machine comes back' },
@@ -99,6 +103,7 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
         scenario: 'keeps the settings page of an extension Ruimte does not ship under Extensions, also when it asks for a section'
     },
     'client/provider/defineNode': { scenario: NODE },
+    'client/provider/defineProjectSettings': { scenario: PROJECT_SETTING, refusal: NO_PROJECT_SETTING },
     'client/provider/defineView': { scenario: 'keeps a view of its own as a view of a kind Ruimte does not know, as useViews reads it' },
     'client/slot/nodeHeader': { scenario: SLOT },
     'client/slot/selectionBar': { scenario: SLOT },
@@ -118,6 +123,7 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
     'server/call/files.readText': { scenario: FILES, refusal: NO_FILES },
     'server/call/files.watch': { scenario: FILES, refusal: NO_FILES, cleanup: FILES },
     'server/call/problems.clear': { scenario: REPORTS, refusal: NO_REPORT },
+    'server/call/projectSettings.get': { scenario: CHOSEN, refusal: CHOSEN },
     'server/call/problems.report': { scenario: REPORTS, refusal: NO_REPORT },
     'server/event/launch.status': { scenario: FOLLOWS, refusal: FOLLOWS },
     'server/event/project.closed': { scenario: FOLLOWS, refusal: FOLLOWS },

@@ -189,6 +189,25 @@ export function defineExtensionSettings(
     settings: { component: LazyComponent; keywords?: string[]; section?: SettingsSection } | { fields: SettingField[] } | { groups: SettingGroup[] }
 ): void;
 export function useSetting<Value extends boolean | string>(key: string): Value;
+
+/** A section of a project's settings: `fields` (one card) or `groups` (a card per group) that Ruimte draws. */
+export type ProjectSettings = {
+    /** The name of the section; the name of the extension without one. */
+    title?: string;
+    description?: string;
+    /** A Lucide icon; your `assets/icon.svg` without one. */
+    icon?: string;
+} & ({ fields: SettingField[] } | { groups: SettingGroup[] });
+
+/**
+ * A section in the settings of a project, for a choice that belongs to one project, such as the service its shells open
+ * in. What a person chooses is kept on the machine per project, never in the project file, so every computer that opens
+ * the project reads the same. Read a field with `useProjectSetting`, and from `server/` with `projectSettings.get`.
+ * Proposed: name `projectSettings` under `proposed` in the manifest.
+ */
+export function defineProjectSettings(settings: ProjectSettings): void;
+/** A field of `defineProjectSettings` for the project in front, or its default while a person never chose. */
+export function useProjectSetting<Value extends boolean | string>(key: string): Value;
 export function useMachine(): { id: string };
 export function useTheme(): { side: 'light' | 'dark' };
 /** The chat of this id on the machine in front, or null when it has none. */

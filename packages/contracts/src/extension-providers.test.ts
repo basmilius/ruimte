@@ -2,9 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { EXTENSION_PERMISSIONS } from './extension-permissions.ts';
 import {
     allowsProposed,
+    clientPointRefusal,
+    EXTENSION_CLIENT_POINTS,
     EXTENSION_PROPOSED_PARTS,
     EXTENSION_PROVIDER_POINTS,
     extensionProvidesProblems,
+    projectSettingKey,
     proposedPackWarning,
     proposedPartsOf,
     proposedRefusal,
@@ -25,8 +28,34 @@ describe('the provider points', () => {
     });
 
     test('are a proposed part while they are proposed', () => {
-        expect(EXTENSION_PROPOSED_PARTS).toEqual(Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed));
+        expect(EXTENSION_PROPOSED_PARTS).toEqual([
+            ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed),
+            ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed)
+        ]);
         expect(EXTENSION_PROPOSED_PARTS).toContain('terminalProfiles');
+    });
+});
+
+describe('a proposed part of the client', () => {
+    test('is named under proposed like a provider point, and lists nothing under provides', () => {
+        expect(EXTENSION_PROPOSED_PARTS).toContain('projectSettings');
+        expect(extensionProvidesProblems({ proposed: ['projectSettings'] })).toEqual([]);
+        expect(Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind))).toEqual([]);
+    });
+
+    test('is refused when the manifest does not name it, and for an extension a person installed', () => {
+        expect(clientPointRefusal({ proposed: ['projectSettings'] }, 'defineProjectSettings', true)).toBeNull();
+        expect(clientPointRefusal({}, 'defineProjectSettings', true)).toBe(
+            'defineProjectSettings is still proposed; name projectSettings under proposed in manifest.json'
+        );
+        expect(clientPointRefusal({ proposed: ['projectSettings'] }, 'defineProjectSettings', false)).toBe(
+            'defineProjectSettings is still proposed, which an installed extension cannot use'
+        );
+        expect(clientPointRefusal({}, 'defineAction', false)).toBeNull();
+    });
+
+    test('keeps the setting of a project under a key of its own in what the extension stores on the machine', () => {
+        expect(projectSettingKey('project-1', 'service')).toBe('project:project-1:setting.service');
     });
 });
 
@@ -38,8 +67,8 @@ describe('what a manifest provides', () => {
 
     test('is told of a kind and a proposed part this Ruimte does not know, a missing permission and a part it did not name', () => {
         expect(extensionProvidesProblems({ provides: { machines: ['devcontainer'] }, proposed: ['machines'] })).toEqual([
-            'machines is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels, uiSources, references, slashCommands)',
-            'provides.machines is not something this Ruimte takes from an extension (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels, uiSources, references, slashCommands)'
+            `machines is not a proposed part this Ruimte knows (${EXTENSION_PROPOSED_PARTS.join(', ')})`,
+            `provides.machines is not something this Ruimte takes from an extension (${Object.keys(EXTENSION_PROVIDER_POINTS).join(', ')})`
         ]);
         expect(extensionProvidesProblems({ provides: HARBOR.provides })).toEqual([
             'provides.terminalProfiles needs the permission terminals.profiles',

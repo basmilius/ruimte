@@ -51,7 +51,7 @@ clientContract(async (permissions, seed = {}) => {
     const asked = Promise.withResolvers<void>();
     const start = Promise.withResolvers<void>();
     const host = await createTestHost({
-        manifest: { name: NAME, permissions },
+        manifest: { name: NAME, permissions, ...(seed.proposed === undefined ? {} : { proposed: seed.proposed }) },
         project: { ...SEED.project, views, nodes: [SEED.node, ...nodes] },
         machine: SEED.machine,
         ...(seed.providers === undefined ? {} : { providers: seed.providers }),
@@ -115,7 +115,9 @@ clientContract(async (permissions, seed = {}) => {
         typed: () => host.terminals.flatMap((terminal) => terminal.written.map((text) => ({ terminal: terminal.id, text }))),
         focused: () => [...host.focused],
         // An extension under test is never one Ruimte ships, which alone gets a section of its own.
-        settingsSections: () => []
+        settingsSections: () => [],
+        projectSettings: () => host.definitions.flatMap(({ kind, definition }) => (kind === 'projectSettings' ? [definition.title ?? NAME] : [])),
+        chooseProjectSetting: async (key, value) => host.setProjectSetting(key, value)
     };
 });
 

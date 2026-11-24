@@ -17,6 +17,7 @@ import {
     machine,
     onEvent,
     problems,
+    projectSettings,
     secrets,
     storage,
     terminals
@@ -58,6 +59,14 @@ const api = defineServer({
     },
     async kept(key: string) {
         return (await storage.get<number>(key)) ?? null;
+    },
+    // What a person chose for a project, or why the read was refused: a proposed part throws, where a Result would go unread.
+    async chosen(projectId: string, key: string) {
+        try {
+            return (await projectSettings.get<string>({ id: projectId }, key)) ?? null;
+        } catch (e) {
+            return `refused: ${(e as Error).message}`;
+        }
     },
     async forget(key: string) {
         await storage.delete(key);

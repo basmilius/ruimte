@@ -7,7 +7,7 @@ import {
     files,
     log,
     onEvent,
-    storage,
+    projectSettings,
     terminals,
     type ProjectRef,
     type SpawnDescription
@@ -19,13 +19,11 @@ export const SHELL_PROFILE = 'service-shell';
 export const COMPOSE_SOURCE = 'compose';
 export const MACHINE_SOURCE = 'compose-machine';
 
-/* The key of the service a project's shells open in, which the client's card writes as `machine` storage. */
-export function serviceKey(projectId: string): string {
-    return `service:${projectId}`;
-}
+/* The field of the project's settings that holds the service its shells open in, which `client/` defines. */
+export const SERVICE_SETTING = 'service';
 
 async function serviceOf(projectId: string): Promise<Service> {
-    return serviceNamed(await storage.get<string>(serviceKey(projectId)));
+    return serviceNamed(await projectSettings.get<string>({ id: projectId }, SERVICE_SETTING));
 }
 
 /* What a person reads first in a shell Harbor opened: which service it stands in. */

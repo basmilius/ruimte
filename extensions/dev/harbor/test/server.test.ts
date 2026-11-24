@@ -31,7 +31,9 @@ const NOT_OPENED = { code: 'refused' as const, message: 'dev.harbor did not open
 
 describe('Harbor on the machine', () => {
     test("opens a shell through its profile in the project's service, and types the first command into it", async () => {
-        const server = await createTestServer<HarborServer>({ storage: { 'service:project-1': 'api' } });
+        const server = await createTestServer<HarborServer>();
+
+        server.setProjectSetting('service', 'api');
 
         expect(await server.call('openShell', 'project-1')).toEqual({ ok: true, value: { id: 'terminal-1' } });
         expect(server.terminals).toEqual([
@@ -56,7 +58,7 @@ describe('Harbor on the machine', () => {
         expect(await profile.available()).toBe(true);
         expect(await profile.spawn()).toEqual({ command: 'sh', env: { HARBOR_SERVICE: 'web', HARBOR_WORKDIR: '/app' } });
 
-        server.storage['service:other'] = 'db';
+        server.setProjectSetting('service', 'db', { id: 'other' });
 
         expect(await profile.spawn({ project: { id: 'other' } })).toEqual({
             command: 'sh',
@@ -108,7 +110,7 @@ describe('Harbor on the machine', () => {
 
     test('does not load as an extension a person installed, where a proposed part does not work', async () => {
         await expect(createTestServer<HarborServer>({ provenance: 'installed' })).rejects.toThrow(
-            'This extension uses a part of Ruimte that is not final yet (terminalProfiles, launchSources, machineSources). It works while its author develops it, and an installed extension cannot use it.'
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles, launchSources, machineSources, projectSettings). It works while its author develops it, and an installed extension cannot use it.'
         );
     });
 

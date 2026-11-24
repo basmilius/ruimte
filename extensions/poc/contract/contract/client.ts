@@ -74,6 +74,8 @@ export interface WorldSeed {
     providers?: { id: string; name: string }[];
     /* What is on screen of the canvas in front, at 100%; 1280 by 800 from its origin by default. */
     visible?: Client.CanvasArea;
+    /* The proposed parts the manifest names. The extension is one its author develops, where a named part works. */
+    proposed?: string[];
 }
 
 export interface ClientWorld {
@@ -114,6 +116,10 @@ export interface ClientWorld {
     focused(): string[];
     /* The sections of their own this extension has in the settings navigation. */
     settingsSections(): string[];
+    /* The title of the section this extension has in the settings of the project in front, if it has one. */
+    projectSettings(): string[];
+    /* A person choosing a value for a field of that section. */
+    chooseProjectSetting(key: string, value: boolean | string): Promise<void>;
 }
 
 export type OpenClientWorld = (permissions: Record<string, string>, seed?: WorldSeed) => Promise<ClientWorld>;
@@ -878,6 +884,44 @@ export function clientContract(open: OpenClientWorld): void {
                     section: { group: 'elsewhere' as 'ai', label: 'a', description: 'b' }
                 })
             ).toThrow(TypeError);
+        });
+
+        test("puts a section in a project's settings, whose field a surface reads for the project in front", async () => {
+            const world = await open({}, { proposed: ['projectSettings'] });
+            const { api, createElement: h } = world;
+
+            api.defineProjectSettings({
+                title: 'Probe',
+                fields: [
+                    {
+                        key: 'service',
+                        type: 'select',
+                        label: 'Service',
+                        default: 'web',
+                        options: [
+                            { value: 'web', label: 'Web' },
+                            { value: 'db', label: 'Database' }
+                        ]
+                    }
+                ]
+            });
+
+            const screen = await world.render(() => h('p', null, `service ${api.useProjectSetting<string>('service')}`));
+
+            expect(world.projectSettings()).toEqual(['Probe']);
+            expect(screen.text()).toBe('service web');
+
+            await world.chooseProjectSetting('service', 'db');
+            await screen.until(() => screen.text() === 'service db');
+        });
+
+        test("puts no section in a project's settings while its manifest does not name the part as proposed", async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineProjectSettings({ fields: [] })).toThrow(
+                'defineProjectSettings is still proposed; name projectSettings under proposed in manifest.json'
+            );
+            expect(world.projectSettings()).toEqual([]);
         });
 
         test('hands out the rows and sections of a settings page with the components', async () => {

@@ -47,17 +47,21 @@ describe('Harbor', () => {
         expect(host.notifications).toEqual([{ text: 'Built in 2s', tone: 'neutral' }]);
     });
 
-    test('keeps the service of a project on the machine, where the shell it opens next reads it', async () => {
+    test("offers the services in the project's settings, and opens the next shell in the one a person chose there", async () => {
         const server = await createTestServer<HarborServer>();
         const host = await createTestHost({ project: { id: 'project-1' }, answers: { server } });
         const card = await host.render(host.card('service'));
+        const section = host.definitions.find((each) => each.kind === 'projectSettings')?.definition;
 
+        expect(section).toMatchObject({
+            title: 'Harbor',
+            fields: [{ key: 'service', default: 'web', options: [{ value: 'web' }, { value: 'api' }, { value: 'db' }] }]
+        });
         expect(card.text()).toBe('web (shells open here)apidb');
 
-        await card.click('db');
+        host.setProjectSetting('service', 'db');
         await card.until(() => card.find('db (shells open here)') !== null);
 
-        expect(server.storage).toEqual({ 'service:project-1': 'db' });
         expect(await host.run(host.action('shell-view'), 'commandPalette')).toEqual({ ok: true, value: undefined });
         expect(server.terminals[0]?.spawn?.env).toEqual({ HARBOR_SERVICE: 'db', HARBOR_WORKDIR: '/var/lib/postgresql' });
     });

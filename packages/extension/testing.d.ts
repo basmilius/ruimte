@@ -223,6 +223,8 @@ export interface TestHost {
     select(ids: string[]): void;
     /** Changes a setting, as a person would. */
     setSetting(key: string, value: boolean | string): void;
+    /** Changes a field of `defineProjectSettings` for the open project, as a person would in the settings of that project. */
+    setProjectSetting(key: string, value: boolean | string): void;
     /**
      * The agent of a node, or of a chat or terminal open as a view of its own, changing what it does as the machine reports it,
      * and draws again what reads it. Null takes a terminal's agent away, as its CLI ending does.
@@ -465,6 +467,8 @@ export interface TestServer<Api> {
     /** The text files of the project, by path. `writeFile` changes one, or removes it with null, and tells every `files.watch` that follows it. */
     files: Record<string, string>;
     writeFile(path: string, text: string | null): void;
+    /** A person choosing a field of `defineProjectSettings` in the settings of a project, the test's own unless it names another. */
+    setProjectSetting(key: string, value: boolean | string, project?: { id?: string }): void;
     /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */
     tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };
     /** What an agent reads of a node of this type along a line. */

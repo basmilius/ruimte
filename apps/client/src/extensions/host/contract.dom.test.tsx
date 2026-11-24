@@ -2,6 +2,7 @@ import { afterEach } from 'bun:test';
 import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
@@ -180,8 +181,16 @@ function seedAgents(nodes: readonly SeedNode[]): void {
 
 /* The real client host of `poc.contract`, on a fake machine that keeps what it is told to store and answers by its own rules. */
 clientContract(async (permissions, seed = {}) => {
-    const manifest: ExtensionManifest = { id: ID, name: NAME, version: '0.1.0', api: 1, permissions };
-    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null };
+    const manifest: ExtensionManifest = {
+        id: ID,
+        name: NAME,
+        version: '0.1.0',
+        api: 1,
+        permissions,
+        ...(seed.proposed === undefined ? {} : { proposed: seed.proposed })
+    };
+    // Linked by its author, which is where a proposed part works.
+    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null, ...(seed.proposed === undefined ? {} : { dev: true }) };
     const machine = new FakeMachine();
     const stored = new Map<string, unknown>();
     const before = useToasts.getState().toasts.length;
@@ -467,6 +476,20 @@ clientContract(async (permissions, seed = {}) => {
                 .getState()
                 .settingsSections.filter((section) => section.id === ID)
                 .map((section) => section.id),
+        projectSettings: () =>
+            useContributions
+                .getState()
+                .projectSettings.filter((section) => section.id === ID)
+                .map((section) => section.title),
+        // The dialog's row writes the field to the machine, which tells every window that reads it.
+        async chooseProjectSetting(key, value) {
+            const kept = projectSettingKey(SEED.project.id, key);
+
+            await act(async () => {
+                stored.set(kept, value);
+                machine.emit('extension.storageChanged', { id: ID, key: kept, value });
+            });
+        },
         failures: () =>
             useToasts
                 .getState()

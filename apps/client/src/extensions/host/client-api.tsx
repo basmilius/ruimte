@@ -2,6 +2,8 @@ import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import { ErrorBoundary } from '@adecore/ui';
 import * as format from '@adecore/ui/format';
 import {
+    clientPointRefusal,
+    projectSettingKey,
     extensionActionCall,
     extensionAgentStatus,
     extensionCallPermission,
@@ -55,6 +57,7 @@ import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-d
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { namedIcon } from '@/extensions/host/named-icon';
 import { extensionRequest } from '@/extensions/machine-request';
+import { ProjectSchemaSettings } from '@/extensions/ProjectSchemaSettings';
 import { baseContext, nodeInfoIn, useNodeInfo, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { focusView } from '@/extensions/view-focus';
 import { isUnderFolder } from '@/paths/file-path';
@@ -619,6 +622,14 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             permit(permission);
         }
     };
+    // A proposed part registers at the top of the module, where a Result has nobody to read it, so one it may not use throws.
+    const mayUse = (define: string): void => {
+        const refused = clientPointRefusal(extension.manifest, define, extension.dev === true || extension.builtIn === true);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
     // A callback of a load that was taken down or replaced reads, writes and changes nothing any more.
     const withdrawn = (): Refused => new Refused('unavailable', `${extension.manifest.name} was turned off or replaced`);
     const assertLive = (): void => {
@@ -1027,6 +1038,23 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
 
             add('extensionSettings', { id, component, keywords: settings.keywords ?? [] });
         },
+        defineProjectSettings(settings: PublicClient.ProjectSettings) {
+            mayUse('defineProjectSettings');
+
+            const groups = 'groups' in settings ? settings.groups : [{ fields: settings.fields }];
+
+            add('projectSettings', {
+                id,
+                icon: iconOf(settings.icon, extension),
+                title: settings.title ?? extension.manifest.name,
+                description: settings.description ?? extension.manifest.description ?? '',
+                groups,
+                fields: groups.flatMap((group) => group.fields),
+                component: function ExtensionProjectSettings() {
+                    return <ProjectSchemaSettings id={id} />;
+                }
+            });
+        },
         defineAction(action: {
             id: string;
             title: string;
@@ -1224,6 +1252,16 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             const initial = fields?.find((field) => field.key === key)?.default;
 
             return useExtensionStorage(settingKey(extensionNow.manifest.id, key), initial as Value);
+        },
+        useProjectSetting<Value>(key: string): Value {
+            const extensionNow = useExtension();
+            const fields = useContributions((state) => state.projectSettings.find((section) => section.id === extensionNow.manifest.id)?.fields);
+            const initial = fields?.find((field) => field.key === key)?.default;
+            const { transport, endpointId } = useFocusedMachine();
+            const projectId = useProject((state) => state.current?.projectId ?? '');
+            const stored = useMachineStorage(transport, endpointId, extensionNow.manifest.id, projectSettingKey(projectId, key), initial, storageFailed);
+
+            return stored[0] as Value;
         },
         useMachine() {
             return { id: useFocusedMachine().endpointId };

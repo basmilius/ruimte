@@ -6,6 +6,7 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
  */
 import { extensionWord, lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { clientPointRefusal, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
 import { terminalProfileRefusal, terminalWriteRefusal } from './policy.ts';
@@ -176,9 +177,9 @@ function nodeText(host: TestHost, id: string, kind: 'terminal' | 'chat'): string
     return node.text;
 }
 
-function settingDefault(host: TestHost, key: string): unknown {
+function settingDefault(host: TestHost, of: 'settings' | 'projectSettings', key: string): unknown {
     for (const { kind, definition } of host.definitions) {
-        if (kind !== 'settings') {
+        if (kind !== of) {
             continue;
         }
 
@@ -216,6 +217,14 @@ export function clientApi(host: TestHost) {
         });
     const entry = (definition: object, details: Omit<Entry, 'slots'> & { slots?: Slots }): void =>
         host.addEntry(definition, { ...details, slots: details.slots ?? {} });
+    // A test host runs an author's own code, where a proposed part works once the manifest names it.
+    const mayUse = (define: string): void => {
+        const refused = clientPointRefusal(host.manifest, define, true);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
     const actionHandle = (id: string): PublicClient.ActionHandle & { actionId: string } => ({
         actionId: id,
         run: async (context?: object) => {
@@ -389,6 +398,10 @@ export function clientApi(host: TestHost) {
 
             host.record('settings', settings);
         },
+        defineProjectSettings(settings: PublicClient.ProjectSettings): void {
+            mayUse('defineProjectSettings');
+            host.record('projectSettings', settings);
+        },
         defineAction(action: { id: string; title: string; icon?: string; shortcut?: string; slots?: Slots; run(context: never): void | Promise<void> }) {
             const problem = action.shortcut === undefined ? null : shortcutProblem(action.shortcut);
 
@@ -493,7 +506,15 @@ export function clientApi(host: TestHost) {
         useSetting<Value extends boolean | string>(key: string): Value {
             useHost(host);
 
-            return (Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, key)) as Value;
+            return (Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, 'settings', key)) as Value;
+        },
+        useProjectSetting<Value extends boolean | string>(key: string): Value {
+            useHost(host);
+
+            // On the machine, as the client keeps it, so a test server handed to this host reads the same value.
+            const kept = projectSettingKey(host.project?.id ?? '', key);
+
+            return (Object.hasOwn(host.storage.machine, kept) ? host.storage.machine[kept] : settingDefault(host, 'projectSettings', key)) as Value;
         },
         useMachine: () => ({ id: host.machineId }),
         useTheme: () => ({ side: host.theme }),

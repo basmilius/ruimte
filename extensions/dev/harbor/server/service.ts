@@ -2,9 +2,11 @@
  * The Harbor service, as this extension would reach a container engine: the services of a project's compose file, as
  * fixed data. No engine runs and nothing is read from the project folder.
  */
+import type { ServiceName } from '../shared/services';
 
 export interface Service {
-    name: string;
+    // One of the names `client/` offers, so a service added here without its name there fails the check.
+    name: ServiceName;
     image: string;
     /* The folder inside the container a shell starts in. */
     workdir: string;

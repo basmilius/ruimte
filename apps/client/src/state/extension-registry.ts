@@ -207,6 +207,28 @@ interface ExtensionSchemaContribution {
     groups: readonly SettingGroup[];
 }
 
+/* The section an extension has in the settings of a project, whose pane reads the project from the dialog it draws in. */
+export interface ProjectSettingsContribution {
+    // The id of the extension, which has one section.
+    id: string;
+    icon: LucideIcon;
+    title: string;
+    description: string;
+    fields: readonly SettingField[];
+    groups: readonly SettingGroup[];
+    component: ComponentType;
+}
+
+/* The section of an extension among those of a project's settings, which no section of Ruimte's own is named like. */
+export function projectSettingsSectionId(id: string): string {
+    return `extension:${id}`;
+}
+
+/* The row of one field in that section, which a search of the dialog leads to. */
+export function projectSettingRowId(id: string, key: string): string {
+    return `${projectSettingsSectionId(id)}.${key}`;
+}
+
 interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
@@ -236,6 +258,7 @@ export interface Contributions {
     commands: readonly CommandContribution[];
     extensionSettings: readonly ExtensionSettingsContribution[];
     extensionSchemas: readonly ExtensionSchemaContribution[];
+    projectSettings: readonly ProjectSettingsContribution[];
 }
 
 type ContributionKind = keyof Contributions;
@@ -261,7 +284,8 @@ export const useContributions = create<Contributions>(() => ({
     extensionViews: [],
     commands: [],
     extensionSettings: [],
-    extensionSchemas: []
+    extensionSchemas: [],
+    projectSettings: []
 }));
 
 /* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */

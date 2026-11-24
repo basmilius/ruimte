@@ -8,8 +8,11 @@ import * as ui from '@/extensions/host/extension-ui';
  * the real API. A module evaluates once, and a lazy surface imports the API later, so a test file holds one extension.
  */
 async function loadDevelopment(folder: string, id: string, name: string): Promise<LoadedExtension> {
-    const manifest: ExtensionManifest = { id, name, version: '0.1.0', api: 1, permissions: {} };
-    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null };
+    const { default: written } = (await import(`../../../extensions/${folder}/manifest.json`)) as { default: { proposed?: string[] } };
+    const proposed = written.proposed ?? [];
+    const manifest: ExtensionManifest = { id, name, version: '0.1.0', api: 1, permissions: {}, ...(proposed.length === 0 ? {} : { proposed }) };
+    // One that names a proposed part is linked by `bun dev`, which is where such a part works.
+    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null, ...(proposed.length === 0 ? {} : { dev: true }) };
     const client = clientApiFor(extension);
 
     await mock.module('@ruimte/extension/client', () => client);

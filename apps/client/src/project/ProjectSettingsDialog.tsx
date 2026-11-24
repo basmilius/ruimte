@@ -5,6 +5,7 @@ import { ProjectSettingsContext, type ProjectSettingsSubject } from '@/project/p
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { projectSettingsSectionRegistry, type ProjectSettingsSectionDefinition } from '@/registry/project-settings-sections';
 import { currentEndpointId } from '@/state/current-endpoint';
+import { projectSettingRowId, projectSettingsSectionId, useContributions } from '@/state/extension-registry';
 import { useProject } from '@/state/project';
 
 interface ProjectSettingsDialogProps {
@@ -50,7 +51,19 @@ export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChang
     }
 
     const scratch = shown?.project.scratch === true;
-    const sections = registered.filter((definition) => definition.available?.({ scratch, onScreen }) ?? true);
+    const contributed = useContributions((state) => state.projectSettings);
+    // An extension runs in the window of its machine, so its section shows for the project this window holds and no other.
+    const fromExtensions: readonly ProjectSettingsSectionDefinition[] = onScreen
+        ? contributed.map((entry) => ({
+              id: projectSettingsSectionId(entry.id),
+              icon: entry.icon,
+              label: () => entry.title,
+              description: () => entry.description,
+              pane: entry.component,
+              rows: entry.fields.map((field) => ({ id: projectSettingRowId(entry.id, field.key), label: () => field.label }))
+          }))
+        : [];
+    const sections = [...registered.filter((definition) => definition.available?.({ scratch, onScreen }) ?? true), ...fromExtensions];
 
     return (
         <ProjectSettingsContext value={shown}>

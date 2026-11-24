@@ -4,7 +4,7 @@
  * pipes and files (`server-runtime.ts`); `createTestServer` hands in memory and a clock a test turns.
  */
 import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
-import { providerRefusal } from '@ruimte/contracts/extension-providers';
+import { clientPointRefusal, projectSettingKey, providerRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { everyMs, SCHEDULE_NEEDS_CLOCK } from './policy.ts';
 
@@ -387,6 +387,18 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             get: async <Value>(key: string) => (await options.storage.get(key)) as Value | undefined,
             set: <Value>(key: string, value: Value) => options.storage.set(key, value),
             delete: (key: string) => options.storage.delete(key)
+        },
+        projectSettings: {
+            // The client's section writes the key into what this extension stores, so the read needs no ask of its own.
+            async get<Value extends boolean | string>(project: Ref, key: string) {
+                const refused = clientPointRefusal(options.provides, 'defineProjectSettings', options.proposedAllowed);
+
+                if (refused !== null) {
+                    throw new Error(refused);
+                }
+
+                return (await options.storage.get(projectSettingKey(project.id, key))) as Value | undefined;
+            }
         },
         secrets: {
             get: async (key: string) => (await options.secrets.get(key)) as string | undefined,

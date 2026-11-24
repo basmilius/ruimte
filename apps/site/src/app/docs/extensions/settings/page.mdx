@@ -137,6 +137,50 @@ defineExtensionSettings({
 
 For now Ruimte gives a section only to the extensions it ships itself. For any other extension the same call puts the page under Settings, Extensions, as without `section`, and `ruimte extension dev` says so once. The test host shows the page under Extensions too.
 
+### Settings of a project
+
+A choice that belongs to one project, such as the service its shells open in, goes in the settings of that project. `defineProjectSettings` adds a section there, after Ruimte's own, with fields or groups as above:
+
+```ts
+import { defineProjectSettings } from '@ruimte/extension/client';
+
+defineProjectSettings({
+    title: 'Harbor',
+    description: 'The service a Harbor shell opens in.',
+    icon: 'container',
+    fields: [
+        {
+            key: 'service',
+            type: 'select',
+            label: 'Service for shells',
+            default: 'web',
+            options: [
+                { value: 'web', label: 'web' },
+                { value: 'db', label: 'db' }
+            ]
+        }
+    ]
+});
+```
+
+`title` is the name of the section, and your extension's name without one. `icon` is a Lucide name, and your mark without one. The section shows for the project the window has open.
+
+Ruimte keeps what a person chooses on the machine, per project, with what your extension stores there. Nothing goes into the project file, and every computer that opens the project reads the same value. Read a field in a component with `useProjectSetting`, which answers for the project in front and gives the default until someone chose:
+
+```tsx
+const service = useProjectSetting<string>('service');
+```
+
+The server part reads the same field with `projectSettings.get`, which names the project. It answers `undefined` for a field nobody changed, since the default lives in your client part:
+
+```ts
+import { projectSettings } from '@ruimte/extension/server';
+
+const service = (await projectSettings.get<string>(project, 'service')) ?? 'web';
+```
+
+This is a [proposed part](/docs/extensions/manifest#proposed-parts): name `projectSettings` under `proposed`. Without it, `defineProjectSettings` and `projectSettings.get` throw. In a test, `host.setProjectSetting(key, value)` and `server.setProjectSetting(key, value)` choose a value as a person would.
+
 ## Storage
 
 `useStorage` keeps a value and draws again when it changes:

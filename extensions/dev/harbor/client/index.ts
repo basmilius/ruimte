@@ -1,9 +1,27 @@
-import { defineAction, defineSidebarCard, getServer, host, terminals } from '@ruimte/extension/client';
+import { defineAction, defineProjectSettings, defineSidebarCard, getServer, host, terminals } from '@ruimte/extension/client';
 import type { HarborServer } from '../server/index';
+import { SERVICE_NAMES } from '../shared/services';
 
 const SHELL_PROFILE = 'service-shell';
 
 defineSidebarCard({ id: 'service', title: 'Harbor', component: () => import('./ServiceCard') });
+
+// The choice belongs to a project, so it sits in that project's settings, where `server/` reads it for every shell it opens.
+defineProjectSettings({
+    title: 'Harbor',
+    description: 'The service a Harbor shell opens in.',
+    icon: 'container',
+    fields: [
+        {
+            key: 'service',
+            type: 'select',
+            label: 'Service for shells',
+            description: 'A Harbor shell in this project opens in this service.',
+            default: SERVICE_NAMES[0],
+            options: SERVICE_NAMES.map((name) => ({ value: name, label: name }))
+        }
+    ]
+});
 
 defineAction({
     id: 'shell',

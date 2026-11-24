@@ -103,7 +103,16 @@ var EXTENSION_PROVIDER_POINTS = {
   references: { define: "defineReference", permission: "composer.provide", proposed: true },
   slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
 };
-var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
+var EXTENSION_CLIENT_POINTS = {
+  projectSettings: { define: "defineProjectSettings", proposed: true }
+};
+var EXTENSION_PROPOSED_PARTS = [
+  ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true),
+  ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed === true)
+];
+function projectSettingKey(projectId, key) {
+  return `project:${projectId}:setting.${key}`;
+}
 function pointOf(kind) {
   return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
 }
@@ -125,6 +134,16 @@ function providerRefusal(manifest, define, id, proposedAllowed) {
     return `${define} is still proposed, which an installed extension cannot use`;
   }
   return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
+function clientPointRefusal(manifest, define, proposedAllowed) {
+  const kind = Object.keys(EXTENSION_CLIENT_POINTS).find((each) => EXTENSION_CLIENT_POINTS[each]?.define === define);
+  if (kind === undefined || EXTENSION_CLIENT_POINTS[kind]?.proposed !== true) {
+    return null;
+  }
+  if (!(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  return proposedAllowed ? null : `${define} is still proposed, which an installed extension cannot use`;
 }
 
 // apps/server/src/extensions/policy.ts
@@ -375,6 +394,15 @@ function createServerApi(options) {
       get: async (key) => await options.storage.get(key),
       set: (key, value) => options.storage.set(key, value),
       delete: (key) => options.storage.delete(key)
+    },
+    projectSettings: {
+      async get(project, key) {
+        const refused = clientPointRefusal(options.provides, "defineProjectSettings", options.proposedAllowed);
+        if (refused !== null) {
+          throw new Error(refused);
+        }
+        return await options.storage.get(projectSettingKey(project.id, key));
+      }
     },
     secrets: {
       get: async (key) => await options.secrets.get(key),

@@ -404,6 +404,14 @@ export const storage: {
     delete(key: string): Promise<void>;
 };
 
+/**
+ * What a person chose in the section `defineProjectSettings` of `client/` put in a project's settings. Undefined for a
+ * field nobody changed, since its default lives in `client/`. Proposed: name `projectSettings` under `proposed` in the manifest.
+ */
+export const projectSettings: {
+    get<Value extends boolean | string>(project: ProjectRef, key: string): Promise<Value | undefined>;
+};
+
 /** Kept readable only by the person who runs the machine. */
 export const secrets: {
     get(key: string): Promise<string | undefined>;

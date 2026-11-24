@@ -92,6 +92,9 @@ The machine decides this on where it knows an extension came from, never on the 
 | `uiSources` | `provides.uiSources` and `defineUiSource` |
 | `references` | `provides.references` and `defineReference` in `server/` |
 | `slashCommands` | `provides.slashCommands` and `defineSlashCommand` in `server/` |
+| `projectSettings` | [`defineProjectSettings`](/docs/extensions/settings#settings-of-a-project) and `useProjectSetting` in `client/`, `projectSettings` in `server/` |
+
+A proposed part of `client/` lists nothing under `provides` and takes no permission of its own. Its name under `proposed` is enough.
 
 ## The mark
 

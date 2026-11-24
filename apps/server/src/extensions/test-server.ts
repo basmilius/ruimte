@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
 import { extensionProjectPath } from '@ruimte/contracts/extension-client';
 import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblemsReportSchema } from '@ruimte/contracts/extension-problems';
-import { allowsProposed, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
+import { allowsProposed, projectSettingKey, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import {
@@ -903,6 +903,13 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
         problems: machine.problems,
         files: machine.files,
         writeFile: (path, text) => machine.writeFile(path, text),
+        setProjectSetting(key, value, project = {}) {
+            machine.storage[projectSettingKey(project.id ?? machine.project.id, key)] = value;
+
+            for (const listener of [...machine.storageListeners]) {
+                listener();
+            }
+        },
         tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? 'test') }),
         nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
     };

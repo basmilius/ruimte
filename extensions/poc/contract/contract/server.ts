@@ -7,6 +7,7 @@
  * registry.
  */
 import { describe, expect, test } from 'bun:test';
+import { projectSettingKey } from '@ruimte/contracts/extension-providers';
 import type * as Server from '../../../../packages/extension/server';
 
 export const ID = 'poc.contract';
@@ -163,6 +164,23 @@ export function serverContract(open: OpenServerWorld): void {
             expect(await world.call('kept', 'count')).toEqual({ ok: true, value: 2 });
             expect(await world.call('forget', 'count')).toEqual({ ok: true, value: null });
             expect(await world.call('kept', 'count')).toEqual({ ok: true, value: null });
+        });
+
+        test("reads what a person chose in a project's settings, and nothing while its manifest does not name the part", async () => {
+            const named = await open({}, { proposed: ['projectSettings'] });
+            const unnamed = await open({});
+
+            expect(await named.call('chosen', named.project, 'service')).toEqual({ ok: true, value: null });
+
+            // Where the section of `client/` keeps the field, in what the extension stores on the machine.
+            await named.call('keep', projectSettingKey(named.project, 'service'), 'db');
+
+            expect(await named.call('chosen', named.project, 'service')).toEqual({ ok: true, value: 'db' });
+            expect(await named.call('chosen', 'another-project', 'service')).toEqual({ ok: true, value: null });
+            expect(await unnamed.call('chosen', unnamed.project, 'service')).toEqual({
+                ok: true,
+                value: 'refused: defineProjectSettings is still proposed; name projectSettings under proposed in manifest.json'
+            });
         });
 
         test('reads no key it never wrote, also one every object has', async () => {

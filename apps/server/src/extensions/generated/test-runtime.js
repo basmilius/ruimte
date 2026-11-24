@@ -209,6 +209,95 @@ async function render(target, options = {}) {
 import { existsSync } from "fs";
 import { join as join5, resolve as resolve2 } from "path";
 
+// packages/contracts/src/extension-providers.ts
+var EXTENSION_PROVIDER_POINTS = {
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
+  launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
+  references: { define: "defineReference", permission: "composer.provide", proposed: true },
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
+};
+var EXTENSION_CLIENT_POINTS = {
+  projectSettings: { define: "defineProjectSettings", proposed: true }
+};
+var MAX_SOURCED_LAUNCHES = 64;
+var MAX_MACHINE_CANDIDATES = 16;
+var MAX_MACHINE_STEPS = 16;
+var MAX_UI_SOURCE_DESCRIPTION = 200;
+var MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
+var MAX_UI_SOURCE_ANSWER_BYTES = 32768;
+var MAX_REFERENCE_ITEMS = 200;
+var MAX_COMPOSER_TEXT = 1e5;
+function uiSourceName(extension, source) {
+  return `${extension}/${source}`;
+}
+var EXTENSION_PROPOSED_PARTS = [
+  ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true),
+  ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed === true)
+];
+function projectSettingKey(projectId, key) {
+  return `project:${projectId}:setting.${key}`;
+}
+function pointOf(kind) {
+  return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
+}
+function providerPointOf(define) {
+  const kind = Object.keys(EXTENSION_PROVIDER_POINTS).find((each) => EXTENSION_PROVIDER_POINTS[each]?.define === define);
+  const point = kind === undefined ? null : pointOf(kind);
+  return kind === undefined || point === null ? null : { kind, point };
+}
+function proposedPartsOf(manifest) {
+  const provided = Object.keys(manifest.provides ?? {}).filter((kind) => pointOf(kind)?.proposed === true);
+  return [...new Set([...manifest.proposed ?? [], ...provided])];
+}
+function allowsProposed(provenance) {
+  return provenance === "dev-link" || provenance === "development" || provenance === "built-in";
+}
+function proposedRefusal(manifest, provenance) {
+  const parts = proposedPartsOf(manifest);
+  if (parts.length === 0 || allowsProposed(provenance)) {
+    return null;
+  }
+  return `This extension uses a part of Ruimte that is not final yet (${parts.join(", ")}). It works while its author develops it, and an installed extension cannot use it.`;
+}
+function providerRefusal(manifest, define, id, proposedAllowed) {
+  const found = providerPointOf(define);
+  if (found === null) {
+    return `${define} registers nothing this Ruimte takes from an extension`;
+  }
+  const { kind, point } = found;
+  if (point.proposed && !(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  if (point.proposed && !proposedAllowed) {
+    return `${define} is still proposed, which an installed extension cannot use`;
+  }
+  return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
+function clientPointRefusal(manifest, define, proposedAllowed) {
+  const kind = Object.keys(EXTENSION_CLIENT_POINTS).find((each) => EXTENSION_CLIENT_POINTS[each]?.define === define);
+  if (kind === undefined || EXTENSION_CLIENT_POINTS[kind]?.proposed !== true) {
+    return null;
+  }
+  if (!(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  return proposedAllowed ? null : `${define} is still proposed, which an installed extension cannot use`;
+}
+function providedIds(manifest, kind, proposedAllowed) {
+  const point = pointOf(kind);
+  if (point === null || !Object.hasOwn(manifest.permissions ?? {}, point.permission)) {
+    return [];
+  }
+  if (point.proposed && (!proposedAllowed || !(manifest.proposed ?? []).includes(kind))) {
+    return [];
+  }
+  return manifest.provides?.[kind] ?? [];
+}
+
 // node_modules/.bun/zod@4.6.7/node_modules/zod/v4/core/util.js
 function getEnumValues(entries) {
   const numericValues = Object.values(entries).filter((v) => typeof v === "number");
@@ -6771,76 +6860,6 @@ var NODE_ACCENT_COLORS = {
   rose: "#ec003f"
 };
 
-// packages/contracts/src/extension-providers.ts
-var EXTENSION_PROVIDER_POINTS = {
-  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
-  launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
-  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
-  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
-  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
-  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
-  references: { define: "defineReference", permission: "composer.provide", proposed: true },
-  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
-};
-var MAX_SOURCED_LAUNCHES = 64;
-var MAX_MACHINE_CANDIDATES = 16;
-var MAX_MACHINE_STEPS = 16;
-var MAX_UI_SOURCE_DESCRIPTION = 200;
-var MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
-var MAX_UI_SOURCE_ANSWER_BYTES = 32768;
-var MAX_REFERENCE_ITEMS = 200;
-var MAX_COMPOSER_TEXT = 1e5;
-function uiSourceName(extension, source) {
-  return `${extension}/${source}`;
-}
-var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
-function pointOf(kind) {
-  return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
-}
-function providerPointOf(define) {
-  const kind = Object.keys(EXTENSION_PROVIDER_POINTS).find((each) => EXTENSION_PROVIDER_POINTS[each]?.define === define);
-  const point = kind === undefined ? null : pointOf(kind);
-  return kind === undefined || point === null ? null : { kind, point };
-}
-function proposedPartsOf(manifest) {
-  const provided = Object.keys(manifest.provides ?? {}).filter((kind) => pointOf(kind)?.proposed === true);
-  return [...new Set([...manifest.proposed ?? [], ...provided])];
-}
-function allowsProposed(provenance) {
-  return provenance === "dev-link" || provenance === "development" || provenance === "built-in";
-}
-function proposedRefusal(manifest, provenance) {
-  const parts = proposedPartsOf(manifest);
-  if (parts.length === 0 || allowsProposed(provenance)) {
-    return null;
-  }
-  return `This extension uses a part of Ruimte that is not final yet (${parts.join(", ")}). It works while its author develops it, and an installed extension cannot use it.`;
-}
-function providerRefusal(manifest, define, id, proposedAllowed) {
-  const found = providerPointOf(define);
-  if (found === null) {
-    return `${define} registers nothing this Ruimte takes from an extension`;
-  }
-  const { kind, point } = found;
-  if (point.proposed && !(manifest.proposed ?? []).includes(kind)) {
-    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
-  }
-  if (point.proposed && !proposedAllowed) {
-    return `${define} is still proposed, which an installed extension cannot use`;
-  }
-  return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
-}
-function providedIds(manifest, kind, proposedAllowed) {
-  const point = pointOf(kind);
-  if (point === null || !Object.hasOwn(manifest.permissions ?? {}, point.permission)) {
-    return [];
-  }
-  if (point.proposed && (!proposedAllowed || !(manifest.proposed ?? []).includes(kind))) {
-    return [];
-  }
-  return manifest.provides?.[kind] ?? [];
-}
-
 // packages/contracts/src/extension-results.ts
 function extensionAgentStatus(status, needsYou = false) {
   if (needsYou || status === "needs-you") {
@@ -7213,6 +7232,15 @@ function createServerApi(options) {
       get: async (key) => await options.storage.get(key),
       set: (key, value) => options.storage.set(key, value),
       delete: (key) => options.storage.delete(key)
+    },
+    projectSettings: {
+      async get(project, key) {
+        const refused = clientPointRefusal(options.provides, "defineProjectSettings", options.proposedAllowed);
+        if (refused !== null) {
+          throw new Error(refused);
+        }
+        return await options.storage.get(projectSettingKey(project.id, key));
+      }
     },
     secrets: {
       get: async (key) => await options.secrets.get(key),
@@ -8222,6 +8250,12 @@ async function createTestServer(options = {}) {
     problems: machine.problems,
     files: machine.files,
     writeFile: (path, text) => machine.writeFile(path, text),
+    setProjectSetting(key, value, project = {}) {
+      machine.storage[projectSettingKey(project.id ?? machine.project.id, key)] = value;
+      for (const listener of [...machine.storageListeners]) {
+        listener();
+      }
+    },
     tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? "test") }),
     nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
   };
@@ -9004,9 +9038,9 @@ function nodeText(host, id, kind) {
   }
   return node.text;
 }
-function settingDefault(host, key) {
+function settingDefault(host, of, key) {
   for (const { kind, definition } of host.definitions) {
-    if (kind !== "settings") {
+    if (kind !== of) {
       continue;
     }
     const settings = definition;
@@ -9033,6 +9067,12 @@ function clientApi(host) {
     return host.scripted(what, args);
   });
   const entry = (definition, details) => host.addEntry(definition, { ...details, slots: details.slots ?? {} });
+  const mayUse = (define) => {
+    const refused = clientPointRefusal(host.manifest, define, true);
+    if (refused !== null) {
+      throw new Error(refused);
+    }
+  };
   const actionHandle = (id) => ({
     actionId: id,
     run: async (context) => {
@@ -9173,6 +9213,10 @@ function clientApi(host) {
       }
       host.record("settings", settings);
     },
+    defineProjectSettings(settings) {
+      mayUse("defineProjectSettings");
+      host.record("projectSettings", settings);
+    },
     defineAction(action) {
       const problem = action.shortcut === undefined ? null : shortcutProblem(action.shortcut);
       if (problem !== null) {
@@ -9259,7 +9303,12 @@ function clientApi(host) {
     },
     useSetting(key) {
       useHost(host);
-      return Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, key);
+      return Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, "settings", key);
+    },
+    useProjectSetting(key) {
+      useHost(host);
+      const kept = projectSettingKey(host.project?.id ?? "", key);
+      return Object.hasOwn(host.storage.machine, kept) ? host.storage.machine[kept] : settingDefault(host, "projectSettings", key);
     },
     useMachine: () => ({ id: host.machineId }),
     useTheme: () => ({ side: host.theme }),
@@ -9786,6 +9835,10 @@ function publicHost(host, api) {
       host.settings[key] = value;
       host.changed();
     },
+    setProjectSetting(key, value) {
+      host.storage.machine[projectSettingKey(host.project?.id ?? "", key)] = value;
+      host.changed();
+    },
     setAgent: (id, agent) => host.setAgent(id, agent),
     setCanvasView(view) {
       host.canvasView = { ...host.canvasView, ...view, visible: { ...host.canvasView.visible, ...view.visible } };
@@ -9947,6 +10000,7 @@ var server = {
   agents: forwarded2("agents"),
   chats: forwarded2("chats"),
   storage: forwarded2("storage"),
+  projectSettings: forwarded2("projectSettings"),
   secrets: forwarded2("secrets"),
   machine: forwarded2("machine"),
   log: forwarded2("log")

@@ -103,6 +103,7 @@ export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
     'storage.watch',
     'secrets.get',
     'secrets.set',
+    'projectSettings.get',
     'machine.run',
     'log.info',
     'log.error'

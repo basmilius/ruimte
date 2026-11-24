@@ -22,5 +22,5 @@
         "launchSources": ["compose"],
         "machineSources": ["compose-machine"]
     },
-    "proposed": ["terminalProfiles", "launchSources", "machineSources"]
+    "proposed": ["terminalProfiles", "launchSources", "machineSources", "projectSettings"]
 }

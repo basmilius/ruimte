@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { extensionManifestProblem, readExtensionPack } from './extension-pack.ts';
+import { EXTENSION_PROPOSED_PARTS } from './extension-providers.ts';
 import { EXTENSION_API_VERSION } from './extension.ts';
 
 const gunzip = (bytes: Uint8Array): Uint8Array => gunzipSync(bytes);
@@ -98,8 +99,7 @@ describe('a pack read whole', () => {
         });
         expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ proposed: ['teleport'] }) }), gunzip)).toMatchObject({
             ok: false,
-            message:
-                'acme.pack: teleport is not a proposed part this Ruimte knows (terminalProfiles, launchSources, problemSources, machineSources, notificationChannels, uiSources, references, slashCommands)'
+            message: `acme.pack: teleport is not a proposed part this Ruimte knows (${EXTENSION_PROPOSED_PARTS.join(', ')})`
         });
     });
 
