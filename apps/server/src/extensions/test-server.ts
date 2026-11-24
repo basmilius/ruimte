@@ -11,7 +11,16 @@ import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblems
 import { allowsProposed, proposedRefusal, uiSourceName } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { candidatesListed, launchesListed, machineStartDescribed, uiAnswerRead, uiSourceDescribed, type UiSourceDescription } from './descriptions.ts';
+import {
+    candidatesListed,
+    composerTextRead,
+    launchesListed,
+    machineStartDescribed,
+    referenceItemsListed,
+    uiAnswerRead,
+    uiSourceDescribed,
+    type UiSourceDescription
+} from './descriptions.ts';
 import {
     askRefusal,
     eventRefusal,
@@ -165,6 +174,8 @@ class TestMachine {
     readonly machineSources = new Map<string, string>();
     readonly notificationChannels = new Map<string, string>();
     readonly uiSources = new Map<string, UiSourceDescription>();
+    readonly references = new Map<string, string>();
+    readonly slashCommands = new Map<string, string>();
     // The lines a machine source reported while it described a start, by the number it was asked under.
     readonly machineReports = new Map<number, string[]>();
     nextMachineStart = 1;
@@ -301,6 +312,10 @@ class TestMachine {
             this.machineReports.get(message.run)?.push(message.line);
         } else if (message.type === 'notificationChannel') {
             this.notificationChannels.set(message.id, message.title);
+        } else if (message.type === 'reference') {
+            this.references.set(message.id, message.title);
+        } else if (message.type === 'slashCommand') {
+            this.slashCommands.set(message.name, message.description);
         } else if (message.type === 'uiSource') {
             const described = uiSourceDescribed(message.description, message.parameters);
 
@@ -809,6 +824,35 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                         options.signal?.removeEventListener('abort', abort);
                     }
                 }
+            };
+        },
+        reference: (id) => {
+            const title = machine.references.get(id);
+
+            if (title === undefined) {
+                throw new Error(`No reference ${id}. defineReference says what there is`);
+            }
+
+            return {
+                title,
+                list: async (project = {}) =>
+                    referenceItemsListed(wire(await machine.core.askReference(id, 'list', { project: { ...machine.project, ...project } })), (reason) => {
+                        machine.logs.push(`${id} ${reason}`);
+                    }),
+                read: async (item, project = {}) =>
+                    composerTextRead(wire(await machine.core.askReference(id, 'read', { project: { ...machine.project, ...project }, item })))
+            };
+        },
+        slashCommand: (name) => {
+            const description = machine.slashCommands.get(name);
+
+            if (description === undefined) {
+                throw new Error(`No slash command ${name}. defineSlashCommand says what there is`);
+            }
+
+            return {
+                description,
+                run: async (args = '', project = {}) => composerTextRead(wire(await machine.core.expandCommand(name, args, { ...machine.project, ...project })))
             };
         },
         uiSource: (id) => {

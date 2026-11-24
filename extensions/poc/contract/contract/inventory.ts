@@ -132,6 +132,14 @@ export const EXTENSION_API_SCENARIOS: Readonly<Partial<Record<ExtensionApiRow, E
         scenario: 'hands a notification channel what to tell a person, and keeps a channel that throws to its own log',
         refusal: 'defines a notification channel only when its manifest asks for it, names it as proposed and lists it'
     },
+    'server/provider/defineReference': {
+        scenario: 'offers a reference and a slash command of server/ in a chat, and puts what each answers in the prompt',
+        refusal: 'defines a reference and a slash command only when its manifest asks for them, names them as proposed and lists them'
+    },
+    'server/provider/defineSlashCommand': {
+        scenario: 'offers a reference and a slash command of server/ in a chat, and puts what each answers in the prompt',
+        refusal: 'defines a reference and a slash command only when its manifest asks for them, names them as proposed and lists them'
+    },
     'server/provider/defineUiSource': {
         scenario: 'answers a block with what a UI source reads for its project, and nothing for a throw or an answer that is too large',
         refusal: 'defines a UI source only when its manifest asks for it, names it as proposed and lists it'

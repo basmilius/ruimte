@@ -56,6 +56,25 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        composer: async () => {
+            // A test server lists what the module defined; one it could not define offers nothing, as on the machine.
+            const defined = <Value>(read: () => Value): Value | null => {
+                try {
+                    return read();
+                } catch {
+                    return null;
+                }
+            };
+            const things = defined(() => server.reference('probe-things'));
+            const echo = defined(() => server.slashCommand('probe-echo'));
+
+            return {
+                references: things === null ? [] : (await things.list()).map((item) => ({ reference: 'probe-things', title: things.title, ...item })),
+                commands: echo === null ? [] : [{ name: 'probe-echo', description: echo.description }]
+            };
+        },
+        pick: async (reference, item) => server.reference(reference).read(item),
+        slash: async (name, args) => server.slashCommand(name).run(args),
         uiSource: async (id) => {
             const { read: _read, ...told } = server.uiSource(id);
 

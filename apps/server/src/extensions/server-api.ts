@@ -36,6 +36,8 @@ export type ServerMessage =
     | { type: 'machineReport'; run: number; line: string }
     | { type: 'notificationChannel'; id: string; title: string }
     | { type: 'uiSource'; id: string; description: string; parameters?: object }
+    | { type: 'reference'; id: string; title: string }
+    | { type: 'slashCommand'; name: string; description: string }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -77,6 +79,10 @@ export interface ServerCore {
     deliverNotification(id: string, notification: PublicServer.Notification): unknown;
     /* Asks a UI source what a block shows, with the arguments the block wrote. */
     readUiSource(id: string, args: Record<string, PublicServer.Json>, project: PublicServer.ProjectInfo): unknown;
+    /* Asks a reference what it lists for `#`, or the text of one thing it listed. */
+    askReference(id: string, method: 'list' | 'read', input: ReferenceAsk): unknown;
+    /* Asks a slash command what it puts in the prompt. */
+    expandCommand(name: string, args: string, project: PublicServer.ProjectInfo): unknown;
     /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
     fileChanged(watch: number): void;
 }
@@ -90,12 +96,20 @@ export interface MachineSourceAsk {
     run?: number;
 }
 
+export interface ReferenceAsk {
+    project: PublicServer.ProjectInfo;
+    // Only a read names the thing, as `list` answered it.
+    item?: PublicServer.ReferenceItem;
+}
+
 type Listener = (payload: unknown) => void;
 type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
 type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
 type MachineSource = Parameters<typeof PublicServer.defineMachineSource>[0];
 type NotificationChannel = Parameters<typeof PublicServer.defineNotificationChannel>[0];
 type UiSource = Parameters<typeof PublicServer.defineUiSource>[0];
+type Reference = Parameters<typeof PublicServer.defineReference>[0];
+type SlashCommand = Parameters<typeof PublicServer.defineSlashCommand>[0];
 
 interface Ref {
     id: string;
@@ -145,6 +159,8 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const machineStarts = new Map<number, AbortController>();
     const notificationChannels = new Map<string, NotificationChannel>();
     const uiSources = new Map<string, UiSource>();
+    const references = new Map<string, Reference>();
+    const slashCommands = new Map<string, SlashCommand>();
     const fileWatches = new Map<number, () => void>();
     let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
@@ -258,6 +274,16 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 description: source.description,
                 ...(source.parameters === undefined ? {} : { parameters: source.parameters })
             });
+        },
+        defineReference(reference: Reference): void {
+            mayDefine('defineReference', 'composer.provide', reference.id);
+            references.set(reference.id, reference);
+            send({ type: 'reference', id: reference.id, title: reference.title });
+        },
+        defineSlashCommand(command: SlashCommand): void {
+            mayDefine('defineSlashCommand', 'composer.provide', command.name);
+            slashCommands.set(command.name, command);
+            send({ type: 'slashCommand', name: command.name, description: command.description });
         },
         problems: {
             report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
@@ -470,6 +496,32 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             }
 
             return source.read(args, { project });
+        },
+        askReference(id, method, { project, item }) {
+            const reference = references.get(id);
+
+            if (reference === undefined) {
+                throw new MissingHandler(`No reference ${id}`);
+            }
+
+            if (method === 'list') {
+                return reference.list({ project });
+            }
+
+            if (item === undefined) {
+                throw new TypeError('A read names the thing to read');
+            }
+
+            return reference.read(item, { project });
+        },
+        expandCommand(name, args, project) {
+            const command = slashCommands.get(name);
+
+            if (command === undefined) {
+                throw new MissingHandler(`No slash command ${name}`);
+            }
+
+            return command.run(args, { project });
         },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {

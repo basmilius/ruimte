@@ -99,7 +99,9 @@ var EXTENSION_PROVIDER_POINTS = {
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
   machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
   notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
-  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true }
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
+  references: { define: "defineReference", permission: "composer.provide", proposed: true },
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -176,6 +178,8 @@ function createServerApi(options) {
   const machineStarts = new Map;
   const notificationChannels = new Map;
   const uiSources = new Map;
+  const references = new Map;
+  const slashCommands = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -275,6 +279,16 @@ function createServerApi(options) {
         description: source.description,
         ...source.parameters === undefined ? {} : { parameters: source.parameters }
       });
+    },
+    defineReference(reference) {
+      mayDefine("defineReference", "composer.provide", reference.id);
+      references.set(reference.id, reference);
+      send({ type: "reference", id: reference.id, title: reference.title });
+    },
+    defineSlashCommand(command) {
+      mayDefine("defineSlashCommand", "composer.provide", command.name);
+      slashCommands.set(command.name, command);
+      send({ type: "slashCommand", name: command.name, description: command.description });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -446,6 +460,26 @@ ${project.id}`;
         throw new MissingHandler(`No UI source ${id}`);
       }
       return source.read(args, { project });
+    },
+    askReference(id, method, { project, item }) {
+      const reference = references.get(id);
+      if (reference === undefined) {
+        throw new MissingHandler(`No reference ${id}`);
+      }
+      if (method === "list") {
+        return reference.list({ project });
+      }
+      if (item === undefined) {
+        throw new TypeError("A read names the thing to read");
+      }
+      return reference.read(item, { project });
+    },
+    expandCommand(name, args, project) {
+      const command = slashCommands.get(name);
+      if (command === undefined) {
+        throw new MissingHandler(`No slash command ${name}`);
+      }
+      return command.run(args, { project });
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -623,6 +657,17 @@ function handle(message) {
       await loaded;
       const { args, project } = message.input;
       return core.readUiSource(message.source, args, project);
+    });
+  } else if (message.type === "reference") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askReference(message.source, message.method, message.input);
+    });
+  } else if (message.type === "slashCommand") {
+    answer(message.id, async () => {
+      await loaded;
+      const { args, project } = message.input;
+      return core.expandCommand(message.source, args, project);
     });
   } else if (message.type === "machineAbort") {
     loaded.then(() => core.abortMachineStart(message.run));

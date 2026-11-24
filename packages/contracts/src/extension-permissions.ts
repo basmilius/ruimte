@@ -54,6 +54,7 @@ export const EXTENSION_PERMISSIONS: readonly string[] = [
     'machines.provide',
     'notifications.provide',
     'ui.provide',
+    'composer.provide',
     'projects.read',
     'terminals.read',
     'terminals.write',

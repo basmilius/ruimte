@@ -30,6 +30,7 @@ import type {
     MachineInput,
     MachineOutput,
     Notification,
+    ReferenceItem,
     NodeRef,
     ProjectInfo,
     ProjectRef,
@@ -427,6 +428,18 @@ export interface TestServer<Api> {
         list(project?: Partial<ProjectInfo>): Promise<MachineCandidate[]>;
         start(candidate: string, options?: { project?: Partial<ProjectInfo>; signal?: AbortSignal }): Promise<{ start: MachineStart; reports: string[] }>;
     };
+    /**
+     * A reference `defineReference` of `server/` named, asked as the machine asks it for `#` in a chat. `list` leaves
+     * out a thing the machine would not take, with the reason in `logs`, and `read` answers the text that goes in the
+     * prompt. Throws for a reference it did not define.
+     */
+    reference(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<ReferenceItem[]>;
+        read(item: ReferenceItem, project?: Partial<ProjectInfo>): Promise<string>;
+    };
+    /** A command `defineSlashCommand` of `server/` named, run as the machine runs it for `/` in a chat. Throws for one it did not define. */
+    slashCommand(name: string): { description: string; run(args?: string, project?: Partial<ProjectInfo>): Promise<string> };
     /**
      * A UI source `defineUiSource` named, read as the machine reads it for a block. `name` is what a block writes as
      * `source`, and `description` and `parameters` are what an agent is told. `read` hands over the arguments and the

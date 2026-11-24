@@ -1,11 +1,13 @@
 /*
  * What a provider of an extension hands back for Ruimte to run, checked the same way by the machine and by
  * `createTestServer`: a program to start, a launch that starts one, a place for a machine with what starts one there,
- * and a UI source with what it answers a block.
+ * a UI source with what it answers a block, and what a reference or a slash command puts in a prompt.
  */
 import {
+    MAX_COMPOSER_TEXT,
     MAX_MACHINE_CANDIDATES,
     MAX_MACHINE_STEPS,
+    MAX_REFERENCE_ITEMS,
     MAX_SOURCED_LAUNCHES,
     MAX_UI_SOURCE_ANSWER_BYTES,
     MAX_UI_SOURCE_DESCRIPTION,
@@ -142,4 +144,39 @@ export function uiAnswerRead(answer: unknown): unknown {
 
     // Through JSON, so a block never gets what JSON cannot say, whichever way the answer came.
     return JSON.parse(text) as unknown;
+}
+
+const ReferenceItemSchema = z.object({ id: z.string().min(1).max(200), name: z.string().trim().min(1).max(200) });
+export type ReferenceItemDescription = z.infer<typeof ReferenceItemSchema>;
+
+/* The things a reference answered `list` with, as the machine takes them, by the rules of `launchesListed`. */
+export function referenceItemsListed(answer: unknown, refused: (reason: string) => void): ReferenceItemDescription[] {
+    const items = new Map<string, ReferenceItemDescription>();
+
+    for (const entry of (Array.isArray(answer) ? answer : []).slice(0, MAX_REFERENCE_ITEMS)) {
+        const described = ReferenceItemSchema.safeParse(entry);
+
+        if (!described.success) {
+            const issue = described.error.issues[0];
+
+            refused(`listed a thing that is none: ${issue?.path.join('.') ?? ''} ${issue?.message ?? 'invalid'}`);
+        } else if (!items.has(described.data.id)) {
+            items.set(described.data.id, described.data);
+        }
+    }
+
+    return [...items.values()];
+}
+
+/* What a reference or a slash command puts in a prompt, or a throw that says why it does not. */
+export function composerTextRead(answer: unknown): string {
+    if (typeof answer !== 'string') {
+        throw new Error('answered no text');
+    }
+
+    if (answer.length > MAX_COMPOSER_TEXT) {
+        throw new Error(`answered more than ${MAX_COMPOSER_TEXT} characters`);
+    }
+
+    return answer;
 }

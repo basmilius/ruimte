@@ -22,6 +22,8 @@ import {
     type ExtensionInfo,
     type ExtensionManifest,
     type ExtensionStatus,
+    type ExtensionComposerCommand,
+    type ExtensionComposerReference,
     type ExtensionTerminalProfile
 } from '@ruimte/contracts';
 import { z } from 'zod';
@@ -33,8 +35,10 @@ import type { SessionSink } from '../wire.ts';
 import { clientFilesOf } from './client-files.ts';
 import {
     candidatesListed,
+    composerTextRead,
     launchesListed,
     machineStartDescribed,
+    referenceItemsListed,
     SpawnDescriptionSchema,
     uiAnswerRead,
     uiSourceDescribed,
@@ -86,6 +90,8 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('machineSource'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('machineReport'), run: z.number(), line: z.string() }),
     z.object({ type: z.literal('notificationChannel'), id: z.string(), title: z.string().min(1).max(80) }),
+    z.object({ type: z.literal('reference'), id: z.string(), title: z.string().min(1).max(80) }),
+    z.object({ type: z.literal('slashCommand'), name: z.string(), description: z.string().max(200) }),
     z.object({ type: z.literal('uiSource'), id: z.string(), description: z.unknown(), parameters: z.unknown().optional() }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
@@ -157,6 +163,9 @@ interface Running {
     machineReports: Map<number, (line: string) => void>;
     notificationChannels: Map<string, { title: string }>;
     uiSources: Map<string, UiSourceDescription>;
+    // What its module offers after `#` and `/` in a chat, by id and by name.
+    references: Map<string, { title: string }>;
+    slashCommands: Map<string, { description: string }>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -970,6 +979,8 @@ export class ExtensionHost {
             machineReports: new Map(),
             notificationChannels: new Map(),
             uiSources: new Map(),
+            references: new Map(),
+            slashCommands: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -1066,6 +1077,14 @@ export class ExtensionHost {
         } else if (message.type === 'notificationChannel') {
             if (this.mayProvide(id, running, 'defineNotificationChannel', 'notifications.provide', message.id)) {
                 running.notificationChannels.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'reference') {
+            if (this.mayProvide(id, running, 'defineReference', 'composer.provide', message.id)) {
+                running.references.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'slashCommand') {
+            if (this.mayProvide(id, running, 'defineSlashCommand', 'composer.provide', message.name)) {
+                running.slashCommands.set(message.name, { description: message.description });
             }
         } else if (message.type === 'uiSource') {
             if (this.mayProvide(id, running, 'defineUiSource', 'ui.provide', message.id)) {
@@ -1314,6 +1333,110 @@ export class ExtensionHost {
         }
 
         return profiles;
+    }
+
+    /*
+     * What the extensions of this machine offer after `#` and `/` in a chat of a project, from their `server/`, so a
+     * client that did not load their `client/` offers it too. An extension's process starts for the list, and one that
+     * does not start or answer offers nothing, with the reason in its log.
+     */
+    async composerItems(project: ExtensionProject): Promise<{ references: ExtensionComposerReference[]; commands: ExtensionComposerCommand[] }> {
+        const references: ExtensionComposerReference[] = [];
+        const commands: ExtensionComposerCommand[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id } = extension.manifest;
+            const proposedAllowed = allowsProposed(this.provenanceOf(extension));
+            const referenceIds = providedIds(extension.manifest, 'references', proposedAllowed);
+            const commandNames = providedIds(extension.manifest, 'slashCommands', proposedAllowed);
+
+            if (referenceIds.length === 0 && commandNames.length === 0) {
+                continue;
+            }
+
+            try {
+                const running = await this.runningFor(id);
+
+                for (const name of commandNames) {
+                    const defined = running.slashCommands.get(name);
+
+                    if (defined !== undefined) {
+                        commands.push({ extension: id, name, description: defined.description });
+                    }
+                }
+
+                for (const reference of referenceIds) {
+                    const defined = running.references.get(reference);
+
+                    if (defined === undefined) {
+                        continue;
+                    }
+
+                    const answer = await this.send(
+                        running,
+                        { type: 'reference', source: reference, method: 'list', input: { project } },
+                        `${id} reference ${reference}`
+                    );
+                    const items = referenceItemsListed(answer, (reason) => {
+                        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${reference} ${reason}\n`));
+                    });
+
+                    references.push(...items.map((item) => ({ extension: id, reference, title: defined.title, ...item })));
+                }
+            } catch (e) {
+                void bestEffort(
+                    'files.append',
+                    this.files.append(this.options.store.logFile(id), `What it offers in a chat was not listed: ${errorText(e)}\n`)
+                );
+            }
+        }
+
+        return { references, commands };
+    }
+
+    /* The text of a thing a reference listed, which goes in the prompt of the person who picked it. */
+    async readReference(id: string, reference: string, item: { id: string; name: string }, project: ExtensionProject): Promise<string> {
+        const running = await this.composerProcess(id);
+
+        if (!running.references.has(reference)) {
+            throw new ExtensionRefusal('not-found', `${id} supplies no reference ${reference}`);
+        }
+
+        return this.composerText(running, { type: 'reference', source: reference, method: 'read', input: { project, item } }, `${id} reference ${reference}`);
+    }
+
+    /* What a slash command puts in the prompt of the person who typed it. It starts nothing and sends nothing. */
+    async expandCommand(id: string, name: string, args: string, project: ExtensionProject): Promise<string> {
+        const running = await this.composerProcess(id);
+
+        if (!running.slashCommands.has(name)) {
+            throw new ExtensionRefusal('not-found', `${id} supplies no slash command ${name}`);
+        }
+
+        return this.composerText(running, { type: 'slashCommand', source: name, input: { args, project } }, `${id} slash command ${name}`);
+    }
+
+    /* The process a pick in a chat is answered by, which starts for it: a machine that restarted since the list still answers. */
+    private async composerProcess(id: string): Promise<Running> {
+        const grant = await this.grantedTo(id);
+
+        if (grant.manifest === null) {
+            throw new ExtensionRefusal('not-found', `No extension ${id} on this machine`);
+        }
+
+        return this.runningFor(id);
+    }
+
+    private async composerText(running: Running, message: object, label: string): Promise<string> {
+        try {
+            return composerTextRead(await this.send(running, message, label));
+        } catch (e) {
+            throw e instanceof ExtensionRefusal ? e : new ExtensionRefusal('failed', errorText(e));
+        }
     }
 
     /*

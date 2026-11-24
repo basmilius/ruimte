@@ -28,7 +28,9 @@ export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProvide
     problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true },
     machineSources: { define: 'defineMachineSource', permission: 'machines.provide', proposed: true },
     notificationChannels: { define: 'defineNotificationChannel', permission: 'notifications.provide', proposed: true },
-    uiSources: { define: 'defineUiSource', permission: 'ui.provide', proposed: true }
+    uiSources: { define: 'defineUiSource', permission: 'ui.provide', proposed: true },
+    references: { define: 'defineReference', permission: 'composer.provide', proposed: true },
+    slashCommands: { define: 'defineSlashCommand', permission: 'composer.provide', proposed: true }
 };
 
 // The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
@@ -48,6 +50,10 @@ export const EXTENSION_UI_SOURCE = 'extension';
 export const MAX_UI_SOURCE_DESCRIPTION = 200;
 export const MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
 export const MAX_UI_SOURCE_ANSWER_BYTES = 32_768;
+
+// What the machine takes of a reference and a slash command of `server/`: the things one reference lists, and the text one puts in a prompt.
+export const MAX_REFERENCE_ITEMS = 200;
+export const MAX_COMPOSER_TEXT = 100_000;
 
 /* The name a UI source of an extension goes by in a block, which no source of Ruimte's own can have: those hold no slash. */
 export function uiSourceName(extension: string, source: string): string {

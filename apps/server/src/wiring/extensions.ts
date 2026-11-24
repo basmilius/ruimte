@@ -302,6 +302,7 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
             providers: later.providers().providers,
             terminalProfiles: async (projectId) => host.terminalProfiles(await projectOf(projectId)),
             notificationChannels,
+            projectOf,
             databaseQuery: async (projectId, connection, sql) => {
                 const folder = folderOfProject(projectId);
                 const { result } = await later

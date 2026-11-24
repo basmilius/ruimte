@@ -51,6 +51,12 @@ export interface ServerWorld {
      * goes out. Answers the channel's title and whether it delivered. Rejects for a channel the extension does not supply.
      */
     notify(channel: string, body: string, reason: Server.Notification['reason']): Promise<{ title: string; delivered: boolean }>;
+    /* What `server/` offers after `#` and `/` in a chat of `project`, as the machine lists it for a client. */
+    composer(): Promise<{ references: { reference: string; title: string; id: string; name: string }[]; commands: { name: string; description: string }[] }>;
+    /* The text a pick of a thing puts in the prompt. Rejects for a reference the extension does not supply, and for a read that fails. */
+    pick(reference: string, item: { id: string; name: string }): Promise<string>;
+    /* The text a slash command puts in the prompt. Rejects for a command the extension does not supply, and for a run that fails. */
+    slash(name: string, args: string): Promise<string>;
     /* A UI source as the machine tells an agent of it. Rejects for a source the extension does not supply. */
     uiSource(id: string): Promise<{ name: string; description: string; parameters?: object }>;
     /* What a UI source answers a block of a chat in `project`, or the reason the block gets nothing. */
@@ -88,6 +94,11 @@ const NOTIFIES = { 'notifications.provide': 'Tells you elsewhere' };
 const CHANNELS: WorldManifest = { provides: { notificationChannels: ['probe-channel'] }, proposed: ['notificationChannels'] };
 const SHOWS = { 'ui.provide': 'Gives a chat rows to draw' };
 const UI_SOURCES: WorldManifest = { provides: { uiSources: ['probe-rows', 'probe-vague'] }, proposed: ['uiSources'] };
+const COMPOSES = { 'composer.provide': 'Offers things and commands in a chat' };
+const COMPOSER: WorldManifest = {
+    provides: { references: ['probe-things'], slashCommands: ['probe-echo'] },
+    proposed: ['references', 'slashCommands']
+};
 const NOT_FINAL =
     'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.';
 
@@ -417,6 +428,59 @@ export function serverContract(open: OpenServerWorld): void {
             await expect(unlisted.machines('probe-machines')).rejects.toThrow();
             await expect(open(MACHINES, { ...MACHINE_SOURCES, provenance: 'installed' })).rejects.toThrow(
                 'This extension uses a part of Ruimte that is not final yet (machineSources).'
+            );
+        });
+
+        test('offers a reference and a slash command of server/ in a chat, and puts what each answers in the prompt', async () => {
+            const world = await open(COMPOSES, COMPOSER);
+
+            expect(await world.composer()).toEqual({
+                references: [{ reference: 'probe-things', title: 'Probe things', id: 'one', name: 'Thing one' }],
+                commands: [{ name: 'probe-echo', description: 'Says back what you typed' }]
+            });
+            expect(await world.logs()).toContainEqual(expect.stringMatching(/^probe-things listed a thing that is none: id /));
+            expect(await world.pick('probe-things', { id: 'one', name: 'Thing one' })).toBe(`Thing one of ${world.project}`);
+            expect(await world.slash('probe-echo', 'hello')).toBe(`You said hello in ${world.project}`);
+            await expect(world.pick('probe-things', { id: 'gone', name: 'Gone' })).rejects.toThrow('The probe has no thing gone');
+            await expect(world.slash('probe-echo', 'large')).rejects.toThrow('answered more than 100000 characters');
+        });
+
+        test('defines a reference and a slash command only when its manifest asks for them, names them as proposed and lists them', async () => {
+            const allowed = await open(COMPOSES, COMPOSER);
+            const unasked = await open({});
+            const unnamed = await open(COMPOSES);
+            const unlisted = await open(COMPOSES, {
+                provides: { references: ['another'], slashCommands: ['another'] },
+                proposed: ['references', 'slashCommands']
+            });
+
+            expect(await allowed.call('composerRefused')).toEqual({ ok: true, value: { reference: null, command: null } });
+            expect(await unasked.call('composerRefused')).toEqual({
+                ok: true,
+                value: {
+                    reference: `${ID} did not ask for the permission composer.provide in its manifest`,
+                    command: `${ID} did not ask for the permission composer.provide in its manifest`
+                }
+            });
+            expect(await unnamed.call('composerRefused')).toEqual({
+                ok: true,
+                value: {
+                    reference: 'defineReference is still proposed; name references under proposed in manifest.json',
+                    command: 'defineSlashCommand is still proposed; name slashCommands under proposed in manifest.json'
+                }
+            });
+            expect(await unlisted.call('composerRefused')).toEqual({
+                ok: true,
+                value: {
+                    reference: 'defineReference got probe-things, which manifest.json does not list under provides.references',
+                    command: 'defineSlashCommand got probe-echo, which manifest.json does not list under provides.slashCommands'
+                }
+            });
+            expect(await unlisted.composer()).toEqual({ references: [], commands: [] });
+            await expect(unlisted.pick('probe-things', { id: 'one', name: 'Thing one' })).rejects.toThrow();
+            await expect(unlisted.slash('probe-echo', 'hello')).rejects.toThrow();
+            await expect(open(COMPOSES, { ...COMPOSER, provenance: 'installed' })).rejects.toThrow(
+                'This extension uses a part of Ruimte that is not final yet (references, slashCommands).'
             );
         });
 

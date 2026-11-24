@@ -287,6 +287,40 @@ export function defineUiSource(source: {
     read(args: Record<string, Json>, context: { project: ProjectInfo }): Json | Promise<Json>;
 }): void;
 
+/** A thing a reference lists after `#`: `id` is its own within the reference, `name` is what a person picks it by. */
+export interface ReferenceItem {
+    id: string;
+    name: string;
+}
+
+/**
+ * Needs `composer.provide`. Proposed: name `references` under `proposed` in the manifest, and the id under
+ * `provides.references`. Things from outside the project for `#` in a chat, as `defineReference` of `client/` offers
+ * them, from the machine: they also show on a phone and in a window that did not load your `client/`. Picking one puts
+ * what `read` answers in the prompt, which the person still sends. `list` answers at most 200 things, and `read` at
+ * most 100,000 characters. A reference both parts define under one id shows once. Throws for an id the manifest does
+ * not list.
+ */
+export function defineReference(reference: {
+    id: string;
+    title: string;
+    list(context: { project: ProjectInfo }): ReferenceItem[] | Promise<ReferenceItem[]>;
+    read(item: ReferenceItem, context: { project: ProjectInfo }): string | Promise<string>;
+}): void;
+
+/**
+ * Needs `composer.provide`. Proposed: name `slashCommands` under `proposed` in the manifest, and the name under
+ * `provides.slashCommands`. After `/` in a chat, as `defineSlashCommand` of `client/` offers it, from the machine.
+ * `name` is of lowercase letters, digits and dashes. It expands into the prompt, at most 100,000 characters, and the
+ * person still sends it: a command starts nothing and sends nothing. A command both parts define under one name shows
+ * once. Throws for a name the manifest does not list.
+ */
+export function defineSlashCommand(command: {
+    name: string;
+    description: string;
+    run(args: string, context: { project: ProjectInfo }): string | Promise<string>;
+}): void;
+
 /** A place in a file, counted from 1 as a person reads it, and what is wrong there. */
 export interface Problem {
     line: number;

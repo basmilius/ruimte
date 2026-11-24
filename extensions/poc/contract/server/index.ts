@@ -6,7 +6,9 @@ import {
     defineMachineSource,
     defineNotificationChannel,
     defineProblemSource,
+    defineReference,
     defineServer,
+    defineSlashCommand,
     defineTerminalProfile,
     defineUiSource,
     emit,
@@ -209,6 +211,39 @@ try {
     machineSourceRefused = (e as Error).message;
 }
 
+const composerRefused: { reference: string | null; command: string | null } = { reference: null, command: null };
+
+try {
+    defineReference({
+        id: 'probe-things',
+        title: 'Probe things',
+        list: () => [
+            { id: 'one', name: 'Thing one' },
+            // No id, so the machine leaves it out and says why.
+            { id: '', name: 'Unnamed' }
+        ],
+        read(item, { project }) {
+            if (item.id !== 'one') {
+                throw new Error(`The probe has no thing ${item.id}`);
+            }
+
+            return `${item.name} of ${project.id}`;
+        }
+    });
+} catch (e) {
+    composerRefused.reference = (e as Error).message;
+}
+
+try {
+    defineSlashCommand({
+        name: 'probe-echo',
+        description: 'Says back what you typed',
+        run: (args, { project }) => (args === 'large' ? 'x'.repeat(100_001) : `You said ${args} in ${project.id}`)
+    });
+} catch (e) {
+    composerRefused.command = (e as Error).message;
+}
+
 let uiSourceRefused: string | null = null;
 
 try {
@@ -273,6 +308,9 @@ const providerApi = defineServer({
     },
     async machineSourceRefused() {
         return machineSourceRefused;
+    },
+    async composerRefused() {
+        return composerRefused;
     },
     async uiSourceRefused() {
         return uiSourceRefused;

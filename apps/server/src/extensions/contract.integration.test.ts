@@ -310,6 +310,16 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
                 return { start: null, reports: [], failure: (e as Error).message };
             }
         },
+        composer: async () => {
+            const offered = await host.composerItems(project);
+
+            return {
+                references: offered.references.map(({ extension: _extension, ...thing }) => thing),
+                commands: offered.commands.map(({ extension: _extension, ...command }) => command)
+            };
+        },
+        pick: (reference, item) => host.readReference(ID, reference, item, project),
+        slash: (name, args) => host.expandCommand(ID, name, args, project),
         uiSource: async (id) => {
             const listed = (await host.uiSources(true)).find((source) => source.extension === ID && source.id === id);
 

@@ -6778,7 +6778,9 @@ var EXTENSION_PROVIDER_POINTS = {
   problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
   machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
   notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
-  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true }
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
+  references: { define: "defineReference", permission: "composer.provide", proposed: true },
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true }
 };
 var MAX_SOURCED_LAUNCHES = 64;
 var MAX_MACHINE_CANDIDATES = 16;
@@ -6786,6 +6788,8 @@ var MAX_MACHINE_STEPS = 16;
 var MAX_UI_SOURCE_DESCRIPTION = 200;
 var MAX_UI_SOURCE_PARAMETERS_BYTES = 2048;
 var MAX_UI_SOURCE_ANSWER_BYTES = 32768;
+var MAX_REFERENCE_ITEMS = 200;
+var MAX_COMPOSER_TEXT = 1e5;
 function uiSourceName(extension, source) {
   return `${extension}/${source}`;
 }
@@ -7012,6 +7016,8 @@ function createServerApi(options) {
   const machineStarts = new Map;
   const notificationChannels = new Map;
   const uiSources = new Map;
+  const references = new Map;
+  const slashCommands = new Map;
   const fileWatches = new Map;
   let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
@@ -7111,6 +7117,16 @@ function createServerApi(options) {
         description: source.description,
         ...source.parameters === undefined ? {} : { parameters: source.parameters }
       });
+    },
+    defineReference(reference) {
+      mayDefine("defineReference", "composer.provide", reference.id);
+      references.set(reference.id, reference);
+      send({ type: "reference", id: reference.id, title: reference.title });
+    },
+    defineSlashCommand(command) {
+      mayDefine("defineSlashCommand", "composer.provide", command.name);
+      slashCommands.set(command.name, command);
+      send({ type: "slashCommand", name: command.name, description: command.description });
     },
     problems: {
       report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
@@ -7282,6 +7298,26 @@ ${project.id}`;
         throw new MissingHandler(`No UI source ${id}`);
       }
       return source.read(args, { project });
+    },
+    askReference(id, method, { project, item }) {
+      const reference = references.get(id);
+      if (reference === undefined) {
+        throw new MissingHandler(`No reference ${id}`);
+      }
+      if (method === "list") {
+        return reference.list({ project });
+      }
+      if (item === undefined) {
+        throw new TypeError("A read names the thing to read");
+      }
+      return reference.read(item, { project });
+    },
+    expandCommand(name, args, project) {
+      const command = slashCommands.get(name);
+      if (command === undefined) {
+        throw new MissingHandler(`No slash command ${name}`);
+      }
+      return command.run(args, { project });
     },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
@@ -7464,6 +7500,29 @@ function uiAnswerRead(answer) {
   }
   return JSON.parse(text);
 }
+var ReferenceItemSchema = object({ id: string2().min(1).max(200), name: string2().trim().min(1).max(200) });
+function referenceItemsListed(answer, refused) {
+  const items = new Map;
+  for (const entry of (Array.isArray(answer) ? answer : []).slice(0, MAX_REFERENCE_ITEMS)) {
+    const described = ReferenceItemSchema.safeParse(entry);
+    if (!described.success) {
+      const issue = described.error.issues[0];
+      refused(`listed a thing that is none: ${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`);
+    } else if (!items.has(described.data.id)) {
+      items.set(described.data.id, described.data);
+    }
+  }
+  return [...items.values()];
+}
+function composerTextRead(answer) {
+  if (typeof answer !== "string") {
+    throw new Error("answered no text");
+  }
+  if (answer.length > MAX_COMPOSER_TEXT) {
+    throw new Error(`answered more than ${MAX_COMPOSER_TEXT} characters`);
+  }
+  return answer;
+}
 
 // apps/server/src/extensions/test-loader.ts
 import { mkdirSync, mkdtempSync, rmSync } from "fs";
@@ -7618,6 +7677,8 @@ class TestMachine {
   machineSources = new Map;
   notificationChannels = new Map;
   uiSources = new Map;
+  references = new Map;
+  slashCommands = new Map;
   machineReports = new Map;
   nextMachineStart = 1;
   problems = [];
@@ -7728,6 +7789,10 @@ class TestMachine {
       this.machineReports.get(message.run)?.push(message.line);
     } else if (message.type === "notificationChannel") {
       this.notificationChannels.set(message.id, message.title);
+    } else if (message.type === "reference") {
+      this.references.set(message.id, message.title);
+    } else if (message.type === "slashCommand") {
+      this.slashCommands.set(message.name, message.description);
     } else if (message.type === "uiSource") {
       const described = uiSourceDescribed(message.description, message.parameters);
       if (typeof described === "string") {
@@ -8092,6 +8157,29 @@ async function createTestServer(options = {}) {
             options.signal?.removeEventListener("abort", abort);
           }
         }
+      };
+    },
+    reference: (id) => {
+      const title = machine.references.get(id);
+      if (title === undefined) {
+        throw new Error(`No reference ${id}. defineReference says what there is`);
+      }
+      return {
+        title,
+        list: async (project = {}) => referenceItemsListed(wire(await machine.core.askReference(id, "list", { project: { ...machine.project, ...project } })), (reason) => {
+          machine.logs.push(`${id} ${reason}`);
+        }),
+        read: async (item, project = {}) => composerTextRead(wire(await machine.core.askReference(id, "read", { project: { ...machine.project, ...project }, item })))
+      };
+    },
+    slashCommand: (name) => {
+      const description = machine.slashCommands.get(name);
+      if (description === undefined) {
+        throw new Error(`No slash command ${name}. defineSlashCommand says what there is`);
+      }
+      return {
+        description,
+        run: async (args = "", project = {}) => composerTextRead(wire(await machine.core.expandCommand(name, args, { ...machine.project, ...project })))
       };
     },
     uiSource: (id) => {
@@ -9851,6 +9939,8 @@ var server = {
   defineMachineSource: through("defineMachineSource"),
   defineNotificationChannel: through("defineNotificationChannel"),
   defineUiSource: through("defineUiSource"),
+  defineReference: through("defineReference"),
+  defineSlashCommand: through("defineSlashCommand"),
   problems: forwarded2("problems"),
   files: forwarded2("files"),
   terminals: forwarded2("terminals"),

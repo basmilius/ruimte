@@ -315,6 +315,46 @@ export const ExtensionNotificationChannelSchema = z.object({
 });
 export type ExtensionNotificationChannel = z.infer<typeof ExtensionNotificationChannelSchema>;
 
+/* A thing an extension's `server/` offers after `#` in a chat, under the reference that lists it. */
+export const ExtensionComposerReferenceSchema = z.object({
+    extension: ExtensionIdSchema,
+    reference: ExtensionProvidedIdSchema,
+    // What the reference is called, such as the name of the service its things come from.
+    title: z.string().min(1).max(80),
+    id: z.string().min(1).max(200),
+    name: z.string().min(1).max(200)
+});
+export type ExtensionComposerReference = z.infer<typeof ExtensionComposerReferenceSchema>;
+
+/* A command an extension's `server/` offers after `/` in a chat. */
+export const ExtensionComposerCommandSchema = z.object({
+    extension: ExtensionIdSchema,
+    name: ExtensionProvidedIdSchema,
+    description: z.string().max(200)
+});
+export type ExtensionComposerCommand = z.infer<typeof ExtensionComposerCommandSchema>;
+
+export const ExtensionComposerItemsPayloadSchema = z.object({ projectId: z.string().min(1) });
+export const ExtensionComposerItemsResultSchema = z.object({
+    references: z.array(ExtensionComposerReferenceSchema),
+    commands: z.array(ExtensionComposerCommandSchema)
+});
+export const ExtensionReferenceReadPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    extension: ExtensionIdSchema,
+    reference: ExtensionProvidedIdSchema,
+    id: z.string().min(1).max(200),
+    name: z.string().min(1).max(200)
+});
+export const ExtensionCommandExpandPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    extension: ExtensionIdSchema,
+    name: ExtensionProvidedIdSchema,
+    args: z.string().max(10_000)
+});
+// The text that goes in the prompt, which the person still sends.
+export const ExtensionComposerTextResultSchema = z.object({ text: z.string() });
+
 export const ExtensionNotificationChannelsResultSchema = z.object({ channels: z.array(ExtensionNotificationChannelSchema) });
 export const ExtensionNotificationChannelSetPayloadSchema = z.object({
     extension: ExtensionIdSchema,
@@ -371,7 +411,10 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.terminalOpen': { payload: ExtensionTerminalOpenPayloadSchema, result: ExtensionTerminalOpenResultSchema },
     'extension.terminalWrite': { payload: ExtensionTerminalWritePayloadSchema, result: EmptySchema },
     'extension.notificationChannels': { payload: EmptySchema, result: ExtensionNotificationChannelsResultSchema },
-    'extension.notificationChannelSet': { payload: ExtensionNotificationChannelSetPayloadSchema, result: EmptySchema }
+    'extension.notificationChannelSet': { payload: ExtensionNotificationChannelSetPayloadSchema, result: EmptySchema },
+    'extension.composerItems': { payload: ExtensionComposerItemsPayloadSchema, result: ExtensionComposerItemsResultSchema },
+    'extension.referenceRead': { payload: ExtensionReferenceReadPayloadSchema, result: ExtensionComposerTextResultSchema },
+    'extension.commandExpand': { payload: ExtensionCommandExpandPayloadSchema, result: ExtensionComposerTextResultSchema }
 } as const;
 
 export const EXTENSION_EVENT_SCHEMAS = {
