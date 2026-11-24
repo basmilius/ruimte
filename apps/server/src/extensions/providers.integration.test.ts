@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ManualClock } from '@adecore/agents/testing';
-import type { LaunchesDocument, ProjectContent } from '@ruimte/contracts';
+import type { LaunchesDocument, MachineCandidate, MachineSourceChangedEvent, ProjectContent, ServerFrame } from '@ruimte/contracts';
 import { launchSessionIdOf } from '../launches/runner.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, invokeTool, releasedProject, type TestDaemon } from '../testing/test-daemon.ts';
@@ -17,6 +17,15 @@ const MIGRATE = 'dev.harbor:compose:migrate';
 const COMPOSE = ['services:', '  web:', '    command: bun run dev', '    port: 5173', '  migrate:', '    command: bun run migrate', '    kind: task', ''].join(
     '\n'
 );
+const MACHINE = [
+    'machine:',
+    '  name: workbench',
+    '  image: harbor/workbench:1',
+    '  prepare: sh scripts/prepare.sh',
+    '  start: sh scripts/start.sh',
+    '  login: sh scripts/login.sh',
+    ''
+].join('\n');
 const CONTENT: ProjectContent = {
     name: 'Shop',
     color: '#123456',
@@ -92,6 +101,119 @@ afterAll(async () => {
     await daemon.stop();
     store.closeAll();
     rmSync(root, { recursive: true, force: true });
+});
+
+describe('Harbor, a machine source in a process of its own', () => {
+    const target = { projectId: '', extension: HARBOR, source: 'compose-machine', candidate: 'workbench' };
+    const heard: MachineCandidate[] = [];
+    const LOGIN = 'sh -c sh scripts/login.sh';
+
+    /* A request from the app on this machine, which is the client that presented the local secret. */
+    async function owner(type: string, payload: unknown): Promise<ServerFrame> {
+        const frames: ServerFrame[] = [];
+
+        await daemon.dispatcher.handle(
+            { id: 'owner-1', access: { reachability: 'loopback', sessionId: null }, send: (frame) => frames.push(frame) },
+            JSON.stringify({ id: 'request', type, payload })
+        );
+
+        return frames[0]!;
+    }
+
+    async function start(approve?: string): Promise<MachineCandidate> {
+        const frame = await owner('extension.machineStart', { ...target, ...(approve === undefined ? {} : { approve }) });
+
+        if (!('ok' in frame) || !frame.ok) {
+            throw new Error(JSON.stringify(frame));
+        }
+
+        return (frame.result as { candidate: MachineCandidate }).candidate;
+    }
+
+    beforeAll(() => {
+        target.projectId = projectId;
+        writeFileSync(join(folder, 'harbor.yaml'), `${COMPOSE}${MACHINE}`);
+        daemon.bundles.extensions.machineSources.subscribe('owner-1', (event) => void heard.push((event.payload as MachineSourceChangedEvent).candidate));
+    });
+
+    afterAll(() => {
+        // The launches below read the file as it was before a machine was named in it.
+        writeFileSync(join(folder, 'harbor.yaml'), COMPOSE);
+    });
+
+    test('lists the machine of harbor.yaml to the app on this machine, and to no client a statement let in', async () => {
+        expect(await owner('extension.machineList', { projectId })).toMatchObject({
+            ok: true,
+            result: {
+                candidates: [
+                    {
+                        source: { extension: HARBOR, id: 'compose-machine', title: 'Harbor' },
+                        id: 'workbench',
+                        title: 'workbench',
+                        place: 'harbor/workbench:1',
+                        running: false,
+                        state: 'idle',
+                        lines: []
+                    }
+                ]
+            }
+        });
+        expect(await daemon.request('extension.machineList', { projectId })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await daemon.request('extension.machineStart', target)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+    });
+
+    test('holds the start until a person approved it, and then runs the programs Harbor described up to the sign-in of the new machine', async () => {
+        const held = await start();
+
+        expect(held).toMatchObject({
+            state: 'held',
+            lines: ['Reading harbor.yaml'],
+            held: {
+                programs: [
+                    { title: 'Prepare workbench', command: "sh -c 'sh scripts/prepare.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } },
+                    { title: 'Start workbench', command: "sh -c 'sh scripts/start.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } },
+                    { login: true, command: "sh -c 'sh scripts/login.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } }
+                ]
+            }
+        });
+        expect(daemon.machineSteps.ran).toEqual([]);
+
+        daemon.machineSteps.script('sh -c sh scripts/start.sh', { lines: ['workbench is up'] });
+        daemon.machineSteps.script(LOGIN, { lines: ['Open https://station.ruimte.app/link?code=BCDF-GHJK'], stays: true });
+
+        expect((await start(held.held?.digest)).state).toBe('starting');
+        await until(async () => (heard.at(-1)?.state === 'joining' && heard.at(-1)?.lines.at(-1)?.startsWith('Open ') === true ? true : null));
+
+        expect(daemon.machineSteps.ran.map((step) => [step.command, ...step.args, step.cwd, step.env.HARBOR_MACHINE])).toEqual([
+            ['sh', '-c', 'sh scripts/prepare.sh', folder, 'workbench'],
+            ['sh', '-c', 'sh scripts/start.sh', folder, 'workbench'],
+            ['sh', '-c', 'sh scripts/login.sh', folder, 'workbench']
+        ]);
+        expect(heard.at(-1)?.lines).toEqual([
+            'Reading harbor.yaml',
+            'Prepare workbench',
+            'Start workbench',
+            'workbench is up',
+            'Open https://station.ruimte.app/link?code=BCDF-GHJK'
+        ]);
+
+        // The person approved the code on the page, so the sign-in of the new machine ended by itself.
+        daemon.machineSteps.finish(LOGIN);
+        await until(async () => (heard.at(-1)?.state === 'done' ? true : null));
+    });
+
+    test('asks a person again once harbor.yaml changed, though the programs stayed the same', async () => {
+        const before = daemon.machineSteps.ran.length;
+
+        writeFileSync(join(folder, 'harbor.yaml'), `# Reviewed\n${COMPOSE}${MACHINE}`);
+
+        expect((await start()).state).toBe('held');
+        expect(daemon.machineSteps.ran).toHaveLength(before);
+
+        // Let go of, so nothing waits on this machine when the test ends.
+        expect(await owner('extension.machineStop', target)).toMatchObject({ ok: true });
+        expect(heard.at(-1)?.state).toBe('idle');
+    });
 });
 
 describe('Harbor, a launch source in a process of its own', () => {

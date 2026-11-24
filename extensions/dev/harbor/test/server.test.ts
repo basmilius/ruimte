@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { createTestServer } from '@ruimte/extension/testing';
+import manifest from '../manifest.json';
 import type { HarborServer } from '../server';
 
 const COMPOSE = [
@@ -16,6 +17,16 @@ const COMPOSE = [
     '    command: never listed',
     ''
 ].join('\n');
+const MACHINE = [
+    'machine:',
+    '  name: workbench',
+    '  image: harbor/workbench:1',
+    '  prepare: sh scripts/prepare.sh',
+    '  start: sh scripts/start.sh',
+    '  login: sh scripts/login.sh',
+    ''
+].join('\n');
+const PERMISSIONS: Record<string, string> = manifest.permissions;
 const NOT_OPENED = { code: 'refused' as const, message: 'dev.harbor did not open the terminal shell-1, so it cannot type into it' };
 
 describe('Harbor on the machine', () => {
@@ -81,7 +92,7 @@ describe('Harbor on the machine', () => {
     });
 
     test('opens no terminal and types into none without the permission of each', async () => {
-        const permissions = { 'launches.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
+        const permissions = { 'launches.provide': 'Lists', 'machines.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
         const server = await createTestServer<HarborServer>({ manifest: { permissions } });
 
         expect(await server.call('openShell', 'project-1')).toEqual({
@@ -97,7 +108,7 @@ describe('Harbor on the machine', () => {
 
     test('does not load as an extension a person installed, where a proposed part does not work', async () => {
         await expect(createTestServer<HarborServer>({ provenance: 'installed' })).rejects.toThrow(
-            'This extension uses a part of Ruimte that is not final yet (terminalProfiles, launchSources). It works while its author develops it, and an installed extension cannot use it.'
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles, launchSources, machineSources). It works while its author develops it, and an installed extension cannot use it.'
         );
     });
 
@@ -187,7 +198,7 @@ describe('Harbor on the machine', () => {
     });
 
     test('reads no file and follows no launch without the permission of each, and says so in its log', async () => {
-        const permissions = { 'launches.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
+        const permissions = { 'launches.provide': 'Lists', 'machines.provide': 'Lists', 'terminals.profiles': 'Adds a shell' };
         const server = await createTestServer<HarborServer>({ manifest: { permissions }, files: { 'harbor.yaml': COMPOSE } });
 
         expect(await server.launchSource('compose').list()).toEqual([]);
@@ -201,6 +212,60 @@ describe('Harbor on the machine', () => {
             'files.watch answered permission-denied: dev.harbor did not ask for the permission files.read in its manifest',
             'Harbor does not follow harbor.yaml: dev.harbor did not ask for the permission files.read in its manifest'
         ]);
+    });
+
+    test('lists the machine of harbor.yaml as a place Ruimte can start one in, and none for a file without it', async () => {
+        const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': `${COMPOSE}${MACHINE}` } });
+        const source = server.machineSource('compose-machine');
+
+        expect(source.title).toBe('Harbor');
+        expect(await source.list()).toEqual([{ id: 'workbench', title: 'workbench', place: 'harbor/workbench:1', running: false }]);
+
+        server.writeFile('harbor.yaml', COMPOSE);
+
+        expect(await source.list()).toEqual([]);
+    });
+
+    test('describes the shell lines of the file as the steps of a start, with its sign-in last and the digest of the file', async () => {
+        const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': `${COMPOSE}${MACHINE}` } });
+        const source = server.machineSource('compose-machine');
+        const env = { HARBOR_MACHINE: 'workbench' };
+        const { start, reports } = await source.start('workbench');
+
+        expect(reports).toEqual(['Reading harbor.yaml']);
+        expect(start).toEqual({
+            steps: [
+                { title: 'Prepare workbench', spawn: { command: 'sh', args: ['-c', 'sh scripts/prepare.sh'], env } },
+                { title: 'Start workbench', spawn: { command: 'sh', args: ['-c', 'sh scripts/start.sh'], env } }
+            ],
+            login: { command: 'sh', args: ['-c', 'sh scripts/login.sh'], env },
+            fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/)
+        });
+        // It described and ran nothing: all it asked the machine was to read the file.
+        expect(new Set(server.asked.map((ask) => ask.method))).toEqual(new Set(['files.readText']));
+
+        server.writeFile('harbor.yaml', `# Reviewed\n${COMPOSE}${MACHINE}`);
+
+        expect((await source.start('workbench')).start.fingerprint).not.toBe(start.fingerprint);
+    });
+
+    test('describes a start without a sign-in or a preparation the file leaves out', async () => {
+        const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': 'machine:\n  name: bare\n  start: sh up.sh\n' } });
+        const source = server.machineSource('compose-machine');
+
+        expect(await source.list()).toEqual([{ id: 'bare', title: 'bare', place: 'harbor.yaml', running: false }]);
+        expect((await source.start('bare')).start).toEqual({
+            steps: [{ title: 'Start bare', spawn: { command: 'sh', args: ['-c', 'sh up.sh'], env: { HARBOR_MACHINE: 'bare' } } }],
+            fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/)
+        });
+    });
+
+    test('defines no machine source its manifest does not ask the permission for', async () => {
+        const { 'machines.provide': _, ...permissions } = PERMISSIONS;
+
+        await expect(createTestServer<HarborServer>({ manifest: { permissions } })).rejects.toThrow(
+            'dev.harbor did not ask for the permission machines.provide in its manifest'
+        );
     });
 
     test('defines no profile its manifest does not name as proposed, list or ask the permission for', async () => {

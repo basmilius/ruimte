@@ -1,5 +1,6 @@
 import {
     defineLaunchSource,
+    defineMachineSource,
     defineServer,
     defineTerminalProfile,
     emit,
@@ -8,13 +9,15 @@ import {
     onEvent,
     storage,
     terminals,
-    type ProjectRef
+    type ProjectRef,
+    type SpawnDescription
 } from '@ruimte/extension/server';
-import { COMPOSE_FILE, fingerprintOf, servicesIn, type ComposeService } from './compose';
+import { COMPOSE_FILE, fingerprintOf, machineIn, servicesIn, type ComposeMachine, type ComposeService } from './compose';
 import { SERVICES, serviceNamed, type Service } from './service';
 
 export const SHELL_PROFILE = 'service-shell';
 export const COMPOSE_SOURCE = 'compose';
+export const MACHINE_SOURCE = 'compose-machine';
 
 /* The key of the service a project's shells open in, which the client's card writes as `machine` storage. */
 export function serviceKey(projectId: string): string {
@@ -80,6 +83,52 @@ defineLaunchSource({
         }
 
         return watching.ok ? watching.value : () => undefined;
+    }
+});
+
+async function machineOf(project: ProjectRef): Promise<{ machine: ComposeMachine; fingerprint: string } | null> {
+    const read = await files.readText(project, COMPOSE_FILE);
+    const machine = read.ok ? machineIn(read.value) : null;
+
+    return read.ok && machine !== null ? { machine, fingerprint: await fingerprintOf(read.value) } : null;
+}
+
+function shell(line: string, machine: ComposeMachine): SpawnDescription {
+    return { command: 'sh', args: ['-c', line], env: { HARBOR_MACHINE: machine.name } };
+}
+
+/*
+ * The machine of the project's `harbor.yaml` as a place Ruimte can start one in. Harbor describes the shell lines of
+ * the file and never runs them, and it has no engine to ask, so it cannot tell whether a machine already runs there.
+ * The file's `login` is the new machine's own sign-in: Harbor sees neither its lines nor the account.
+ */
+defineMachineSource({
+    id: MACHINE_SOURCE,
+    title: 'Harbor',
+    async list(project) {
+        const found = await machineOf(project);
+
+        return found === null ? [] : [{ id: found.machine.name, title: found.machine.name, place: found.machine.image ?? COMPOSE_FILE, running: false }];
+    },
+    async start(candidate, { project, report }) {
+        report(`Reading ${COMPOSE_FILE}`);
+
+        const found = await machineOf(project);
+
+        if (found === null || found.machine.name !== candidate.id) {
+            throw new Error(`${COMPOSE_FILE} no longer names the machine ${candidate.id}`);
+        }
+
+        const { machine, fingerprint } = found;
+
+        return {
+            steps: [
+                ...(machine.prepare === undefined ? [] : [{ title: `Prepare ${machine.name}`, spawn: shell(machine.prepare, machine) }]),
+                { title: `Start ${machine.name}`, spawn: shell(machine.start, machine) }
+            ],
+            ...(machine.login === undefined ? {} : { login: shell(machine.login, machine) }),
+            fingerprint
+        };
     }
 });
 

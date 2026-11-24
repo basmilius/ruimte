@@ -12,7 +12,7 @@ const PRODUCTS = ['trackline', 'boardwalk', 'beacon', 'pulseboard'].map((name) =
 const POCS = ['surfaces', 'machine', 'frame', 'themes', 'broken', 'broken-load'].map((name) => [`poc/${name}`, `poc.${name}`] as const);
 // The products that use a proposed part, each with the parts a person reads of.
 const PROPOSED = [
-    ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources'],
+    ['dev/harbor', 'dev.harbor', 'terminalProfiles, launchSources, machineSources'],
     ['dev/lintel', 'dev.lintel', 'problemSources']
 ] as const;
 const TRACKLINE = 'dev.trackline';

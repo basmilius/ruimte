@@ -1,5 +1,5 @@
 /*
- * `harbor.yaml` in a project folder: the services Harbor lists as launches. A format of its own, read without a
+ * `harbor.yaml` in a project folder: the services Harbor lists as launches, and the machine it can start. A format of its own, read without a
  * dependency. Two spaces of indentation name a service, four give it a field:
  *
  *     services:
@@ -76,6 +76,66 @@ export function servicesIn(text: string): ComposeService[] {
     }
 
     return services.filter((service): service is ComposeService => service.command !== undefined);
+}
+
+/*
+ * The place `harbor.yaml` names for a machine, under a `machine:` of its own beside `services:`. Its fields sit at two
+ * spaces, and each command is a plain shell line this computer runs:
+ *
+ *     machine:
+ *       name: workbench
+ *       image: harbor/workbench:1
+ *       prepare: sh scripts/prepare.sh
+ *       start: sh scripts/start.sh
+ *       login: sh scripts/login.sh
+ */
+export interface ComposeMachine {
+    name: string;
+    image?: string;
+    /* Runs before the start, such as building what the machine runs in. */
+    prepare?: string;
+    /* Puts the machine there and starts it. */
+    start: string;
+    /* Runs `ruimte login` on the new machine, so a person can put it on their account. */
+    login?: string;
+}
+
+const MACHINE_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/;
+const MACHINE_FIELD = /^ {2}([a-z]+):\s*(.+?)\s*$/;
+
+/* The machine of a compose file, or null for a file without one, one without a name Ruimte takes or one that starts nothing. */
+export function machineIn(text: string): ComposeMachine | null {
+    const fields = new Map<string, string>();
+    let inMachine = false;
+
+    for (const line of text.split(/\r?\n/)) {
+        if (line.trim() === '' || line.trimStart().startsWith('#')) {
+            continue;
+        }
+
+        if (!line.startsWith(' ')) {
+            inMachine = line.trim() === 'machine:';
+
+            continue;
+        }
+
+        const field = inMachine ? MACHINE_FIELD.exec(line) : null;
+
+        if (field !== null) {
+            fields.set(field[1] ?? '', field[2] ?? '');
+        }
+    }
+
+    const name = fields.get('name');
+    const start = fields.get('start');
+
+    if (name === undefined || start === undefined || !MACHINE_NAME.test(name)) {
+        return null;
+    }
+
+    const optional = (key: 'image' | 'prepare' | 'login'): Partial<ComposeMachine> => (fields.has(key) ? { [key]: fields.get(key) } : {});
+
+    return { name, start, ...optional('image'), ...optional('prepare'), ...optional('login') };
 }
 
 /* A digest of the whole file: any change to it, also to a comment, has a person look at the launches again. */

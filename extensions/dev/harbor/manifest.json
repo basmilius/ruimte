@@ -12,13 +12,15 @@
         "files.read": "Reads harbor.yaml in the project folder",
         "launches.provide": "Lists the services of harbor.yaml as launches",
         "launches.read": "Shows which of its services run",
+        "machines.provide": "Lists the machine of harbor.yaml as one Ruimte can start",
         "terminals.profiles": "Adds a shell in a service to the menu of a new terminal",
         "terminals.read": "Shows the last line of the terminal you select",
         "terminals.write": "Types the first command into a shell it opened"
     },
     "provides": {
         "terminalProfiles": ["service-shell"],
-        "launchSources": ["compose"]
+        "launchSources": ["compose"],
+        "machineSources": ["compose-machine"]
     },
-    "proposed": ["terminalProfiles", "launchSources"]
+    "proposed": ["terminalProfiles", "launchSources", "machineSources"]
 }
