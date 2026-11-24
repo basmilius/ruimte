@@ -913,13 +913,18 @@ export function clientContract(open: OpenClientWorld): void {
                 ]
             });
 
-            const screen = await world.render(() => h('p', null, `service ${api.useProjectSetting<string>('service')}`));
+            const Service = () => {
+                const project = api.useProject();
+
+                return h('p', null, `${project.id} ${project.name}: service ${api.useProjectSetting<string>('service')}`);
+            };
+            const screen = await world.render(Service);
 
             expect(world.projectSettings()).toEqual(['Probe']);
-            expect(screen.text()).toBe('service web');
+            expect(screen.text()).toBe(`${SEED.project.id} ${SEED.project.name}: service web`);
 
             await world.chooseProjectSetting('service', 'db');
-            await screen.until(() => screen.text() === 'service db');
+            await screen.until(() => screen.text() === `${SEED.project.id} ${SEED.project.name}: service db`);
         });
 
         test("puts no section in a project's settings while its manifest does not name the part as proposed", async () => {

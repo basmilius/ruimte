@@ -250,8 +250,10 @@ export function serverContract(open: OpenServerWorld): void {
 
             expect(await allowed.call('asks', 'Hi')).toEqual({ ok: true, value: { ok: true, value: { text: 'Answer to Hi' } } });
             expect(await allowed.call('chatIds')).toEqual({ ok: true, value: ['chat-1'] });
+            expect(await allowed.call('readsChat', 'chat-1')).toEqual({ ok: true, value: { ok: true, value: 'The thread' } });
             expect(await refused.call('asks', 'Hi')).toEqual(denied('agents.run'));
             expect(await refused.call('chatIds')).toEqual(denied('chats.read'));
+            expect(await refused.call('readsChat', 'chat-1')).toEqual(denied('chats.read'));
         });
 
         test('keeps a secret apart from what it stores, and writes what it logs', async () => {
@@ -259,6 +261,8 @@ export function serverContract(open: OpenServerWorld): void {
 
             expect(await world.call('hide', 'hunter2')).toEqual({ ok: true, value: ['hunter2', null] });
             expect(await world.logs()).toContain('Kept a secret');
+            // An error with nothing caught beside it: the process prints the gap where the error would stand.
+            expect(await world.logs()).toContainEqual(expect.stringMatching(/^Kept it badly ?$/));
         });
 
         test('says an event without a payload as one a client hears with none', async () => {

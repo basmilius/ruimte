@@ -93,10 +93,14 @@ const api = defineServer({
 
         return listed.ok ? listed.value.map((chat) => chat.id) : listed;
     },
+    async readsChat(chatId: string) {
+        return chats.read(chatId);
+    },
     // Beside what storage holds under the same key, which a secret never reaches.
     async hide(value: string) {
         await secrets.set('token', value);
         log.info('Kept a secret');
+        log.error('Kept it badly');
 
         return [(await secrets.get('token')) ?? null, (await storage.get<string>('token')) ?? null];
     },

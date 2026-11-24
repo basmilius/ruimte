@@ -195,7 +195,8 @@ serverContract(async (permissions, { provenance, ...provided } = {}) => {
         asks: () => ({
             'chats.send': async () => undefined,
             'agents.run': async ({ prompt }: { prompt: string }) => ({ text: `Answer to ${prompt}` }),
-            'chats.list': async () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }]
+            'chats.list': async () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }],
+            'chats.read': async () => 'The thread'
         }),
         startChat: extensionChatStarter({
             host: daemon.host,

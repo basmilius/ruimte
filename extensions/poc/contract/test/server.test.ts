@@ -16,6 +16,7 @@ serverContract(async (permissions, { provenance, ...manifest } = {}) => {
             'chats.send': () => undefined,
             'agents.run': ({ prompt }) => ({ text: `Answer to ${prompt}` }),
             'chats.list': () => [{ id: 'chat-1', provider: 'claude', status: 'idle', model: null, cwd: '/work' }],
+            'chats.read': () => 'The thread',
             'terminals.read': () => 'The screen',
             'machine.run': { 'launch.start': ({ launch }) => ({ id: launch, name: launch }) }
         }
