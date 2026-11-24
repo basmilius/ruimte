@@ -1,7 +1,8 @@
 import { KeyedSerializer } from '@adecore/utils/async';
-import type { ExtensionInfo } from '@ruimte/contracts';
+import type { ExtensionInfo, ExtensionProvenance } from '@ruimte/contracts';
 import { EXTENSION_FILE_TYPES, EXTENSION_FILES_PATH } from '@ruimte/csp';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
+import { provenanceOf } from '@/extensions/installed';
 import { extensionRequest } from '@/extensions/machine-request';
 import type { Transport } from '@/transport';
 import { machineAnswers } from '@/transport/features';
@@ -21,6 +22,7 @@ export interface MachineExtensions {
     installed: InstalledClientExtension[];
     // Why the files of an extension did not arrive, by id; the others load all the same.
     failures: Record<string, string>;
+    provenance?: Record<string, ExtensionProvenance>;
 }
 
 /* The machine updated an extension between its list and its files, so this list is not the one its files belong to. */
@@ -262,8 +264,12 @@ export async function machineExtensions(link: Link, endpointId: string, { previo
         const { answer, listed } = await read(link, root);
         const installed = [...answer.installed, ...keptFrom(previous, root, answer.failures, listed)];
 
+        const told = provenanceOf(listed);
+        // Left out for a machine that tells none, as one of before does.
+        const provenance = Object.keys(told).length === 0 ? {} : { provenance: told };
+
         if (!current()) {
-            return { installed, failures: answer.failures };
+            return { installed, failures: answer.failures, ...provenance };
         }
 
         const bases = installed.map((entry) => entry.base);
@@ -272,6 +278,6 @@ export async function machineExtensions(link: Link, endpointId: string, { previo
         // A version another window runs of an extension whose files did not come stays as well.
         await dropOtherVersions(root, [...bases, ...Object.keys(answer.failures).map((id) => `${root}${id}/`)]);
 
-        return { installed, failures: answer.failures };
+        return { installed, failures: answer.failures, ...provenance };
     });
 }

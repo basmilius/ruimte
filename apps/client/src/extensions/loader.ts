@@ -1,9 +1,9 @@
-import { EXTENSION_ICON_PATH, type ExtensionInfo } from '@ruimte/contracts';
+import { EXTENSION_ICON_PATH, type ExtensionInfo, type ExtensionProvenance } from '@ruimte/contracts';
 import type { InstalledClientExtension } from '@ruimte/desktop-bridge';
 import { desktop } from '@/desktop/bridge';
 import { wantsLoading, watchActivation } from '@/extensions/activation';
 import type { LoadedExtension } from '@/extensions/host/client-api';
-import { useInstalledExtensions } from '@/extensions/installed';
+import { provenanceOf, useInstalledExtensions } from '@/extensions/installed';
 import { extensionsInSafeMode } from '@/extensions/safe-mode';
 import { machineExtensions } from '@/extensions/station-files';
 import { refreshExtensionTheme } from '@/extensions/themes';
@@ -49,7 +49,7 @@ function failed(id: string, e: unknown): void {
 async function installedNow(
     endpointId: string,
     current: () => boolean
-): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string> } | null> {
+): Promise<{ installed: readonly InstalledClientExtension[]; failures: Record<string, string>; provenance?: Record<string, ExtensionProvenance> } | null> {
     if (!IS_STATION) {
         const installed = (await desktop()?.extensions?.list()) ?? null;
 
@@ -121,7 +121,8 @@ export async function syncExtensions(): Promise<void> {
         runningFor = endpointId;
     }
 
-    useInstalledExtensions.setState({ installed, listed: true });
+    // Only Station reads it here, with the list; a desktop window hears it from its own machine (`followDevLinks`).
+    useInstalledExtensions.setState({ installed, listed: true, ...(IS_STATION ? { provenance: answer.provenance ?? {} } : {}) });
 
     for (const [id, failure] of Object.entries(answer.failures)) {
         failed(id, failure);
@@ -279,6 +280,8 @@ export async function followDevLinks(machineExtensions: readonly ExtensionInfo[]
 
     const linked = machineExtensions.filter((entry) => entry.devFolder !== undefined);
     const known = await bridge.list();
+
+    useInstalledExtensions.setState({ provenance: provenanceOf(machineExtensions) });
 
     for (const entry of known.filter((each) => each.dev && !linked.some((link) => link.manifest.id === each.manifest.id))) {
         await bridge.unlink(entry.manifest.id);

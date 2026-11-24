@@ -2285,6 +2285,8 @@
         "noPermissions": "Vraagt nergens extra om.",
         "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer.",
         "groupDevelopment": "In ontwikkeling",
+        "groupTest": "Testextensies",
+        "testExtension": "Testextensie",
         "groupInstalled": "Geïnstalleerd",
         "builtIn": "Ingebouwd",
         "development": "Ontwikkeling",

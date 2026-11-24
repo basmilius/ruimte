@@ -2285,6 +2285,8 @@
         "noPermissions": "Asks for nothing extra.",
         "removeDescription": "Takes it and what it stored off this computer.",
         "groupDevelopment": "In development",
+        "groupTest": "Test extensions",
+        "testExtension": "Test extension",
         "groupInstalled": "Installed",
         "builtIn": "Built-in",
         "development": "Development",

@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { desktop } from '@/desktop/bridge';
 import { readDisabled } from '@/extensions/built-ins';
 import { ExtensionTile } from '@/extensions/ExtensionTile';
-import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions } from '@/extensions/loader';
+import { extensionIconUrl, extensionsInSafeMode, syncExtensions, useInstalledExtensions, type ExtensionsState } from '@/extensions/loader';
 import { SchemaSettings } from '@/extensions/SchemaSettings';
 import {
     installFromStore,
@@ -345,10 +345,16 @@ function BuiltInDetail({ id }: { id: string }) {
     );
 }
 
+/* One of Ruimte's own development extensions, which only the machine says: its manifest could claim anything. */
+function isTestExtension(state: ExtensionsState, id: string): boolean {
+    return state.provenance?.[id] === 'development';
+}
+
 function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void }) {
     const { t } = useTranslation('settings');
     const entry = useInstalledExtensions((state) => state.installed.find((each) => each.manifest.id === id));
     const failure = useInstalledExtensions((state) => state.failures[id]);
+    const test = useInstalledExtensions((state) => isTestExtension(state, id));
     const settings = useContributions((state) => state.extensionSettings.find((each) => each.id === id));
     const name = entry?.manifest.name ?? id;
     const machineSaid = ({ machineFailure }: MachineChange): void => {
@@ -371,7 +377,15 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                 color={manifest.color}
                 name={manifest.name}
                 meta={[manifest.publisher, manifest.version]}
-                badge={entry.dev ? t('extensions.development') : entry.fromStore === true ? undefined : t('extensions.fromDiskBadge')}
+                badge={
+                    test
+                        ? t('extensions.testExtension')
+                        : entry.dev
+                          ? t('extensions.development')
+                          : entry.fromStore === true
+                            ? undefined
+                            : t('extensions.fromDiskBadge')
+                }
                 description={manifest.description}
             />
             {failure !== undefined && <p className="text-sm text-status-error">{failure}</p>}
@@ -381,7 +395,8 @@ function InstalledDetail({ id, onRemoved }: { id: string; onRemoved: () => void 
                     control={
                         <Switch
                             checked={entry.enabled}
-                            disabled={entry.dev}
+                            // A link of `extension dev` is on while its run lasts; a test extension stays linked, so a person turns it on and off.
+                            disabled={entry.dev && !test}
                             label={t('extensions.enabled')}
                             onCheckedChange={(next) => void setExtensionEnabled(id, next).then(machineSaid)}
                         />
@@ -446,7 +461,9 @@ export function ExtensionsPane() {
     const installed = useInstalledExtensions((state) => state.installed);
     const builtIns = useContributions((state) => state.builtIns);
     const [selected, setSelected] = useState(BROWSE);
-    const developing = installed.filter((entry) => entry.dev);
+    const provenance = useInstalledExtensions((state) => state.provenance);
+    const testing = installed.filter((entry) => entry.dev && provenance?.[entry.manifest.id] === 'development');
+    const developing = installed.filter((entry) => entry.dev && !testing.includes(entry));
     const fromStore = installed.filter((entry) => !entry.dev);
 
     useEffect(() => {
@@ -476,6 +493,7 @@ export function ExtensionsPane() {
                         {t('extensions.fromDisk')}
                     </MasterItem>
                     <InstalledGroup title={t('extensions.groupDevelopment')} entries={developing} selected={selected} onSelect={setSelected} />
+                    <InstalledGroup title={t('extensions.groupTest')} entries={testing} selected={selected} onSelect={setSelected} />
                     <InstalledGroup title={t('extensions.groupInstalled')} entries={fromStore} selected={selected} onSelect={setSelected} />
                     {builtIns.length > 0 && <SectionLabel className="px-3 pt-3 pb-1">{t('extensions.builtIn')}</SectionLabel>}
                     {builtIns.map((entry) => (
