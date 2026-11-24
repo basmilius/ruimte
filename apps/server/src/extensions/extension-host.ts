@@ -1214,9 +1214,21 @@ export class ExtensionHost {
     private async launchesOf(id: string, running: Running, source: string, project: ExtensionProject): Promise<LaunchDescription[]> {
         const answer = await this.send(running, { type: 'launchSource', source, method: 'list', input: project }, `${id} launch source ${source}`);
 
-        return launchesListed(answer, (reason) => {
-            void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${source} ${reason}\n`));
-        });
+        const refused: string[] = [];
+        const launches = launchesListed(answer, (reason) => refused.push(`${source} ${reason}`));
+
+        await this.logRefused(id, refused);
+
+        return launches;
+    }
+
+    /* Writes why parts of a listing were left out before the listing is answered, so whoever reads the list finds the reasons in the log. */
+    private async logRefused(id: string, reasons: readonly string[]): Promise<void> {
+        if (reasons.length === 0) {
+            return;
+        }
+
+        await bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${reasons.join('\n')}\n`));
     }
 
     /* Has a launch source that runs tell when its list changed in a project, or stop telling. Starts no process for either. */
@@ -1262,10 +1274,10 @@ export class ExtensionHost {
                         { type: 'machineSource', source, method: 'list', input: { project } },
                         `${id} machine source ${source}`
                     );
-                    const candidates = candidatesListed(answer, (reason) => {
-                        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${source} ${reason}\n`));
-                    });
+                    const refused: string[] = [];
+                    const candidates = candidatesListed(answer, (reason) => refused.push(`${source} ${reason}`));
 
+                    await this.logRefused(id, refused);
                     listings.push({ extension: id, source, title: defined.title, candidates });
                 }
             } catch (e) {
@@ -1401,10 +1413,10 @@ export class ExtensionHost {
                         { type: 'reference', source: reference, method: 'list', input: { project } },
                         `${id} reference ${reference}`
                     );
-                    const items = referenceItemsListed(answer, (reason) => {
-                        void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${reference} ${reason}\n`));
-                    });
+                    const refused: string[] = [];
+                    const items = referenceItemsListed(answer, (reason) => refused.push(`${reference} ${reason}`));
 
+                    await this.logRefused(id, refused);
                     references.push(...items.map((item) => ({ extension: id, reference, title: defined.title, ...item })));
                 }
             } catch (e) {
@@ -1592,7 +1604,7 @@ export class ExtensionHost {
 
             return true;
         } catch (e) {
-            void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${channel} did not deliver a notification: ${errorText(e)}\n`));
+            await bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${channel} did not deliver a notification: ${errorText(e)}\n`));
 
             return false;
         }
