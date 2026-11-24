@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
     EXTENSION_CALLS_WITHOUT_PERMISSION,
     EXTENSION_CLIENT_PERMISSIONS,
+    EXTENSION_SERVER_PERMISSIONS,
     extensionCallPermission,
     extensionProjectPath,
     extensionWord,
@@ -108,7 +109,7 @@ describe('the permission of each call', () => {
     const client = declaredCalls('client', { functions: true });
     const server = declaredCalls('server', { functions: true });
     const members = (calls: DeclaredCall[]) => calls.filter((entry) => entry.call.includes('.')).map((entry) => entry.call);
-    const guarded = Object.keys(EXTENSION_CLIENT_PERMISSIONS);
+    const guarded = [...Object.keys(EXTENSION_CLIENT_PERMISSIONS), ...Object.keys(EXTENSION_SERVER_PERMISSIONS)];
 
     test('is in the table or in the list of calls that need none, for every call of an area the API declares', () => {
         const accounted = new Set([...guarded, ...EXTENSION_CALLS_WITHOUT_PERMISSION]);
@@ -126,7 +127,7 @@ describe('the permission of each call', () => {
     });
 
     test('is the one the docs of a call name', () => {
-        const documented = [...client, ...server].filter((entry) => entry.documented !== null && entry.call in EXTENSION_CLIENT_PERMISSIONS);
+        const documented = [...client, ...server].filter((entry) => entry.documented !== null && guarded.includes(entry.call));
 
         expect(documented.length).toBeGreaterThan(5);
         expect(documented.filter((entry) => extensionCallPermission(entry.call) !== entry.documented)).toEqual([]);

@@ -7,6 +7,7 @@ import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { ArtifactsBundle } from './artifacts.ts';
 import type { DatabasesBundle } from './databases.ts';
 import type { DevicesBundle } from './devices.ts';
+import type { ExtensionsBundle } from './extensions.ts';
 import type { GitBundle } from './git.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
@@ -41,6 +42,7 @@ interface CanvasHostInput {
         language(): LanguageBundle;
         push(): PushService;
         tunnels(): TunnelsBundle;
+        extensions(): ExtensionsBundle;
     };
 }
 

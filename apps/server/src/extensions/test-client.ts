@@ -714,7 +714,9 @@ export function clientApi(host: TestHost) {
             'launch.read',
             'launch.start',
             'launch.restart',
-            'launch.stop'
+            'launch.stop',
+            'launch.create',
+            'launch.edit'
         ]) as unknown as typeof PublicClient.launches,
         routines: machineCalls(host, 'routines', ['routine.list', 'routine.run', 'routine.pause', 'routine.resume']) as unknown as typeof PublicClient.routines,
         artifacts: machineCalls(host, 'artifacts', ['artifact.list', 'artifact.read', 'artifact.publish']) as unknown as typeof PublicClient.artifacts,

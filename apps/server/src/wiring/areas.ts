@@ -161,7 +161,7 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         databaseConnectionsLifecycle(databases.connections),
         templateArea({ store: templates.store }),
         databaseArea({ service: databases.service, connections: databases.connections, agents: databases.agents, sql: databases.sqlAnalysis }),
-        languageArea({ host: language.host }),
+        languageArea({ host: language.host, reported: extensions.problems }),
         editorAssistArea({ model: language.editorAssist }),
         provenanceArea({ provenance: language.provenance, machineHome: machine.machineHome }),
         fsArea(fsDeps(input)),

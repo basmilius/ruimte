@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { everyMs, MAX_SENDS_PER_HOUR, SendLimit } from './policy.ts';
+import { eventPayload, eventRefusal, everyMs, MAX_SENDS_PER_HOUR, SendLimit } from './policy.ts';
 
 describe('SendLimit', () => {
     test('lets a chat be sent to again once the oldest send is an hour old, and counts each chat apart', () => {
@@ -18,6 +18,44 @@ describe('SendLimit', () => {
 
         expect(limit.take('acme.builds', 'chat-1')).toBeNull();
         expect(limit.take('acme.builds', 'chat-1')).toMatchObject({ code: 'limit' });
+    });
+});
+
+describe('what an extension hears of a machine event', () => {
+    test('is a launch by its project, id and state, without the session it runs in or where', () => {
+        const status = {
+            projectId: 'p1',
+            launchId: 'dev',
+            sessionId: 'launch-1',
+            kind: 'service',
+            state: 'exited',
+            exitCode: 1,
+            startedAt: 1,
+            endedAt: 2,
+            port: 5173,
+            url: 'http://localhost:5173',
+            stopped: false,
+            worktree: '/work/tree'
+        };
+
+        expect(eventPayload('launch.status', status)).toEqual({ project: { id: 'p1' }, launch: 'dev', state: 'exited', exitCode: 1 });
+    });
+
+    test('is a project that opens with its name and folder, and one that closes by its id', () => {
+        const project = { id: 'p1', name: 'Shop', folder: '/work/shop', more: 'never handed on' };
+
+        expect(eventPayload('project.opened', { project })).toEqual({ project: { id: 'p1', name: 'Shop', folder: '/work/shop' } });
+        expect(eventPayload('project.closed', { projectId: 'p1' })).toEqual({ project: { id: 'p1' } });
+    });
+
+    test('is behind the read permission of its area, and nothing for an event of the wire it has no shape for', () => {
+        const all = new Set(['launches.read', 'projects.read']);
+
+        expect(['launch.status', 'project.opened', 'project.closed'].map((name) => eventRefusal(name, all))).toEqual([null, null, null]);
+        expect(eventRefusal('launch.status', new Set(['launches.run']))).toBe('launch.status needs the permission launches.read in manifest.json');
+        expect(eventRefusal('project.opened', new Set())).toBe('project.opened needs the permission projects.read in manifest.json');
+        expect(eventRefusal('launches.changed', all)).toBe('launches.changed is no event an extension can follow');
+        expect(eventPayload('launches.changed', { projectId: 'p1' })).toBeNull();
     });
 });
 

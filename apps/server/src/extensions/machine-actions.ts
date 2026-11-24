@@ -71,7 +71,7 @@ const routineNamed = (output: { routineId: string; title: string }) => ({ id: ou
 const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish'>]: Entry<Name, ActionName> } = {
     'launch.list': entry('launch.list', {
         input: () => ({}),
-        output: ({ launches }) => ({ launches: launches.map(({ launchId, ...launch }) => ({ id: launchId, ...launch })) })
+        output: ({ launches }) => ({ launches: launches.map(({ launchId, source, ...launch }) => ({ id: launchId, ...launch, source: source ?? null })) })
     }),
     'launch.read': entry('launch.read', {
         input: ({ launch, tail }) => ({ launch, tail: tail ?? null }),
@@ -83,6 +83,9 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
         input: ({ launch }) => ({ launch }),
         output: ({ launchId, name, stopping }) => ({ id: launchId, name, stopping })
     }),
+    // Never `shared`: which file a launch lives in is a person's, so an extension's launch goes in this person's own.
+    'launch.create': entry('launch.create', { input: (input) => input, output: launchNamed }),
+    'launch.edit': entry('launch.edit', { input: (input) => input, output: launchNamed }),
     'routine.list': entry('routine.list', { input: () => ({}), output: ({ routines }) => ({ routines: routines.map(routineOf) }) }),
     'routine.run': entry('routine.run', {
         input: ({ routine }) => ({ routineId: routine }),

@@ -6,10 +6,22 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseExtensionActionInput } from '@ruimte/contracts/extension-actions';
+import { extensionProjectPath } from '@ruimte/contracts/extension-client';
+import { EXTENSION_PROBLEM_FILES, EXTENSION_PROBLEMS_PER_FILE, ExtensionProblemsReportSchema } from '@ruimte/contracts/extension-problems';
 import { allowsProposed, proposedRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import type * as PublicTesting from '../../../../packages/extension/testing';
-import { askRefusal, eventRefusal, permissionsOf, SendLimit, terminalProfileRefusal, terminalWriteRefusal, type Refusal } from './policy.ts';
+import { launchesListed } from './descriptions.ts';
+import {
+    askRefusal,
+    eventRefusal,
+    permissionsOf,
+    problemSourceRefusal,
+    SendLimit,
+    terminalProfileRefusal,
+    terminalWriteRefusal,
+    type Refusal
+} from './policy.ts';
 import { callHandler, createServerApi, MissingHandler, type KeyValues, type ServerCore, type ServerMessage } from './server-api.ts';
 import { loadFresh } from './test-loader.ts';
 
@@ -54,6 +66,12 @@ function durationMs(duration: string | number): number {
     }
 
     return Number(match[1]) * (DURATION_UNITS[match[2] as string] as number);
+}
+
+function tooManyProblems(file: unknown): boolean {
+    const problems = (file as { problems?: unknown } | null)?.problems;
+
+    return Array.isArray(problems) && problems.length > EXTENSION_PROBLEMS_PER_FILE;
 }
 
 type TestManifest = NonNullable<PublicTesting.TestServerOptions['manifest']>;
@@ -142,6 +160,10 @@ class TestMachine {
     readonly logs: string[] = [];
     readonly terminals: PublicTesting.TestTerminal[];
     readonly profiles = new Map<string, { title: string; icon?: string }>();
+    readonly launchSources = new Map<string, { title: string; changes: number }>();
+    readonly problemSources = new Map<string, string>();
+    readonly problems: { source: string; files: PublicServer.FileProblems[] }[] = [];
+    readonly files: Record<string, string>;
     readonly project: PublicServer.ProjectInfo;
     readonly core: ServerCore;
     // Why the machine would not run this extension at all, such as a proposed part in one a person installed.
@@ -154,6 +176,8 @@ class TestMachine {
     private readonly subscriptions = new Set<string>();
     private readonly tools = new Map<string, boolean>();
     private readonly scheduled: Scheduled[] = [];
+    // The files and folders `files.watch` follows, by the number each asked under, as the path in the project.
+    private readonly fileWatches = new Map<number, string>();
     private readonly sends: SendLimit;
     private now = 0;
 
@@ -172,6 +196,7 @@ class TestMachine {
         this.permissions = permissionsOf(manifest);
         this.answers = options.answers ?? {};
         this.storage = wire(options.storage ?? {});
+        this.files = { ...options.files };
         this.secrets = { ...options.secrets };
         this.sends = new SendLimit(() => this.now);
         // A folder of its own that exists, as the machine gives each extension, so two test servers share nothing.
@@ -254,6 +279,16 @@ class TestMachine {
             this.tools.set(message.name, this.permissions.has('agents.tools'));
         } else if (message.type === 'profile') {
             this.profiles.set(message.id, { title: message.title, ...(message.icon === undefined ? {} : { icon: message.icon }) });
+        } else if (message.type === 'launchSource') {
+            this.launchSources.set(message.id, { title: message.title, changes: 0 });
+        } else if (message.type === 'launchesChanged') {
+            const source = this.launchSources.get(message.source);
+
+            if (source !== undefined) {
+                source.changes += 1;
+            }
+        } else if (message.type === 'problemSource') {
+            this.problemSources.set(message.id, message.title);
         } else {
             const reason = eventRefusal(message.name, this.permissions);
 
@@ -279,9 +314,160 @@ class TestMachine {
         const [name, recorded] = this.named(method, args);
         const result = refused === null ? await this.answer(method, args) : this.refused(method, refused);
 
-        this.asked.push({ method: name, args: wire(recorded), result });
+        // Letting go of a watch is the function `files.watch` answered, which a test sees as changes it no longer hears.
+        if (method !== 'files.unwatch') {
+            this.asked.push({ method: name, args: wire(recorded), result });
+        }
 
         return result;
+    }
+
+    /* The key of a file of the project in `files`, or why the machine would not read it. */
+    private fileKey(method: string, projectId: unknown, path: unknown): { key: string } | Result<never> {
+        if (projectId !== this.project.id) {
+            return this.refused(method, { code: 'not-found', message: `No project ${String(projectId)} on this machine` });
+        }
+
+        const full = extensionProjectPath(this.project.folder, String(path));
+
+        if (full === null) {
+            return this.refused(method, { code: 'outside-project', message: `${String(path)} is outside the project folder` });
+        }
+
+        return {
+            key: full
+                .slice(this.project.folder.length)
+                .replace(/^[\\/]+/, '')
+                .replaceAll('\\', '/')
+        };
+    }
+
+    private answerFiles(method: string, args: unknown[]): Result<unknown> {
+        if (method === 'files.unwatch') {
+            this.fileWatches.delete(Number(args[0]));
+
+            return { ok: true, value: null };
+        }
+
+        const at = this.fileKey(method, args[0], args[1]);
+
+        if (!('key' in at)) {
+            return at;
+        }
+
+        if (method === 'files.watch') {
+            this.fileWatches.set(Number(args[2]), at.key);
+
+            return { ok: true, value: null };
+        }
+
+        if (method === 'files.readText') {
+            return Object.hasOwn(this.files, at.key)
+                ? { ok: true, value: this.files[at.key] }
+                : this.refused(method, { code: 'not-found', message: `No file ${String(args[1])} in the project` });
+        }
+
+        const under = at.key === '' ? '' : `${at.key}/`;
+        const names = new Map<string, PublicServer.FileEntry['kind']>();
+
+        for (const path of Object.keys(this.files)) {
+            if (path.startsWith(under)) {
+                const [name, ...deeper] = path.slice(under.length).split('/') as [string, ...string[]];
+
+                names.set(name, deeper.length === 0 ? 'file' : 'directory');
+            }
+        }
+
+        return {
+            ok: true,
+            value: [...names]
+                .sort(([left, leftKind], [right, rightKind]) => (leftKind === rightKind ? left.localeCompare(right) : leftKind === 'directory' ? -1 : 1))
+                .map(([name, kind]) => ({ path: `${this.project.folder}/${under}${name}`, name, kind }))
+        };
+    }
+
+    /* A test's change to a file of the project, told to every watch of it or of a folder above it. */
+    writeFile(path: string, text: string | null): void {
+        if (text === null) {
+            delete this.files[path];
+        } else {
+            this.files[path] = text;
+        }
+
+        for (const [watch, watched] of [...this.fileWatches]) {
+            if (watched === '' || watched === path || path.startsWith(`${watched}/`)) {
+                this.core.fileChanged(watch);
+            }
+        }
+    }
+
+    private answerProblems(method: string, args: unknown[]): Result<unknown> {
+        const [projectId, source, reported] = args as [unknown, string, unknown];
+        const refused = problemSourceRefusal(this.manifest, String(source), this.proposedAllowed);
+
+        if (refused !== null) {
+            return this.refused(method, refused);
+        }
+
+        if (projectId !== this.project.id) {
+            return this.refused(method, { code: 'not-found', message: `No project ${String(projectId)} on this machine` });
+        }
+
+        const held = this.problems.find((entry) => entry.source === source);
+
+        if (method === 'problems.clear') {
+            if (held !== undefined) {
+                this.problems.splice(this.problems.indexOf(held), 1);
+            }
+
+            return { ok: true, value: null };
+        }
+
+        const limit = `A source reports at most ${EXTENSION_PROBLEMS_PER_FILE} problems per file and ${EXTENSION_PROBLEM_FILES} files at once`;
+
+        if (Array.isArray(reported) && (reported.length > EXTENSION_PROBLEM_FILES || reported.some((file) => tooManyProblems(file)))) {
+            return this.refused(method, { code: 'limit', message: limit });
+        }
+
+        const parsed = ExtensionProblemsReportSchema.safeParse(args);
+
+        if (!parsed.success) {
+            this.logs.push(`${method} answered invalid-input: ${parsed.error.issues[0]?.message ?? 'invalid'}`);
+
+            throw new TypeError(`problems.report takes another shape: ${parsed.error.issues[0]?.message ?? 'invalid'}`);
+        }
+
+        if (!this.problemSources.has(source)) {
+            return this.refused(method, { code: 'not-found', message: `${this.id} lists the problem source ${source} and did not define it` });
+        }
+
+        const files = new Map((held?.files ?? []).map((file) => [file.path, file]));
+
+        for (const file of parsed.data[2]) {
+            const at = this.fileKey(method, projectId, file.path);
+
+            if (!('key' in at)) {
+                return at;
+            }
+
+            if (file.problems.length === 0) {
+                files.delete(at.key);
+            } else {
+                files.set(at.key, { path: at.key, problems: file.problems });
+            }
+        }
+
+        if (files.size > EXTENSION_PROBLEM_FILES) {
+            return this.refused(method, { code: 'limit', message: limit });
+        }
+
+        if (held === undefined) {
+            this.problems.push({ source, files: [...files.values()] });
+        } else {
+            held.files = [...files.values()];
+        }
+
+        return { ok: true, value: null };
     }
 
     private actionInput(action: PublicServer.MachineActionName, input: unknown): unknown {
@@ -325,6 +511,15 @@ class TestMachine {
             return [method, [{ id: args[0] }, ...args.slice(1)]];
         }
 
+        // The number a watch asks under is the pipe's own.
+        if (method === 'files.watch') {
+            return [method, [{ id: args[0] }, args[1]]];
+        }
+
+        if (method.startsWith('files.') || method.startsWith('problems.')) {
+            return [method as Ask['method'], [{ id: args[0] }, ...args.slice(1)]];
+        }
+
         return [method as Ask['method'], args];
     }
 
@@ -341,6 +536,14 @@ class TestMachine {
 
         if (method === 'terminals.write') {
             return this.writeTerminal(String(args[0]), String(args[1]));
+        }
+
+        if (method.startsWith('files.')) {
+            return this.answerFiles(method, args);
+        }
+
+        if (method.startsWith('problems.')) {
+            return this.answerProblems(method, args);
         }
 
         const answer = this.scripted(method, args);
@@ -514,6 +717,36 @@ export async function createTestServer<Api>(options: PublicTesting.TestServerOpt
                     )
             };
         },
+        launchSource: (id) => {
+            const defined = machine.launchSources.get(id);
+
+            if (defined === undefined) {
+                throw new Error(`No launch source ${id}. defineLaunchSource says what there is`);
+            }
+
+            return {
+                title: defined.title,
+                get changes() {
+                    return defined.changes;
+                },
+                list: async (project = {}) => {
+                    const asked = { ...machine.project, ...project };
+                    const listed = launchesListed(wire(await machine.core.askLaunchSource(id, 'list', asked)), (reason) => {
+                        machine.logs.push(`${id} ${reason}`);
+                    });
+
+                    await machine.core.askLaunchSource(id, 'watch', asked);
+
+                    return listed;
+                },
+                stop: async (project = {}) => {
+                    await machine.core.askLaunchSource(id, 'unwatch', { ...machine.project, ...project });
+                }
+            };
+        },
+        problems: machine.problems,
+        files: machine.files,
+        writeFile: (path, text) => machine.writeFile(path, text),
         tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? 'test') }),
         nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
     };

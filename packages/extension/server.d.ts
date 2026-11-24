@@ -64,10 +64,23 @@ export interface ServerEvents {
     'chat.event': { chatId: string };
     /** The agent in a terminal changed what it is doing. Needs `terminals.read`. */
     'session.status': { nodeId: string; status: AgentStatus };
+    /** A launch started, came up, is being stopped or ended. `exitCode` is null until it ended. Needs `launches.read`. */
+    'launch.status': { project: ProjectRef; launch: string; state: 'starting' | 'running' | 'stopping' | 'exited'; exitCode: number | null };
+    /** The first client opened a project on this machine. Needs `projects.read`. */
+    'project.opened': { project: ProjectInfo };
+    /** The last client closed a project, so nothing of it runs here any more. Needs `projects.read`. */
+    'project.closed': { project: ProjectRef };
 }
 
-/** Follows a machine event, behind its permission; any other name is refused. Set `"autostart": true` to follow them with no client open. */
-export function onEvent<Name extends keyof ServerEvents>(name: Name, listener: (event: ServerEvents[Name]) => void): () => void;
+/**
+ * Follows a machine event, behind its permission; any other name is refused. With `filter.project` only the events of that
+ * project are heard. Set `"autostart": true` to follow them with no client open.
+ */
+export function onEvent<Name extends keyof ServerEvents>(
+    name: Name,
+    listener: (event: ServerEvents[Name]) => void,
+    filter?: { project?: ProjectRef }
+): () => void;
 
 /** Says something to every client of this machine, where `useServerEvent(name)` hears `payload`, or undefined without one. */
 export function emit<Payload>(name: string, payload?: Payload): void;
@@ -151,6 +164,89 @@ export function defineTerminalProfile(profile: {
     available?(project: ProjectInfo): boolean | Promise<boolean>;
     spawn(context: { project: ProjectInfo; cwd: string }): SpawnDescription | Promise<SpawnDescription>;
 }): void;
+
+/** A launch as a source describes it. Ruimte starts what `spawn` says, in a session of its own, once a person approved it. */
+export interface LaunchDescription {
+    /** Its own within the source, of lowercase letters, digits and dashes. */
+    id: string;
+    name: string;
+    /** A service stays up, a task runs to its end. */
+    kind: 'service' | 'task';
+    spawn: SpawnDescription;
+    /** A digest of every file that decides what runs. A change to it asks a person again. */
+    fingerprint: string;
+    /** The port a service listens on, which tells when it is up. */
+    port?: number;
+}
+
+/**
+ * Needs `launches.provide`. Proposed: name `launchSources` under `proposed` in the manifest, and the id under
+ * `provides.launchSources`, which starts `server/` once a project's launches are read. Its launches show beside a person's
+ * own, under `title`, and start only after a person approved them on this machine: the command, the folder, the variables
+ * and the fingerprint together. At most 64 launches per source. Throws for an id the manifest does not list.
+ */
+export function defineLaunchSource(source: {
+    id: string;
+    title: string;
+    list(project: ProjectInfo): LaunchDescription[] | Promise<LaunchDescription[]>;
+    /** Call `changed` when the list should be read again, such as after the file it comes from changed. Answers how to stop. */
+    watch?(project: ProjectInfo, changed: () => void): (() => void) | Promise<() => void>;
+}): void;
+
+/** A place in a file, counted from 1 as a person reads it, and what is wrong there. */
+export interface Problem {
+    line: number;
+    /** The start of the line without one. */
+    column?: number;
+    /** It ends where it starts without these. */
+    endLine?: number;
+    endColumn?: number;
+    severity: 'error' | 'warning' | 'information' | 'hint';
+    message: string;
+    /** The rule it broke, as the source names it. */
+    code?: string;
+}
+
+export interface FileProblems {
+    /** Relative to the project folder. */
+    path: string;
+    problems: Problem[];
+}
+
+/**
+ * Needs `problems.provide`. Proposed: name `problemSources` under `proposed` in the manifest, and the id under
+ * `provides.problemSources`. Names a source `problems.report` speaks for; its problems show under `title`. Throws for
+ * an id the manifest does not list.
+ */
+export function defineProblemSource(source: { id: string; title: string }): void;
+
+/**
+ * Needs `problems.provide`. The problems of a source show with the editor's own and in what an agent reads of the project.
+ * The machine keeps them in memory, until the project closes or the extension is turned off, changed or removed.
+ */
+export const problems: {
+    /**
+     * Replaces everything this source said about these files; a file with no problems is cleared. At most 200 problems
+     * per file and 500 files per source in a project, past which it answers `limit`.
+     */
+    report(project: ProjectRef, source: string, files: FileProblems[]): Promise<Result<void>>;
+    /** Takes back everything this source said in the project. */
+    clear(project: ProjectRef, source: string): Promise<Result<void>>;
+};
+
+export interface FileEntry {
+    path: string;
+    name: string;
+    kind: 'file' | 'directory' | 'symlink' | 'other';
+}
+
+/** The folder of a project only, so a path outside it answers `outside-project`. Needs `files.read`. */
+export const files: {
+    readText(project: ProjectRef, path: string): Promise<Result<string>>;
+    list(project: ProjectRef, folder: string): Promise<Result<FileEntry[]>>;
+    /** Calls back when the file or anything under the folder changes. Answers how to stop. */
+    watch(project: ProjectRef, path: string, listener: () => void): Promise<Result<() => void>>;
+};
 
 export interface OpenTerminal {
     project: ProjectRef;

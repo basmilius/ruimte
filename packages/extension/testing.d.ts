@@ -21,7 +21,9 @@ import type {
 import type {
     ChatSummary,
     ExtensionErrorCode,
+    FileProblems,
     Json,
+    LaunchDescription,
     MachineActionName,
     MachineInput,
     MachineOutput,
@@ -336,6 +338,8 @@ export interface TestServerOptions {
     project?: Partial<ProjectInfo>;
     /** Terminals that are there already, opened by a person unless one says otherwise. */
     terminals?: (Pick<TestTerminal, 'id'> & Partial<TestTerminal>)[];
+    /** The text files of the project `files` reads, by their path in the project folder. */
+    files?: Record<string, string>;
     /** `server/index.ts` by default. */
     entry?: string;
     storage?: Record<string, Json>;
@@ -354,6 +358,11 @@ export interface TestAsk {
         | 'terminals.read'
         | 'terminals.open'
         | 'terminals.write'
+        | 'files.readText'
+        | 'files.list'
+        | 'files.watch'
+        | 'problems.report'
+        | 'problems.clear'
         | 'machine.run'
         | 'defineLanguageServer';
     args: Json[];
@@ -391,6 +400,23 @@ export interface TestServer<Api> {
         available(project?: Partial<ProjectInfo>): Promise<boolean>;
         spawn(context?: { project?: Partial<ProjectInfo>; cwd?: string }): Promise<SpawnDescription>;
     };
+    /**
+     * A launch source `defineLaunchSource` named, asked as the machine asks it. `list` reads its launches and has the source
+     * tell when they change, as the machine does; `changes` counts how often it said so, and `stop` has it stop telling, as
+     * when the project closes. A launch the machine would not take is left out, with the reason in `logs`. Throws for a
+     * source it did not define.
+     */
+    launchSource(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<LaunchDescription[]>;
+        stop(project?: Partial<ProjectInfo>): Promise<void>;
+        readonly changes: number;
+    };
+    /** What the problem sources hold now, as `problems.report` and `problems.clear` left it: per source, the files with problems. */
+    problems: { source: string; files: FileProblems[] }[];
+    /** The text files of the project, by path. `writeFile` changes one, or removes it with null, and tells every `files.watch` that follows it. */
+    files: Record<string, string>;
+    writeFile(path: string, text: string | null): void;
     /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */
     tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };
     /** What an agent reads of a node of this type along a line. */

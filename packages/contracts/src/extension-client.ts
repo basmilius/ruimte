@@ -107,8 +107,23 @@ export const EXTENSION_CALLS_WITHOUT_PERMISSION: readonly string[] = [
     'log.error'
 ];
 
+/*
+ * The permission of each call only `@ruimte/extension/server` has, by its path. A call both sides have, such as
+ * `files.readText`, takes the permission the client's table names.
+ */
+export const EXTENSION_SERVER_PERMISSIONS: Readonly<Record<string, string>> = {
+    'problems.report': 'problems.provide',
+    'problems.clear': 'problems.provide'
+};
+
 export function extensionCallPermission(call: string): string | null {
-    return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? (EXTENSION_CLIENT_PERMISSIONS[call] ?? null) : null;
+    for (const table of [EXTENSION_CLIENT_PERMISSIONS, EXTENSION_SERVER_PERMISSIONS]) {
+        if (Object.hasOwn(table, call)) {
+            return table[call] ?? null;
+        }
+    }
+
+    return null;
 }
 
 /* What an extension reads when its manifest does not ask for a permission, on the client and on the machine alike. */

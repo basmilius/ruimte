@@ -26,6 +26,38 @@ describe('runMachineAction', () => {
         expect(asked).toEqual([{ action: 'browser.screenshot', input: { nodeId: 'browser-1' } }]);
     });
 
+    test('adds and changes a launch without saying which file it lives in, and lists each launch with its source', async () => {
+        const asked: unknown[] = [];
+        const execute = (async (action: string, input: unknown) => {
+            asked.push({ action, input });
+
+            return action === 'launch.list'
+                ? {
+                      launches: [
+                          { launchId: 'dev.harbor:compose:web', name: 'web', source: 'Harbor' },
+                          { launchId: 'dev', name: 'Dev' }
+                      ]
+                  }
+                : { launchId: 'web', name: 'Web', kind: 'service', shared: false };
+        }) as ExecuteAction;
+        const added = { name: 'Web', kind: 'service', command: 'bun dev', env: { PORT: '5173' } };
+
+        expect(await runMachineAction('launch.create', { ...added, shared: true }, execute, noPublish)).toEqual({ id: 'web', name: 'Web' });
+        expect(await runMachineAction('launch.edit', { launch: 'web', env: { PORT: null } }, execute, noPublish)).toEqual({ id: 'web', name: 'Web' });
+        expect(await runMachineAction('launch.list', {}, execute, noPublish)).toEqual({
+            launches: [
+                { id: 'dev.harbor:compose:web', name: 'web', source: 'Harbor' },
+                { id: 'dev', name: 'Dev', source: null }
+            ]
+        });
+        // `shared` is no field of the extension's input, so it never reaches the action.
+        expect(asked.slice(0, 2)).toEqual([
+            { action: 'launch.create', input: added },
+            { action: 'launch.edit', input: { launch: 'web', env: { PORT: null } } }
+        ]);
+        await expect(runMachineAction('launch.create', { name: 'Web', kind: 'daemon' }, execute, noPublish)).rejects.toMatchObject({ code: 'invalid-input' });
+    });
+
     test('refuses a name outside the list, and an input of the wrong shape as an argument error', async () => {
         const execute = (async () => ({})) as ExecuteAction;
 

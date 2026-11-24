@@ -14,6 +14,8 @@ export interface LaunchReading {
     members: string[];
     /* Null for one that has not run since the daemon started, and for a group. */
     status: LaunchStatus | null;
+    /* What a person calls the source of an extension that lists it; null for a launch of the project's own files. */
+    source: string | null;
 }
 
 /*
@@ -53,9 +55,10 @@ export function agentLaunches(
                     .map((status) => [status.launchId, status])
             );
             const approved = new Set(resolved.filter((entry) => entry.approved).map((entry) => entry.launch.id));
-            return resolved.map(({ launch, url, port }) => {
+            return resolved.map(({ launch, url, port, sourced }) => {
                 const members = launch.kind === 'group' ? (launch.launches ?? []) : [];
                 return {
+                    source: sourced?.source.title ?? null,
                     launchId: launch.id,
                     name: launch.name,
                     kind: launch.kind,

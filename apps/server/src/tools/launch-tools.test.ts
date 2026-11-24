@@ -84,10 +84,12 @@ async function call(name: string, input: Record<string, unknown> = {}): Promise<
 describe('the launch tools', () => {
     test('lists every launch with its state and whether a person approved it', async () => {
         expect(await call('launch_list')).toEqual([
-            'dev\tDev\tservice\trunning\tyes\t5173\thttp://localhost:5173\t-',
-            'tests\tTests\ttask\texited:1\tno\t-\t-\t-',
-            'stack\tFull stack\tgroup\t-\tno\t-\t-\tdev,tests'
+            'dev\tDev\tservice\trunning\tyes\t5173\thttp://localhost:5173\t-\t-',
+            'tests\tTests\ttask\texited:1\tno\t-\t-\t-\t-',
+            'stack\tFull stack\tgroup\t-\tno\t-\t-\tdev,tests\t-'
         ]);
+        launches = [reading('dev.harbor:compose:web', { name: 'web', approved: false, source: 'Harbor' })];
+        expect(await call('launch_list')).toEqual(['dev.harbor:compose:web\tweb\tservice\t-\tno\t-\t-\t-\tHarbor']);
         launches = [];
         expect(await call('launch_list')).toEqual([
             'note\tThis project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'

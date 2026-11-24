@@ -9758,12 +9758,14 @@ public struct LaunchesDocument: Codable, Sendable, Equatable {
     public let `launches`: [LaunchConfigEntry]
     public let `approved`: [String]
     public let `afterSettle`: LaunchesDocumentAfterSettle?
+    public let `sourced`: [LaunchesDocumentSourcedItem]?
 
-    public init(`rev`: Int64, `launches`: [LaunchConfigEntry], `approved`: [String], `afterSettle`: LaunchesDocumentAfterSettle? = nil) {
+    public init(`rev`: Int64, `launches`: [LaunchConfigEntry], `approved`: [String], `afterSettle`: LaunchesDocumentAfterSettle? = nil, `sourced`: [LaunchesDocumentSourcedItem]? = nil) {
         self.`rev` = `rev`
         self.`launches` = `launches`
         self.`approved` = `approved`
         self.`afterSettle` = `afterSettle`
+        self.`sourced` = `sourced`
     }
 
     public init(from decoder: Decoder) throws {
@@ -9772,6 +9774,7 @@ public struct LaunchesDocument: Codable, Sendable, Equatable {
         `launches` = try container.decode([LaunchConfigEntry].self, forKey: .`launches`)
         `approved` = try container.decode([String].self, forKey: .`approved`)
         `afterSettle` = try container.decodeIfPresent(LaunchesDocumentAfterSettle.self, forKey: .`afterSettle`)
+        `sourced` = try container.decodeIfPresent([LaunchesDocumentSourcedItem].self, forKey: .`sourced`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -9780,6 +9783,7 @@ public struct LaunchesDocument: Codable, Sendable, Equatable {
         try container.encode(`launches`, forKey: .`launches`)
         try container.encode(`approved`, forKey: .`approved`)
         try container.encodeIfPresent(`afterSettle`, forKey: .`afterSettle`)
+        try container.encodeIfPresent(`sourced`, forKey: .`sourced`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -9787,6 +9791,7 @@ public struct LaunchesDocument: Codable, Sendable, Equatable {
         case `launches` = "launches"
         case `approved` = "approved"
         case `afterSettle` = "afterSettle"
+        case `sourced` = "sourced"
     }
 }
 
@@ -9959,6 +9964,100 @@ public struct LaunchesDocumentAfterSettle: Codable, Sendable, Equatable {
     }
 }
 
+public struct LaunchesDocumentSourcedItem: Codable, Sendable, Equatable {
+    public let `id`: String
+    public let `name`: String
+    public let `kind`: LaunchesDocumentSourcedItemKind
+    public let `command`: String
+    public let `cwd`: String?
+    public let `env`: [String: String]?
+    public let `url`: String?
+    public let `source`: LaunchesDocumentSourcedItemSource
+
+    public init(`id`: String, `name`: String, `kind`: LaunchesDocumentSourcedItemKind, `command`: String, `cwd`: String? = nil, `env`: [String: String]? = nil, `url`: String? = nil, `source`: LaunchesDocumentSourcedItemSource) {
+        self.`id` = `id`
+        self.`name` = `name`
+        self.`kind` = `kind`
+        self.`command` = `command`
+        self.`cwd` = `cwd`
+        self.`env` = `env`
+        self.`url` = `url`
+        self.`source` = `source`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `name` = try container.decode(String.self, forKey: .`name`)
+        `kind` = try container.decode(LaunchesDocumentSourcedItemKind.self, forKey: .`kind`)
+        `command` = try container.decode(String.self, forKey: .`command`)
+        `cwd` = try container.decodeIfPresent(String.self, forKey: .`cwd`)
+        `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+        `url` = try container.decodeIfPresent(String.self, forKey: .`url`)
+        `source` = try container.decode(LaunchesDocumentSourcedItemSource.self, forKey: .`source`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`name`, forKey: .`name`)
+        try container.encode(`kind`, forKey: .`kind`)
+        try container.encode(`command`, forKey: .`command`)
+        try container.encodeIfPresent(`cwd`, forKey: .`cwd`)
+        try container.encodeIfPresent(`env`, forKey: .`env`)
+        try container.encodeIfPresent(`url`, forKey: .`url`)
+        try container.encode(`source`, forKey: .`source`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `id` = "id"
+        case `name` = "name"
+        case `kind` = "kind"
+        case `command` = "command"
+        case `cwd` = "cwd"
+        case `env` = "env"
+        case `url` = "url"
+        case `source` = "source"
+    }
+}
+
+public enum LaunchesDocumentSourcedItemKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `service` = "service"
+    case `task` = "task"
+}
+
+public struct LaunchesDocumentSourcedItemSource: Codable, Sendable, Equatable {
+    public let `extension`: String
+    public let `id`: String
+    public let `title`: String
+
+    public init(`extension`: String, `id`: String, `title`: String) {
+        self.`extension` = `extension`
+        self.`id` = `id`
+        self.`title` = `title`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `extension` = try container.decode(String.self, forKey: .`extension`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`extension`, forKey: .`extension`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `extension` = "extension"
+        case `id` = "id"
+        case `title` = "title"
+    }
+}
+
 public struct LaunchStatus: Codable, Sendable, Equatable {
     public let `projectId`: String
     public let `launchId`: String
@@ -10108,12 +10207,14 @@ public struct LaunchHeld: Codable, Sendable, Equatable {
     public let `command`: String
     public let `cwd`: String
     public let `env`: [String: String]?
+    public let `source`: LaunchHeldSource?
 
-    public init(`launchId`: String, `command`: String, `cwd`: String, `env`: [String: String]? = nil) {
+    public init(`launchId`: String, `command`: String, `cwd`: String, `env`: [String: String]? = nil, `source`: LaunchHeldSource? = nil) {
         self.`launchId` = `launchId`
         self.`command` = `command`
         self.`cwd` = `cwd`
         self.`env` = `env`
+        self.`source` = `source`
     }
 
     public init(from decoder: Decoder) throws {
@@ -10122,6 +10223,7 @@ public struct LaunchHeld: Codable, Sendable, Equatable {
         `command` = try container.decode(String.self, forKey: .`command`)
         `cwd` = try container.decode(String.self, forKey: .`cwd`)
         `env` = try container.decodeIfPresent([String: String].self, forKey: .`env`)
+        `source` = try container.decodeIfPresent(LaunchHeldSource.self, forKey: .`source`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -10130,6 +10232,7 @@ public struct LaunchHeld: Codable, Sendable, Equatable {
         try container.encode(`command`, forKey: .`command`)
         try container.encode(`cwd`, forKey: .`cwd`)
         try container.encodeIfPresent(`env`, forKey: .`env`)
+        try container.encodeIfPresent(`source`, forKey: .`source`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -10137,6 +10240,39 @@ public struct LaunchHeld: Codable, Sendable, Equatable {
         case `command` = "command"
         case `cwd` = "cwd"
         case `env` = "env"
+        case `source` = "source"
+    }
+}
+
+public struct LaunchHeldSource: Codable, Sendable, Equatable {
+    public let `extension`: String
+    public let `id`: String
+    public let `title`: String
+
+    public init(`extension`: String, `id`: String, `title`: String) {
+        self.`extension` = `extension`
+        self.`id` = `id`
+        self.`title` = `title`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `extension` = try container.decode(String.self, forKey: .`extension`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`extension`, forKey: .`extension`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`title`, forKey: .`title`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `extension` = "extension"
+        case `id` = "id"
+        case `title` = "title"
     }
 }
 

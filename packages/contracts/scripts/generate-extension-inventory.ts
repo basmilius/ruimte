@@ -7,7 +7,7 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import { EXTENSION_CLIENT_PERMISSIONS } from '../src/extension-client.ts';
+import { extensionCallPermission } from '../src/extension-client.ts';
 import { ExtensionManifestSchema } from '../src/extension.ts';
 
 const ROOT = join(import.meta.dir, '..', '..', '..');
@@ -98,7 +98,7 @@ export function rowsOf(side: 'client' | 'server', declarations: string): Invento
             add(
                 area === null ? kindOf(name) : 'call',
                 call,
-                EXTENSION_CLIENT_PERMISSIONS[call] ?? documented,
+                extensionCallPermission(call) ?? documented,
                 /\): (?:Result<\(\) => void>|\(\) => void);$/.test(last)
             );
         }

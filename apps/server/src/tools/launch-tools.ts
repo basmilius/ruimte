@@ -89,7 +89,8 @@ const launchList = defineActionTool('launches', {
                     launch.approved ? 'yes' : 'no',
                     launch.port === null ? '-' : String(launch.port),
                     launch.url === null ? '-' : field(launch.url),
-                    launch.members.length === 0 ? '-' : launch.members.map(field).join(',')
+                    launch.members.length === 0 ? '-' : launch.members.map(field).join(','),
+                    launch.source == null ? '-' : field(launch.source)
                 ].join('\t')
             ),
             'This project has no launches; a person adds them from the launch chip in the toolbar, and launch_new adds one they approve'

@@ -12,6 +12,8 @@ var EXTENSION_ACTIONS = {
   "launch.start": "launches.run",
   "launch.restart": "launches.run",
   "launch.stop": "launches.run",
+  "launch.create": "launches.write",
+  "launch.edit": "launches.write",
   "routine.list": "routines.read",
   "routine.run": "routines.run",
   "routine.pause": "routines.run",
@@ -90,7 +92,9 @@ function missingPermissionMessage(extension, permission) {
 
 // packages/contracts/src/extension-providers.ts
 var EXTENSION_PROVIDER_POINTS = {
-  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true }
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
+  launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
 };
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
@@ -161,6 +165,10 @@ function createServerApi(options) {
   const tools = new Map;
   const nodeContexts = new Map;
   const profiles = new Map;
+  const launchSources = new Map;
+  const launchWatches = new Map;
+  const fileWatches = new Map;
+  let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
   const mayDefine = (define, permission, id) => {
     if (!permissions.has(permission)) {
@@ -230,6 +238,43 @@ function createServerApi(options) {
         available: profile.available !== undefined
       });
     },
+    defineLaunchSource(source) {
+      mayDefine("defineLaunchSource", "launches.provide", source.id);
+      launchSources.set(source.id, source);
+      send({ type: "launchSource", id: source.id, title: source.title, watches: source.watch !== undefined });
+    },
+    defineProblemSource(source) {
+      mayDefine("defineProblemSource", "problems.provide", source.id);
+      send({ type: "problemSource", id: source.id, title: source.title });
+    },
+    problems: {
+      report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
+        return;
+      }),
+      clear: async (project, source) => mapResult(await ask("problems.clear", [project.id, source]), () => {
+        return;
+      })
+    },
+    files: {
+      readText: (project, path) => typed("files.readText", [project.id, path]),
+      list: (project, folder) => typed("files.list", [project.id, folder]),
+      async watch(project, path, listener) {
+        const watch = nextFileWatch;
+        nextFileWatch += 1;
+        fileWatches.set(watch, listener);
+        const watching = await ask("files.watch", [project.id, path, watch]);
+        if (!watching.ok) {
+          fileWatches.delete(watch);
+          return watching;
+        }
+        const stop = () => {
+          if (fileWatches.delete(watch)) {
+            ask("files.unwatch", [watch]);
+          }
+        };
+        return { ok: true, value: stop };
+      }
+    },
     terminals: {
       read: (terminal) => typed("terminals.read", [terminal.id]),
       async open({ project, profile, title, cwd, near }) {
@@ -262,9 +307,14 @@ function createServerApi(options) {
       })().catch((e) => options.log.error(`${task.id} failed:`, e)));
     },
     defineServer: (api) => api,
-    onEvent(name, listener) {
+    onEvent(name, listener, filter) {
       const group = listeners.get(name) ?? new Set;
-      const heard = listener;
+      const only = filter?.project?.id;
+      const heard = only === undefined ? listener : (payload) => {
+        if (payload.project?.id === only) {
+          listener(payload);
+        }
+      };
       group.add(heard);
       listeners.set(name, group);
       send({ type: "subscribe", name });
@@ -309,10 +359,31 @@ function createServerApi(options) {
       }
       return profile.spawn(input);
     },
+    async askLaunchSource(id, method, project) {
+      const source = launchSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No launch source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      const key = `${id}
+${project.id}`;
+      const stop = launchWatches.get(key);
+      launchWatches.delete(key);
+      stop?.();
+      if (method === "watch" && source.watch !== undefined) {
+        launchWatches.set(key, await source.watch(project, () => send({ type: "launchesChanged", source: id, projectId: project.id })));
+      }
+      return null;
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
       }
+    },
+    fileChanged(watch) {
+      fileWatches.get(watch)?.();
     }
   };
 }
@@ -462,6 +533,13 @@ function handle(message) {
       await loaded;
       return core.askProfile(message.profile, message.method, message.input);
     });
+  } else if (message.type === "launchSource") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askLaunchSource(message.source, message.method, message.input);
+    });
+  } else if (message.type === "fileChanged") {
+    core.fileChanged(message.watch);
   } else if (message.type === "nodeContext") {
     answer(message.id, async () => {
       await loaded;

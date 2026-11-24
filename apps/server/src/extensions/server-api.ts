@@ -26,6 +26,11 @@ export type ServerMessage =
     | { type: 'subscribe'; name: string }
     // A terminal profile it defined; `available` says whether it has a say in where the profile shows.
     | { type: 'profile'; id: string; title: string; icon?: string; available: boolean }
+    // A launch source it defined; `watches` says whether it tells when its list changed.
+    | { type: 'launchSource'; id: string; title: string; watches: boolean }
+    // What a launch source said through the `changed` of its `watch`.
+    | { type: 'launchesChanged'; source: string; projectId: string }
+    | { type: 'problemSource'; id: string; title: string }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
@@ -56,11 +61,18 @@ export interface ServerCore {
     readNodeContext(nodeType: string, data: unknown): unknown;
     /* Asks a terminal profile where it shows, or what it starts. */
     askProfile(id: string, method: 'available' | 'spawn', input: unknown): unknown;
+    /* Asks a launch source what it lists in a project, or to start or stop telling when that changes. */
+    askLaunchSource(id: string, method: LaunchSourceMethod, project: PublicServer.ProjectInfo): unknown;
     deliver(name: string, payload: unknown): void;
+    /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
+    fileChanged(watch: number): void;
 }
+
+export type LaunchSourceMethod = 'list' | 'watch' | 'unwatch';
 
 type Listener = (payload: unknown) => void;
 type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
+type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
 
 interface Ref {
     id: string;
@@ -102,6 +114,11 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const tools = new Map<string, { run(input: unknown, context: { caller: string }): unknown }>();
     const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
     const profiles = new Map<string, TerminalProfile>();
+    const launchSources = new Map<string, LaunchSource>();
+    // What stops a launch source's watch of a project, by source and project.
+    const launchWatches = new Map<string, () => void>();
+    const fileWatches = new Map<number, () => void>();
+    let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
 
     /* A provider registers at the top of the module, where a Result has nobody to read it, so one it may not register throws. */
@@ -185,6 +202,47 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
                 available: profile.available !== undefined
             });
         },
+        defineLaunchSource(source: LaunchSource): void {
+            mayDefine('defineLaunchSource', 'launches.provide', source.id);
+            launchSources.set(source.id, source);
+            send({ type: 'launchSource', id: source.id, title: source.title, watches: source.watch !== undefined });
+        },
+        defineProblemSource(source: { id: string; title: string }): void {
+            mayDefine('defineProblemSource', 'problems.provide', source.id);
+            send({ type: 'problemSource', id: source.id, title: source.title });
+        },
+        problems: {
+            report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
+                mapResult(await ask('problems.report', [project.id, source, reported]), () => undefined),
+            clear: async (project: Ref, source: string) => mapResult(await ask('problems.clear', [project.id, source]), () => undefined)
+        },
+        files: {
+            readText: (project: Ref, path: string) => typed<string>('files.readText', [project.id, path]),
+            list: (project: Ref, folder: string) => typed<PublicServer.FileEntry[]>('files.list', [project.id, folder]),
+            async watch(project: Ref, path: string, listener: () => void) {
+                const watch = nextFileWatch;
+
+                nextFileWatch += 1;
+                // Before the ask, so a change the machine reports with its answer is heard.
+                fileWatches.set(watch, listener);
+
+                const watching = await ask('files.watch', [project.id, path, watch]);
+
+                if (!watching.ok) {
+                    fileWatches.delete(watch);
+
+                    return watching;
+                }
+
+                const stop = (): void => {
+                    if (fileWatches.delete(watch)) {
+                        void ask('files.unwatch', [watch]);
+                    }
+                };
+
+                return { ok: true as const, value: stop };
+            }
+        },
         terminals: {
             read: (terminal: Ref) => typed<string>('terminals.read', [terminal.id]),
             async open({ project, profile, title, cwd, near }: PublicServer.OpenTerminal) {
@@ -219,10 +277,22 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             );
         },
         defineServer: <Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api => api,
-        onEvent<Name extends keyof PublicServer.ServerEvents>(name: Name, listener: (event: PublicServer.ServerEvents[Name]) => void): () => void {
+        onEvent<Name extends keyof PublicServer.ServerEvents>(
+            name: Name,
+            listener: (event: PublicServer.ServerEvents[Name]) => void,
+            filter?: { project?: Ref }
+        ): () => void {
             const group = listeners.get(name) ?? new Set();
+            const only = filter?.project?.id;
             // The daemon hands on only the payload `ServerEvents` names for this event.
-            const heard = listener as Listener;
+            const heard: Listener =
+                only === undefined
+                    ? (listener as Listener)
+                    : (payload) => {
+                          if ((payload as { project?: Ref }).project?.id === only) {
+                              (listener as Listener)(payload);
+                          }
+                      };
 
             group.add(heard);
             listeners.set(name, group);
@@ -277,10 +347,37 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
 
             return profile.spawn(input as { project: PublicServer.ProjectInfo; cwd: string });
         },
+        async askLaunchSource(id, method, project) {
+            const source = launchSources.get(id);
+
+            if (source === undefined) {
+                throw new MissingHandler(`No launch source ${id}`);
+            }
+
+            if (method === 'list') {
+                return source.list(project);
+            }
+
+            const key = `${id}\n${project.id}`;
+            const stop = launchWatches.get(key);
+
+            // A watch asked for twice is one watch, and one that was never there stops nothing.
+            launchWatches.delete(key);
+            stop?.();
+
+            if (method === 'watch' && source.watch !== undefined) {
+                launchWatches.set(key, await source.watch(project, () => send({ type: 'launchesChanged', source: id, projectId: project.id })));
+            }
+
+            return null;
+        },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {
                 listener(payload);
             }
+        },
+        fileChanged(watch) {
+            fileWatches.get(watch)?.();
         }
     };
 }

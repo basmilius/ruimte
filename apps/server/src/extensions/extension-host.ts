@@ -8,12 +8,17 @@ import {
     allowsProposed,
     ANSWER_TIMEOUT_MS,
     EXTENSION_API_VERSION,
+    EXTENSION_PROBLEM_FILES,
+    EXTENSION_PROBLEMS_PER_FILE,
     EXTENSION_TERMINAL_TEXT_MAX,
+    ExtensionProblemsClearSchema,
+    ExtensionProblemsReportSchema,
     ExtensionProvidedIdSchema,
     providedIds,
     proposedRefusal,
     providerRefusal,
     type ExtensionActionName,
+    type ExtensionFileProblems,
     type ExtensionInfo,
     type ExtensionManifest,
     type ExtensionStatus,
@@ -26,6 +31,7 @@ import { errorText } from '../error-text.ts';
 import { bunRuntime } from '../language/runtime.ts';
 import type { SessionSink } from '../wire.ts';
 import { clientFilesOf } from './client-files.ts';
+import { launchesListed, SpawnDescriptionSchema, type LaunchDescription, type SpawnDescription } from './descriptions.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
 import runtimeSource from './generated/server-runtime.js' with { type: 'text' };
 import {
@@ -35,6 +41,7 @@ import {
     eventRefusal,
     missingPermission,
     permissionsOf,
+    problemSourceRefusal,
     SendLimit,
     startsWithMachine,
     terminalProfileRefusal,
@@ -61,6 +68,9 @@ const ProtocolMessageSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('ready') }),
     z.object({ type: z.literal('subscribe'), name: z.string() }),
     z.object({ type: z.literal('profile'), id: z.string(), title: z.string().min(1).max(80), icon: z.string().max(60).optional(), available: z.boolean() }),
+    z.object({ type: z.literal('launchSource'), id: z.string(), title: z.string().min(1).max(80), watches: z.boolean() }),
+    z.object({ type: z.literal('launchesChanged'), source: z.string(), projectId: z.string() }),
+    z.object({ type: z.literal('problemSource'), id: z.string(), title: z.string().min(1).max(80) }),
     z.object({ type: z.literal('emit'), name: z.string(), payload: z.unknown().optional() }),
     z.object({ type: z.literal('result'), id: z.number(), result: z.unknown().optional(), error: z.string().optional(), code: z.string().optional() })
 ]);
@@ -96,6 +106,12 @@ function damagedInfo({ id, error }: DamagedExtension): ExtensionInfo {
     };
 }
 
+function tooManyProblems(file: unknown): boolean {
+    const problems = (file as { problems?: unknown } | null)?.problems;
+
+    return Array.isArray(problems) && problems.length > EXTENSION_PROBLEMS_PER_FILE;
+}
+
 function stopped(): ExtensionRefusal {
     return new ExtensionRefusal('unavailable', 'The extension stopped');
 }
@@ -117,6 +133,9 @@ interface Running {
     proposedAllowed: boolean;
     // The terminal profiles its module defined, by id.
     profiles: Map<string, DefinedProfile>;
+    // The launch sources and problem sources its module defined, by id.
+    launchSources: Map<string, { title: string; watches: boolean }>;
+    problemSources: Map<string, { title: string }>;
     subscriptions: Set<string>;
     nextCall: number;
     buffered: string;
@@ -145,13 +164,38 @@ export interface ExtensionProject {
     folder: string;
 }
 
-const SpawnDescriptionSchema = z.object({
-    command: z.string().min(1),
-    args: z.array(z.string()).max(256).optional(),
-    env: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string()).optional(),
-    cwd: z.string().min(1).optional()
-});
-export type SpawnDescription = z.infer<typeof SpawnDescriptionSchema>;
+export type { SpawnDescription };
+
+/* What one launch source of an extension lists in a project. */
+export interface SourceListing {
+    extension: string;
+    source: string;
+    title: string;
+    // Whether it tells when its list changed, so the machine asks it to.
+    watches: boolean;
+    launches: LaunchDescription[];
+}
+
+const FileReadAskSchema = z.tuple([z.string().min(1), z.string().min(1)]);
+const FileWatchAskSchema = z.tuple([z.string().min(1), z.string().min(1), z.number().int().positive()]);
+
+/* The files of a project, as far as an extension's `server/` reads them: inside its folder only. */
+export interface ExtensionFilesPort {
+    readText(projectId: string, path: string): Promise<string>;
+    list(projectId: string, folder: string): Promise<unknown>;
+    /* Follows a file or folder for one extension under a number of its own, until `unwatch` or `unwatchAll`. */
+    watch(extensionId: string, watch: number, projectId: string, path: string, changed: () => void): Promise<void>;
+    unwatch(extensionId: string, watch: number): void;
+    unwatchAll(extensionId: string): void;
+}
+
+/* Where the problems of an extension's sources go: beside what the language servers report. */
+export interface ExtensionProblemsPort {
+    report(source: { extension: string; id: string; title: string }, projectId: string, files: readonly ExtensionFileProblems[]): Promise<void>;
+    clear(extension: string, source: string, projectId: string): void;
+    /* Everything an extension said, in every project. */
+    drop(extension: string): void;
+}
 
 const TerminalOpenAskSchema = z.object({
     projectId: z.string().min(1),
@@ -215,6 +259,12 @@ export interface ExtensionHostOptions {
     startChat?: (extensionId: string, start: ExtensionChatStart, check: () => void) => Promise<{ nodeId: string }>;
     runAction?: (extensionId: string, projectId: string, action: ExtensionActionName, input: unknown) => Promise<unknown>;
     terminals?: () => ExtensionTerminalPort;
+    projectFiles?: () => ExtensionFilesPort;
+    problems?: () => ExtensionProblemsPort;
+    // A launch source said its list changed, through the `changed` of its `watch`.
+    launchesChanged?: (extensionId: string, source: string, projectId: string) => void;
+    // What an extension supplies may differ from here on: it was turned on or off, changed, removed, or its process ended by itself.
+    providersChanged?: (extensionId: string) => void;
     addLanguageServer?: (extensionId: string, server: object) => Promise<void>;
     // Stops what runs of them also when the change cannot be saved, and then rejects.
     removeLanguageServers?: (extensionId: string) => Promise<void>;
@@ -436,6 +486,7 @@ export class ExtensionHost {
             await after?.();
         } finally {
             this.changed();
+            this.options.providersChanged?.(id);
         }
 
         if (failure !== null) {
@@ -745,7 +796,14 @@ export class ExtensionHost {
         this.exiting.set(id, exiting);
         this.running.delete(id);
         this.forgetTools(id);
+        this.forgetHeld(id);
         this.failPending(running, stopped());
+    }
+
+    /* What the machine held for a process that is gone: the files it followed and the problems it reported. */
+    private forgetHeld(id: string): void {
+        this.options.projectFiles?.().unwatchAll(id);
+        this.options.problems?.().drop(id);
     }
 
     private async runningFor(id: string): Promise<Running> {
@@ -877,6 +935,8 @@ export class ExtensionHost {
             manifest: extension.manifest,
             proposedAllowed,
             profiles: new Map(),
+            launchSources: new Map(),
+            problemSources: new Map(),
             subscriptions: new Set(),
             nextCall: 1,
             buffered: '',
@@ -958,6 +1018,18 @@ export class ExtensionHost {
             this.followEvent(id, running, message.name);
         } else if (message.type === 'profile') {
             this.defineProfile(id, running, message);
+        } else if (message.type === 'launchSource') {
+            if (this.mayProvide(id, running, 'defineLaunchSource', 'launches.provide', message.id)) {
+                running.launchSources.set(message.id, { title: message.title, watches: message.watches });
+            }
+        } else if (message.type === 'problemSource') {
+            if (this.mayProvide(id, running, 'defineProblemSource', 'problems.provide', message.id)) {
+                running.problemSources.set(message.id, { title: message.title });
+            }
+        } else if (message.type === 'launchesChanged') {
+            if (running.launchSources.has(message.source)) {
+                this.options.launchesChanged?.(id, message.source, message.projectId);
+            }
         } else if (message.type === 'emit') {
             this.sinks.emit({ event: 'extension.message', payload: { id, name: message.name, payload: message.payload } });
         } else {
@@ -990,18 +1062,78 @@ export class ExtensionHost {
     }
 
     /* The process's own runtime refuses the same, so this only meets one that speaks the pipe by hand. */
-    private defineProfile(id: string, running: Running, profile: DefinedProfile & { id: string }): void {
+    private mayProvide(id: string, running: Running, define: string, permission: string, provided: string): boolean {
         const refused =
-            missingPermission(id, 'terminals.profiles', running.permissions)?.message ??
-            providerRefusal(running.manifest, 'defineTerminalProfile', profile.id, running.proposedAllowed);
+            missingPermission(id, permission, running.permissions)?.message ?? providerRefusal(running.manifest, define, provided, running.proposedAllowed);
 
         if (refused === null) {
-            running.profiles.set(profile.id, { title: profile.title, icon: profile.icon, available: profile.available });
-
-            return;
+            return true;
         }
 
         void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${refused}\n`));
+
+        return false;
+    }
+
+    private defineProfile(id: string, running: Running, profile: DefinedProfile & { id: string }): void {
+        if (this.mayProvide(id, running, 'defineTerminalProfile', 'terminals.profiles', profile.id)) {
+            running.profiles.set(profile.id, { title: profile.title, icon: profile.icon, available: profile.available });
+        }
+    }
+
+    /*
+     * What the launch sources of this machine's extensions list in a project. A source is its extension's process, so
+     * that starts for the list, as a terminal profile's does for a pick. One that does not start, fails or answers
+     * another shape lists nothing, and its log says why.
+     */
+    async launchSources(project: ExtensionProject): Promise<SourceListing[]> {
+        const listings: SourceListing[] = [];
+
+        for (const extension of await this.options.store.list()) {
+            if (isDamaged(extension) || !extension.enabled || this.refusedReason(extension) !== null || this.options.store.serverEntry(extension) === null) {
+                continue;
+            }
+
+            const { id } = extension.manifest;
+            const ids = providedIds(extension.manifest, 'launchSources', allowsProposed(this.provenanceOf(extension)));
+
+            if (ids.length === 0) {
+                continue;
+            }
+
+            try {
+                const running = await this.runningFor(id);
+
+                for (const source of ids) {
+                    const defined = running.launchSources.get(source);
+
+                    if (defined !== undefined) {
+                        listings.push({ extension: id, source, ...defined, launches: await this.launchesOf(id, running, source, project) });
+                    }
+                }
+            } catch (e) {
+                void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `Its launches were not listed: ${errorText(e)}\n`));
+            }
+        }
+
+        return listings;
+    }
+
+    private async launchesOf(id: string, running: Running, source: string, project: ExtensionProject): Promise<LaunchDescription[]> {
+        const answer = await this.send(running, { type: 'launchSource', source, method: 'list', input: project }, `${id} launch source ${source}`);
+
+        return launchesListed(answer, (reason) => {
+            void bestEffort('files.append', this.files.append(this.options.store.logFile(id), `${source} ${reason}\n`));
+        });
+    }
+
+    /* Has a launch source that runs tell when its list changed in a project, or stop telling. Starts no process for either. */
+    async watchLaunchSource(id: string, source: string, project: ExtensionProject, watch: boolean): Promise<void> {
+        const running = this.running.get(id);
+
+        if (running?.launchSources.get(source)?.watches === true) {
+            await this.send(running, { type: 'launchSource', source, method: watch ? 'watch' : 'unwatch', input: project }, `${id} launch source ${source}`);
+        }
     }
 
     /*
@@ -1284,6 +1416,14 @@ export class ExtensionHost {
             return this.terminalPort().read(String(args[0]));
         }
 
+        if (method.startsWith('files.')) {
+            return this.answerFiles(id, running, grant, method, args);
+        }
+
+        if (method === 'problems.report' || method === 'problems.clear') {
+            return this.answerProblems(id, running, grant, method, args);
+        }
+
         const run = this.options.asks?.()[method];
 
         if (run === undefined) {
@@ -1295,6 +1435,115 @@ export class ExtensionHost {
         }
 
         return (run as (...values: unknown[]) => Promise<unknown>)(...args);
+    }
+
+    private async answerFiles(id: string, running: Running, grant: Grant, method: string, args: unknown[]): Promise<unknown> {
+        const port = this.options.projectFiles?.();
+
+        if (port === undefined) {
+            throw new ExtensionRefusal('unavailable', 'This machine reads no files for an extension');
+        }
+
+        if (method === 'files.unwatch') {
+            port.unwatch(id, Number(args[0]));
+
+            return null;
+        }
+
+        if (method === 'files.watch') {
+            const asked = FileWatchAskSchema.safeParse(args);
+
+            if (!asked.success) {
+                throw new ExtensionRefusal('invalid-input', 'files.watch takes a project, a path and a listener');
+            }
+
+            const [projectId, path, watch] = asked.data;
+
+            await port.watch(id, watch, projectId, path, () => {
+                if (this.running.get(id) === running) {
+                    running.child.stdin.write(`${JSON.stringify({ type: 'fileChanged', watch })}\n`);
+                }
+            });
+
+            // The extension may have been turned off while the path was judged, after its watches were let go.
+            try {
+                grant.check();
+            } catch (e) {
+                port.unwatch(id, watch);
+
+                throw e;
+            }
+
+            return null;
+        }
+
+        const asked = FileReadAskSchema.safeParse(args);
+
+        if (!asked.success) {
+            throw new ExtensionRefusal('invalid-input', `${method} takes a project and a path`);
+        }
+
+        return method === 'files.list' ? port.list(...asked.data) : port.readText(...asked.data);
+    }
+
+    private async answerProblems(id: string, running: Running, grant: Grant, method: string, args: unknown[]): Promise<unknown> {
+        const port = this.options.problems?.();
+
+        if (port === undefined || grant.manifest === null) {
+            throw new ExtensionRefusal('unavailable', 'This machine keeps no problems for an extension');
+        }
+
+        if (method === 'problems.clear') {
+            const cleared = ExtensionProblemsClearSchema.safeParse(args);
+
+            if (!cleared.success) {
+                throw new ExtensionRefusal('invalid-input', 'problems.clear takes a project and a source');
+            }
+
+            refuse(problemSourceRefusal(grant.manifest, cleared.data[1], grant.proposedAllowed));
+            port.clear(id, cleared.data[1], cleared.data[0]);
+
+            return null;
+        }
+
+        const [, , files] = args as [unknown, unknown, unknown];
+
+        // Said as a limit and not as a wrong shape, since a linter that finds too much made no mistake in its call.
+        if (Array.isArray(files) && (files.length > EXTENSION_PROBLEM_FILES || files.some((file) => tooManyProblems(file)))) {
+            throw new ExtensionRefusal(
+                'limit',
+                `A source reports at most ${EXTENSION_PROBLEMS_PER_FILE} problems per file and ${EXTENSION_PROBLEM_FILES} files at once`
+            );
+        }
+
+        const reported = ExtensionProblemsReportSchema.safeParse(args);
+
+        if (!reported.success) {
+            throw new ExtensionRefusal('invalid-input', `problems.report takes another shape: ${reported.error.issues[0]?.message ?? 'invalid'}`);
+        }
+
+        const [projectId, source, problems] = reported.data;
+
+        refuse(problemSourceRefusal(grant.manifest, source, grant.proposedAllowed));
+
+        const title = running.problemSources.get(source)?.title;
+
+        if (title === undefined) {
+            throw new ExtensionRefusal('not-found', `${id} lists the problem source ${source} and did not define it`);
+        }
+
+        await port.report({ extension: id, id: source, title }, projectId, problems);
+
+        // A turn off that came between let go of what the extension reported before this landed.
+        try {
+            grant.check();
+        } catch (e) {
+            port.drop(id);
+
+            throw e;
+        }
+
+        return null;
     }
 
     private send(running: Running, message: object, label: string): Promise<unknown> {
@@ -1322,8 +1571,10 @@ export class ExtensionHost {
 
         this.running.delete(id);
         this.forgetTools(id);
+        this.forgetHeld(id);
         this.crashes.set(id, (this.crashes.get(id) ?? 0) + 1);
         this.changed();
+        this.options.providersChanged?.(id);
     }
 
     private failPending(running: Running, reason: Error): void {

@@ -1196,6 +1196,7 @@ function datetime(args) {
   return new RegExp(`^${dateSource}T(?:${timeRegex})$`);
 }
 var anyString = /^[\s\S]{0,}$/;
+var integer = /^-?\d+$/;
 var number = /^-?\d+(?:\.\d+)?$/;
 var boolean = /^(?:true|false)$/i;
 var lowercase = /^[^A-Z]*$/;
@@ -2749,6 +2750,284 @@ function handleIntersectionResults(result, left, right) {
   result.value = merged.data;
   return result;
 }
+var $ZodTuple = /* @__PURE__ */ $constructor("$ZodTuple", (inst, def) => {
+  $ZodType.init(inst, def);
+  const items = def.items;
+  const memo = globalConfig.memoizer;
+  memo?.attach(inst);
+  inst._zod.parse = (payload, ctx) => {
+    const input = payload.value;
+    if (!Array.isArray(input)) {
+      payload.issues.push({
+        input,
+        inst,
+        expected: "tuple",
+        code: "invalid_type"
+      });
+      return payload;
+    }
+    payload.value = memo ? memo.alloc(inst, payload, [], ctx) : [];
+    const proms = [];
+    const optinStart = getTupleOptStart(items, "optin");
+    const optoutStart = getTupleOptStart(items, "optout");
+    if (!def.rest) {
+      if (input.length < optinStart) {
+        payload.issues.push({
+          code: "too_small",
+          minimum: optinStart,
+          inclusive: true,
+          input,
+          inst,
+          origin: "array"
+        });
+        return payload;
+      }
+      if (input.length > items.length) {
+        payload.issues.push({
+          code: "too_big",
+          maximum: items.length,
+          inclusive: true,
+          input,
+          inst,
+          origin: "array"
+        });
+      }
+    }
+    const itemResults = new Array(items.length);
+    const abortEarly = def.rest ? ctx?.abortEarly : undefined;
+    let itemAborted = false;
+    for (let i = 0;i < items.length; i++) {
+      const r = items[i]._zod.run({ value: input[i], issues: [] }, ctx);
+      if (r instanceof Promise) {
+        proms.push(r.then((rr) => {
+          itemResults[i] = rr;
+        }));
+      } else {
+        itemResults[i] = r;
+        if (abortEarly && !itemAborted && r.issues.length)
+          itemAborted = aborted(r);
+      }
+    }
+    if (def.rest && !itemAborted) {
+      let i = items.length - 1;
+      const rest = input.slice(items.length);
+      let seen = payload.issues.length;
+      for (const el of rest) {
+        if (abortEarly && payload.issues.length !== seen) {
+          if (aborted(payload, seen))
+            break;
+          seen = payload.issues.length;
+        }
+        i++;
+        const result = def.rest._zod.run({ value: el, issues: [] }, ctx);
+        if (result instanceof Promise) {
+          proms.push(result.then((r) => handleTupleResult(r, payload, i)));
+        } else {
+          handleTupleResult(result, payload, i);
+        }
+      }
+    }
+    if (proms.length) {
+      return Promise.all(proms).then(() => handleTupleResults(itemResults, payload, items, input, optoutStart));
+    }
+    return handleTupleResults(itemResults, payload, items, input, optoutStart);
+  };
+});
+function getTupleOptStart(items, key) {
+  for (let i = items.length - 1;i >= 0; i--) {
+    const omittable = key === "optin" ? items[i]._zod.optin !== undefined : items[i]._zod.optout === "optional";
+    if (!omittable)
+      return i + 1;
+  }
+  return 0;
+}
+function handleTupleResult(result, final, index) {
+  if (result.issues.length) {
+    final.issues.push(...prefixIssues(index, result.issues));
+  }
+  final.value[index] = result.value;
+}
+function handleTupleResults(itemResults, final, items, input, optoutStart) {
+  for (let i = 0;i < items.length; i++) {
+    const r = itemResults[i];
+    const isPresent = i < input.length;
+    if (!isPresent && i >= optoutStart && items[i]._zod.optin === "optional") {
+      final.value.length = i;
+      break;
+    }
+    if (r.issues.length) {
+      if (!isPresent && i >= optoutStart) {
+        final.value.length = i;
+        break;
+      }
+      final.issues.push(...prefixIssues(i, r.issues));
+    }
+    final.value[i] = r.value;
+  }
+  for (let i = final.value.length - 1;i >= input.length; i--) {
+    if (items[i]._zod.optout === "optional" && final.value[i] === undefined) {
+      final.value.length = i;
+    } else {
+      break;
+    }
+  }
+  return final;
+}
+var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
+  $ZodType.init(inst, def);
+  const memo = globalConfig.memoizer;
+  memo?.attach(inst);
+  inst._zod.parse = (payload, ctx) => {
+    const input = payload.value;
+    if (!isPlainObject(input)) {
+      payload.issues.push({
+        expected: "record",
+        code: "invalid_type",
+        input,
+        inst
+      });
+      return payload;
+    }
+    const proms = [];
+    const values = def.keyType._zod.values;
+    if (values && !def.partial) {
+      payload.value = memo ? memo.alloc(inst, payload, {}, ctx) : {};
+      const recordKeys = new Set;
+      for (const key of values) {
+        if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
+          recordKeys.add(typeof key === "number" ? key.toString() : key);
+          if (key === "__proto__")
+            continue;
+          const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+          if (keyResult instanceof Promise) {
+            throw new Error("Async schemas not supported in object keys currently");
+          }
+          if (keyResult.issues.length) {
+            payload.issues.push({
+              code: "invalid_key",
+              origin: "record",
+              issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+              input: key,
+              path: [key],
+              inst
+            });
+            continue;
+          }
+          const outKey = keyResult.value;
+          if (outKey === "__proto__")
+            continue;
+          const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
+          if (result instanceof Promise) {
+            proms.push(result.then((result) => {
+              if (result.issues.length) {
+                payload.issues.push(...prefixIssues(key, result.issues));
+              }
+              payload.value[outKey] = result.value;
+            }));
+          } else {
+            if (result.issues.length) {
+              payload.issues.push(...prefixIssues(key, result.issues));
+            }
+            payload.value[outKey] = result.value;
+          }
+        }
+      }
+      let unrecognized;
+      for (const key in input) {
+        if (!recordKeys.has(key)) {
+          if (def.mode === "loose") {
+            if (key === "__proto__")
+              continue;
+            payload.value[key] = input[key];
+          } else {
+            unrecognized = unrecognized ?? [];
+            unrecognized.push(key);
+          }
+        }
+      }
+      if (unrecognized && unrecognized.length > 0) {
+        payload.issues.push({
+          code: "unrecognized_keys",
+          input,
+          inst,
+          keys: unrecognized,
+          continue: true
+        });
+      }
+    } else {
+      payload.value = memo ? memo.alloc(inst, payload, {}, ctx) : {};
+      let unrecognized;
+      for (const key of Reflect.ownKeys(input)) {
+        if (key === "__proto__")
+          continue;
+        if (!Object.prototype.propertyIsEnumerable.call(input, key))
+          continue;
+        let keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+        if (keyResult instanceof Promise) {
+          throw new Error("Async schemas not supported in object keys currently");
+        }
+        const checkNumericKey = typeof key === "string" && number.test(key) && keyResult.issues.length;
+        if (checkNumericKey) {
+          const retryResult = def.keyType._zod.run({ value: Number(key), issues: [] }, ctx);
+          if (retryResult instanceof Promise) {
+            throw new Error("Async schemas not supported in object keys currently");
+          }
+          if (retryResult.issues.length === 0) {
+            keyResult = retryResult;
+          }
+        }
+        if (keyResult.issues.length) {
+          if (def.mode === "loose") {
+            payload.value[key] = input[key];
+          } else if (values) {
+            unrecognized = unrecognized ?? [];
+            unrecognized.push(key);
+          } else {
+            payload.issues.push({
+              code: "invalid_key",
+              origin: "record",
+              issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+              input: key,
+              path: [key],
+              inst
+            });
+          }
+          continue;
+        }
+        const outKey = keyResult.value;
+        if (outKey === "__proto__")
+          continue;
+        const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
+        if (result instanceof Promise) {
+          proms.push(result.then((result) => {
+            if (result.issues.length) {
+              payload.issues.push(...prefixIssues(key, result.issues));
+            }
+            payload.value[outKey] = result.value;
+          }));
+        } else {
+          if (result.issues.length) {
+            payload.issues.push(...prefixIssues(key, result.issues));
+          }
+          payload.value[outKey] = result.value;
+        }
+      }
+      if (unrecognized && unrecognized.length > 0) {
+        payload.issues.push({
+          code: "unrecognized_keys",
+          input,
+          inst,
+          keys: unrecognized,
+          continue: true
+        });
+      }
+    }
+    if (proms.length) {
+      return Promise.all(proms).then(() => payload);
+    }
+    return payload;
+  };
+});
 var $ZodEnum = /* @__PURE__ */ $constructor("$ZodEnum", (inst, def) => {
   $ZodType.init(inst, def);
   const values = getEnumValues(def.entries);
@@ -4789,7 +5068,176 @@ var intersectionProcessor = (schema, ctx, json, params) => {
   json.allOf = allOf;
   ctx.intersections.push(allOf);
 };
+var tupleProcessor = (schema, ctx, _json, params) => {
+  const json = _json;
+  const def = schema._zod.def;
+  json.type = "array";
+  const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
+  const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
+  const prefixItems = def.items.map((x, i) => processSchema(x, ctx, {
+    ...params,
+    path: [...params.path, prefixPath, i]
+  }));
+  const rest = def.rest ? processSchema(def.rest, ctx, {
+    ...params,
+    path: [...params.path, restPath, ...ctx.target === "openapi-3.0" ? [def.items.length] : []]
+  }) : null;
+  let minItems = def.items.length;
+  while (minItems > 0) {
+    const item = def.items[minItems - 1];
+    const optional = ctx.io === "input" ? inputOptin(item) !== undefined : item._zod.optout === "optional";
+    if (!optional)
+      break;
+    minItems--;
+  }
+  const maxItems = def.items.length;
+  const isClosed = !def.rest;
+  if (ctx.target === "draft-2020-12") {
+    json.prefixItems = prefixItems;
+    if (isClosed) {
+      json.items = false;
+    } else if (rest) {
+      json.items = rest;
+    }
+    if (minItems > 0)
+      json.minItems = minItems;
+    if (isClosed)
+      json.maxItems = maxItems;
+  } else if (ctx.target === "openapi-3.0") {
+    json.items = {
+      anyOf: prefixItems
+    };
+    if (rest) {
+      json.items.anyOf.push(rest);
+    }
+    if (minItems > 0)
+      json.minItems = minItems;
+    if (isClosed)
+      json.maxItems = maxItems;
+  } else {
+    json.items = prefixItems;
+    if (isClosed) {
+      json.additionalItems = false;
+    } else if (rest) {
+      json.additionalItems = rest;
+    }
+    if (minItems > 0)
+      json.minItems = minItems;
+    if (isClosed)
+      json.maxItems = maxItems;
+  }
+  const { minimum, maximum } = aggregateChecks(schema);
+  if (typeof minimum === "number")
+    json.minItems = minimum;
+  if (typeof maximum === "number")
+    json.maxItems = maximum;
+};
+function stringifyKeyNames(bySchema, json, visited) {
+  if (json.$ref) {
+    if (visited.has(json))
+      return json;
+    visited.add(json);
+    const def = bySchema.get(json)?.def;
+    if (!def)
+      return json;
+    const inlined = stringifyKeyNames(bySchema, def, visited);
+    return inlined === def ? json : inlined;
+  }
+  for (const keyword of ["anyOf", "oneOf"]) {
+    const branches = json[keyword];
+    if (!Array.isArray(branches))
+      continue;
+    const mapped = branches.map((branch) => stringifyKeyNames(bySchema, branch, visited));
+    if (mapped.some((branch, i) => branch !== branches[i]))
+      json = { ...json, [keyword]: mapped };
+  }
+  const types = Array.isArray(json.type) ? json.type : [json.type];
+  const numericType = !types.includes("string") && types.some((t) => t === "number" || t === "integer");
+  const values = json.enum ?? (json.const !== undefined ? [json.const] : undefined);
+  if (!numericType && !values?.some((v) => typeof v === "number"))
+    return json;
+  const { minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf, format, id, ...rest } = json;
+  if (rest.enum)
+    rest.enum = rest.enum.map((v) => typeof v === "number" ? String(v) : v);
+  else if (typeof rest.const === "number")
+    rest.const = String(rest.const);
+  if (!numericType)
+    return rest;
+  rest.type = "string";
+  if (!values)
+    rest.pattern = (types.includes("number") ? number : integer).source;
+  return rest;
+}
 var pendingRecords = new WeakMap;
+function rewriteKeyNames(ctx) {
+  const bySchema = new Map;
+  for (const entry of ctx.seen.values()) {
+    if (entry.def && !bySchema.has(entry.schema))
+      bySchema.set(entry.schema, entry);
+  }
+  const rewrites = new Map;
+  for (const record of pendingRecords.get(ctx) ?? []) {
+    const seen = ctx.seen.get(record);
+    const names = (seen?.def ?? seen?.schema)?.propertyNames;
+    if (!names || names === true || rewrites.has(names))
+      continue;
+    const rewritten = stringifyKeyNames(bySchema, names, new Set);
+    if (rewritten !== names)
+      rewrites.set(names, rewritten);
+  }
+  if (!rewrites.size)
+    return;
+  for (const entry of ctx.seen.values()) {
+    for (const carrier of [entry.schema, entry.def]) {
+      const rewritten = carrier && rewrites.get(carrier.propertyNames);
+      if (rewritten)
+        carrier.propertyNames = rewritten;
+    }
+  }
+}
+var recordProcessor = (schema, ctx, _json, params) => {
+  const json = _json;
+  const def = schema._zod.def;
+  json.type = "object";
+  const keyType = def.keyType;
+  const patterns = aggregateChecks(keyType).patterns;
+  if (def.mode === "loose" && patterns && patterns.size > 0) {
+    const valueSchema = processSchema(def.valueType, ctx, {
+      ...params,
+      path: [...params.path, "patternProperties", "*"]
+    });
+    json.patternProperties = {};
+    for (const pattern of patterns) {
+      assignProp(json.patternProperties, exactPattern(pattern).source, valueSchema);
+    }
+  } else {
+    if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") {
+      json.propertyNames = processSchema(def.keyType, ctx, {
+        ...params,
+        path: [...params.path, "propertyNames"]
+      });
+      let pending = pendingRecords.get(ctx);
+      if (!pending) {
+        pending = [];
+        pendingRecords.set(ctx, pending);
+        ctx.deferred.push(() => rewriteKeyNames(ctx));
+      }
+      pending.push(schema);
+    }
+    json.additionalProperties = processSchema(def.valueType, ctx, {
+      ...params,
+      path: [...params.path, "additionalProperties"]
+    });
+  }
+  const keyValues = keyType._zod.values;
+  const omittableOnInput = ctx.io === "input" && inputOptin(def.valueType) !== undefined;
+  if (keyValues && !def.partial && !omittableOnInput) {
+    const validKeyValues = [...keyValues].filter((v) => typeof v === "string" || typeof v === "number");
+    if (validKeyValues.length > 0) {
+      json.required = validKeyValues.map(String);
+    }
+  }
+};
 var nullableProcessor = (schema, ctx, json, params) => {
   const def = schema._zod.def;
   const inner = processSchema(def.innerType, ctx, params);
@@ -5576,6 +6024,63 @@ function intersection(left, right) {
     right
   });
 }
+var ZodTuple = /* @__PURE__ */ $constructor("ZodTuple", (inst, def) => {
+  _ensureDefaultMemoizer();
+  $ZodTuple.init(inst, def);
+  ZodType.init(inst, def);
+  inst._zod.processJSONSchema = (ctx, json, params) => tupleProcessor(inst, ctx, json, params);
+}, {
+  rest(rest) {
+    return this.clone({
+      ...this._zod.def,
+      rest
+    });
+  },
+  partial() {
+    const def = this._zod.def;
+    if (def.checks?.length)
+      throw new Error(".partial() cannot be used on tuple schemas containing refinements");
+    return this.clone({
+      ...def,
+      items: def.items.map((item) => new ZodOptional({ type: "optional", innerType: item }))
+    });
+  }
+});
+function tuple(items, _paramsOrRest, _params) {
+  const hasRest = _paramsOrRest instanceof $ZodType;
+  const params = hasRest ? _params : _paramsOrRest;
+  const rest = hasRest ? _paramsOrRest : null;
+  return new ZodTuple({
+    type: "tuple",
+    items,
+    rest,
+    ...normalizeParams(params)
+  });
+}
+var ZodRecord = /* @__PURE__ */ $constructor("ZodRecord", (inst, def) => {
+  _ensureDefaultMemoizer();
+  $ZodRecord.init(inst, def);
+  ZodType.init(inst, def);
+  inst._zod.processJSONSchema = (ctx, json, params) => recordProcessor(inst, ctx, json, params);
+  inst.keyType = def.keyType;
+  inst.valueType = def.valueType;
+});
+function record(keyType, valueType, params) {
+  if (!valueType || !valueType._zod) {
+    return new ZodRecord({
+      type: "record",
+      keyType: string2(),
+      valueType: keyType,
+      ...normalizeParams(valueType)
+    });
+  }
+  return new ZodRecord({
+    type: "record",
+    keyType,
+    valueType,
+    ...normalizeParams(params)
+  });
+}
 var ZodEnum = /* @__PURE__ */ $constructor("ZodEnum", (inst, def) => {
   $ZodEnum.init(inst, def);
   ZodType.init(inst, def);
@@ -5976,6 +6481,14 @@ var ArtifactCleanupResultSchema = object({
 var NodeRefSchema = object({ id: string2().min(1) });
 var nodeInput = object({ node: NodeRefSchema });
 var launchInput = object({ launch: string2().trim().min(1) });
+var launchFieldName = string2().trim().min(1).max(200);
+var launchRunInput = {
+  command: string2().trim().min(1).optional(),
+  cwd: string2().trim().min(1).optional(),
+  url: string2().trim().min(1).optional(),
+  env: record(string2().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), string2().nullable()).optional(),
+  members: array(string2().trim().min(1)).min(1).optional()
+};
 var routineInput = object({ routine: string2().min(1) });
 var publishedName = string2().min(1).max(ARTIFACT_LIMITS.fileNameLength);
 var PublishedTextSchema = object({ name: publishedName, text: string2() });
@@ -5987,6 +6500,8 @@ var EXTENSION_ACTION_INPUTS = {
   "launch.start": launchInput,
   "launch.restart": launchInput,
   "launch.stop": launchInput,
+  "launch.create": object({ name: launchFieldName, kind: _enum(["service", "task", "group"]), ...launchRunInput }),
+  "launch.edit": launchInput.extend({ name: launchFieldName.optional(), ...launchRunInput }),
   "routine.list": object({}),
   "routine.run": routineInput,
   "routine.pause": routineInput,
@@ -6027,6 +6542,8 @@ var EXTENSION_ACTIONS = {
   "launch.start": "launches.run",
   "launch.restart": "launches.run",
   "launch.stop": "launches.run",
+  "launch.create": "launches.write",
+  "launch.edit": "launches.write",
   "routine.list": "routines.read",
   "routine.run": "routines.run",
   "routine.pause": "routines.run",
@@ -6145,8 +6662,17 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   Chat: "agents.start",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
+var EXTENSION_SERVER_PERMISSIONS = {
+  "problems.report": "problems.provide",
+  "problems.clear": "problems.provide"
+};
 function extensionCallPermission(call) {
-  return Object.hasOwn(EXTENSION_CLIENT_PERMISSIONS, call) ? EXTENSION_CLIENT_PERMISSIONS[call] ?? null : null;
+  for (const table of [EXTENSION_CLIENT_PERMISSIONS, EXTENSION_SERVER_PERMISSIONS]) {
+    if (Object.hasOwn(table, call)) {
+      return table[call] ?? null;
+    }
+  }
+  return null;
 }
 function missingPermissionMessage(extension, permission) {
   return `${extension} did not ask for the permission ${permission} in its manifest`;
@@ -6244,8 +6770,11 @@ var NODE_ACCENT_COLORS = {
 
 // packages/contracts/src/extension-providers.ts
 var EXTENSION_PROVIDER_POINTS = {
-  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true }
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
+  launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true }
 };
+var MAX_SOURCED_LAUNCHES = 64;
 var EXTENSION_PROPOSED_PARTS = Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true);
 function pointOf(kind) {
   return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
@@ -6330,6 +6859,20 @@ var SERVER_EVENTS = {
       nodeId: sessionId,
       status: extensionAgentStatus(agent?.status, (agent?.requests?.length ?? 0) > 0)
     })
+  },
+  "launch.status": {
+    permission: "launches.read",
+    payload: ({ projectId, launchId, state, exitCode }) => ({ project: { id: projectId }, launch: launchId, state, exitCode })
+  },
+  "project.opened": {
+    permission: "projects.read",
+    payload: ({ project }) => ({
+      project: { id: project.id, name: project.name, folder: project.folder }
+    })
+  },
+  "project.closed": {
+    permission: "projects.read",
+    payload: ({ projectId }) => ({ project: { id: projectId } })
   }
 };
 function serverEvent(name) {
@@ -6369,6 +6912,9 @@ function askRefusal(id, method, args, permissions) {
   if (method === "languages.add") {
     return missingPermission(id, "languages.servers", permissions);
   }
+  if (method === "files.unwatch") {
+    return missingPermission(id, "files.read", permissions);
+  }
   return missingPermission(id, extensionCallPermission(method) ?? method, permissions);
 }
 function terminalWriteRefusal(id, nodeId, record, awaitsPerson) {
@@ -6380,12 +6926,18 @@ function terminalWriteRefusal(id, nodeId, record, awaitsPerson) {
   }
   return null;
 }
-function terminalProfileRefusal(manifest, profile, proposedAllowed) {
-  const permission = missingPermission(manifest.id, "terminals.profiles", permissionsOf(manifest));
-  if (permission !== null) {
-    return permission;
+function providedRefusal(manifest, kind, permission, what, id, proposedAllowed) {
+  const missing = missingPermission(manifest.id, permission, permissionsOf(manifest));
+  if (missing !== null) {
+    return missing;
   }
-  return providedIds(manifest, "terminalProfiles", proposedAllowed).includes(profile) ? null : { code: "not-found", message: `${manifest.id} supplies no terminal profile ${profile}` };
+  return providedIds(manifest, kind, proposedAllowed).includes(id) ? null : { code: "not-found", message: `${manifest.id} supplies no ${what} ${id}` };
+}
+function terminalProfileRefusal(manifest, profile, proposedAllowed) {
+  return providedRefusal(manifest, "terminalProfiles", "terminals.profiles", "terminal profile", profile, proposedAllowed);
+}
+function problemSourceRefusal(manifest, source, proposedAllowed) {
+  return providedRefusal(manifest, "problemSources", "problems.provide", "problem source", source, proposedAllowed);
 }
 var MAX_SENDS_PER_HOUR = 20;
 var HOUR_MS = 3600000;
@@ -6440,6 +6992,10 @@ function createServerApi(options) {
   const tools = new Map;
   const nodeContexts = new Map;
   const profiles = new Map;
+  const launchSources = new Map;
+  const launchWatches = new Map;
+  const fileWatches = new Map;
+  let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
   const mayDefine = (define, permission, id) => {
     if (!permissions.has(permission)) {
@@ -6509,6 +7065,43 @@ function createServerApi(options) {
         available: profile.available !== undefined
       });
     },
+    defineLaunchSource(source) {
+      mayDefine("defineLaunchSource", "launches.provide", source.id);
+      launchSources.set(source.id, source);
+      send({ type: "launchSource", id: source.id, title: source.title, watches: source.watch !== undefined });
+    },
+    defineProblemSource(source) {
+      mayDefine("defineProblemSource", "problems.provide", source.id);
+      send({ type: "problemSource", id: source.id, title: source.title });
+    },
+    problems: {
+      report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
+        return;
+      }),
+      clear: async (project, source) => mapResult(await ask("problems.clear", [project.id, source]), () => {
+        return;
+      })
+    },
+    files: {
+      readText: (project, path) => typed("files.readText", [project.id, path]),
+      list: (project, folder) => typed("files.list", [project.id, folder]),
+      async watch(project, path, listener) {
+        const watch = nextFileWatch;
+        nextFileWatch += 1;
+        fileWatches.set(watch, listener);
+        const watching = await ask("files.watch", [project.id, path, watch]);
+        if (!watching.ok) {
+          fileWatches.delete(watch);
+          return watching;
+        }
+        const stop = () => {
+          if (fileWatches.delete(watch)) {
+            ask("files.unwatch", [watch]);
+          }
+        };
+        return { ok: true, value: stop };
+      }
+    },
     terminals: {
       read: (terminal) => typed("terminals.read", [terminal.id]),
       async open({ project, profile, title, cwd, near }) {
@@ -6541,9 +7134,14 @@ function createServerApi(options) {
       })().catch((e) => options.log.error(`${task.id} failed:`, e)));
     },
     defineServer: (api) => api,
-    onEvent(name, listener) {
+    onEvent(name, listener, filter) {
       const group = listeners.get(name) ?? new Set;
-      const heard = listener;
+      const only = filter?.project?.id;
+      const heard = only === undefined ? listener : (payload) => {
+        if (payload.project?.id === only) {
+          listener(payload);
+        }
+      };
       group.add(heard);
       listeners.set(name, group);
       send({ type: "subscribe", name });
@@ -6588,10 +7186,31 @@ function createServerApi(options) {
       }
       return profile.spawn(input);
     },
+    async askLaunchSource(id, method, project) {
+      const source = launchSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No launch source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      const key = `${id}
+${project.id}`;
+      const stop = launchWatches.get(key);
+      launchWatches.delete(key);
+      stop?.();
+      if (method === "watch" && source.watch !== undefined) {
+        launchWatches.set(key, await source.watch(project, () => send({ type: "launchesChanged", source: id, projectId: project.id })));
+      }
+      return null;
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
       }
+    },
+    fileChanged(watch) {
+      fileWatches.get(watch)?.();
     }
   };
 }
@@ -6655,6 +7274,63 @@ var DEFAULT_TITLES = {
 import { mkdtempSync as mkdtempSync2, readFileSync, rmSync as rmSync2 } from "fs";
 import { tmpdir } from "os";
 import { join as join3, resolve } from "path";
+
+// packages/contracts/src/extension-problems.ts
+var ExtensionProvidedIdSchema = string2().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
+var EXTENSION_PROBLEMS_PER_FILE = 200;
+var EXTENSION_PROBLEM_FILES = 500;
+var EXTENSION_PROBLEM_MESSAGE_MAX = 2000;
+var EXTENSION_PROBLEM_SEVERITIES = ["error", "warning", "information", "hint"];
+var place = number2().int().min(1);
+var ExtensionProblemSchema = object({
+  line: place,
+  column: place.optional(),
+  endLine: place.optional(),
+  endColumn: place.optional(),
+  severity: _enum(EXTENSION_PROBLEM_SEVERITIES),
+  message: string2().min(1).max(EXTENSION_PROBLEM_MESSAGE_MAX),
+  code: string2().min(1).max(120).optional()
+});
+var ExtensionFileProblemsSchema = object({
+  path: string2().min(1),
+  problems: array(ExtensionProblemSchema).max(EXTENSION_PROBLEMS_PER_FILE)
+});
+var ExtensionProblemsReportSchema = tuple([
+  string2().min(1),
+  ExtensionProvidedIdSchema,
+  array(ExtensionFileProblemsSchema).max(EXTENSION_PROBLEM_FILES)
+]);
+var ExtensionProblemsClearSchema = tuple([string2().min(1), ExtensionProvidedIdSchema]);
+
+// apps/server/src/extensions/descriptions.ts
+var PROVIDED_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+var SpawnDescriptionSchema = object({
+  command: string2().min(1),
+  args: array(string2()).max(256).optional(),
+  env: record(string2().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), string2()).optional(),
+  cwd: string2().min(1).optional()
+});
+var LaunchDescriptionSchema = object({
+  id: string2().regex(PROVIDED_ID),
+  name: string2().trim().min(1).max(200),
+  kind: _enum(["service", "task"]),
+  spawn: SpawnDescriptionSchema,
+  fingerprint: string2().min(1).max(256),
+  port: number2().int().min(1).max(65535).optional()
+});
+function launchesListed(answer, refused) {
+  const launches = new Map;
+  for (const entry of (Array.isArray(answer) ? answer : []).slice(0, MAX_SOURCED_LAUNCHES)) {
+    const described = LaunchDescriptionSchema.safeParse(entry);
+    if (!described.success) {
+      const issue = described.error.issues[0];
+      refused(`listed a launch that is none: ${issue?.path.join(".") ?? ""} ${issue?.message ?? "invalid"}`);
+    } else if (!launches.has(described.data.id)) {
+      launches.set(described.data.id, described.data);
+    }
+  }
+  return [...launches.values()];
+}
 
 // apps/server/src/extensions/test-loader.ts
 import { mkdirSync, mkdtempSync, rmSync } from "fs";
@@ -6741,6 +7417,10 @@ function durationMs(duration) {
   }
   return Number(match[1]) * DURATION_UNITS[match[2]];
 }
+function tooManyProblems(file) {
+  const problems = file?.problems;
+  return Array.isArray(problems) && problems.length > EXTENSION_PROBLEMS_PER_FILE;
+}
 function manifestIn(folder) {
   try {
     return JSON.parse(readFileSync(join3(folder, "manifest.json"), "utf8"));
@@ -6800,6 +7480,10 @@ class TestMachine {
   logs = [];
   terminals;
   profiles = new Map;
+  launchSources = new Map;
+  problemSources = new Map;
+  problems = [];
+  files;
   project;
   core;
   notRun;
@@ -6810,6 +7494,7 @@ class TestMachine {
   subscriptions = new Set;
   tools = new Map;
   scheduled = [];
+  fileWatches = new Map;
   sends;
   now = 0;
   constructor(options, folder) {
@@ -6824,6 +7509,7 @@ class TestMachine {
     this.permissions = permissionsOf(manifest);
     this.answers = options.answers ?? {};
     this.storage = wire(options.storage ?? {});
+    this.files = { ...options.files };
     this.secrets = { ...options.secrets };
     this.sends = new SendLimit(() => this.now);
     const dataFolder = mkdtempSync2(join3(tmpdir(), `ruimte-extension-test-${this.id}-`));
@@ -6889,6 +7575,15 @@ class TestMachine {
       this.tools.set(message.name, this.permissions.has("agents.tools"));
     } else if (message.type === "profile") {
       this.profiles.set(message.id, { title: message.title, ...message.icon === undefined ? {} : { icon: message.icon } });
+    } else if (message.type === "launchSource") {
+      this.launchSources.set(message.id, { title: message.title, changes: 0 });
+    } else if (message.type === "launchesChanged") {
+      const source = this.launchSources.get(message.source);
+      if (source !== undefined) {
+        source.changes += 1;
+      }
+    } else if (message.type === "problemSource") {
+      this.problemSources.set(message.id, message.title);
     } else {
       const reason = eventRefusal(message.name, this.permissions);
       if (reason === null) {
@@ -6905,8 +7600,113 @@ class TestMachine {
     }
     const [name, recorded] = this.named(method, args);
     const result = refused === null ? await this.answer(method, args) : this.refused(method, refused);
-    this.asked.push({ method: name, args: wire(recorded), result });
+    if (method !== "files.unwatch") {
+      this.asked.push({ method: name, args: wire(recorded), result });
+    }
     return result;
+  }
+  fileKey(method, projectId, path) {
+    if (projectId !== this.project.id) {
+      return this.refused(method, { code: "not-found", message: `No project ${String(projectId)} on this machine` });
+    }
+    const full = extensionProjectPath(this.project.folder, String(path));
+    if (full === null) {
+      return this.refused(method, { code: "outside-project", message: `${String(path)} is outside the project folder` });
+    }
+    return {
+      key: full.slice(this.project.folder.length).replace(/^[\\/]+/, "").replaceAll("\\", "/")
+    };
+  }
+  answerFiles(method, args) {
+    if (method === "files.unwatch") {
+      this.fileWatches.delete(Number(args[0]));
+      return { ok: true, value: null };
+    }
+    const at = this.fileKey(method, args[0], args[1]);
+    if (!("key" in at)) {
+      return at;
+    }
+    if (method === "files.watch") {
+      this.fileWatches.set(Number(args[2]), at.key);
+      return { ok: true, value: null };
+    }
+    if (method === "files.readText") {
+      return Object.hasOwn(this.files, at.key) ? { ok: true, value: this.files[at.key] } : this.refused(method, { code: "not-found", message: `No file ${String(args[1])} in the project` });
+    }
+    const under = at.key === "" ? "" : `${at.key}/`;
+    const names = new Map;
+    for (const path of Object.keys(this.files)) {
+      if (path.startsWith(under)) {
+        const [name, ...deeper] = path.slice(under.length).split("/");
+        names.set(name, deeper.length === 0 ? "file" : "directory");
+      }
+    }
+    return {
+      ok: true,
+      value: [...names].sort(([left, leftKind], [right, rightKind]) => leftKind === rightKind ? left.localeCompare(right) : leftKind === "directory" ? -1 : 1).map(([name, kind]) => ({ path: `${this.project.folder}/${under}${name}`, name, kind }))
+    };
+  }
+  writeFile(path, text) {
+    if (text === null) {
+      delete this.files[path];
+    } else {
+      this.files[path] = text;
+    }
+    for (const [watch, watched] of [...this.fileWatches]) {
+      if (watched === "" || watched === path || path.startsWith(`${watched}/`)) {
+        this.core.fileChanged(watch);
+      }
+    }
+  }
+  answerProblems(method, args) {
+    const [projectId, source, reported] = args;
+    const refused = problemSourceRefusal(this.manifest, String(source), this.proposedAllowed);
+    if (refused !== null) {
+      return this.refused(method, refused);
+    }
+    if (projectId !== this.project.id) {
+      return this.refused(method, { code: "not-found", message: `No project ${String(projectId)} on this machine` });
+    }
+    const held = this.problems.find((entry) => entry.source === source);
+    if (method === "problems.clear") {
+      if (held !== undefined) {
+        this.problems.splice(this.problems.indexOf(held), 1);
+      }
+      return { ok: true, value: null };
+    }
+    const limit = `A source reports at most ${EXTENSION_PROBLEMS_PER_FILE} problems per file and ${EXTENSION_PROBLEM_FILES} files at once`;
+    if (Array.isArray(reported) && (reported.length > EXTENSION_PROBLEM_FILES || reported.some((file) => tooManyProblems(file)))) {
+      return this.refused(method, { code: "limit", message: limit });
+    }
+    const parsed = ExtensionProblemsReportSchema.safeParse(args);
+    if (!parsed.success) {
+      this.logs.push(`${method} answered invalid-input: ${parsed.error.issues[0]?.message ?? "invalid"}`);
+      throw new TypeError(`problems.report takes another shape: ${parsed.error.issues[0]?.message ?? "invalid"}`);
+    }
+    if (!this.problemSources.has(source)) {
+      return this.refused(method, { code: "not-found", message: `${this.id} lists the problem source ${source} and did not define it` });
+    }
+    const files = new Map((held?.files ?? []).map((file) => [file.path, file]));
+    for (const file of parsed.data[2]) {
+      const at = this.fileKey(method, projectId, file.path);
+      if (!("key" in at)) {
+        return at;
+      }
+      if (file.problems.length === 0) {
+        files.delete(at.key);
+      } else {
+        files.set(at.key, { path: at.key, problems: file.problems });
+      }
+    }
+    if (files.size > EXTENSION_PROBLEM_FILES) {
+      return this.refused(method, { code: "limit", message: limit });
+    }
+    if (held === undefined) {
+      this.problems.push({ source, files: [...files.values()] });
+    } else {
+      held.files = [...files.values()];
+    }
+    return { ok: true, value: null };
   }
   actionInput(action, input) {
     const parsed = parseExtensionActionInput(action, wire(input));
@@ -6937,6 +7737,12 @@ class TestMachine {
     if (method === "terminals.write" || method === "terminals.read") {
       return [method, [{ id: args[0] }, ...args.slice(1)]];
     }
+    if (method === "files.watch") {
+      return [method, [{ id: args[0] }, args[1]]];
+    }
+    if (method.startsWith("files.") || method.startsWith("problems.")) {
+      return [method, [{ id: args[0] }, ...args.slice(1)]];
+    }
     return [method, args];
   }
   async answer(method, args) {
@@ -6949,6 +7755,12 @@ class TestMachine {
     }
     if (method === "terminals.write") {
       return this.writeTerminal(String(args[0]), String(args[1]));
+    }
+    if (method.startsWith("files.")) {
+      return this.answerFiles(method, args);
+    }
+    if (method.startsWith("problems.")) {
+      return this.answerProblems(method, args);
     }
     const answer = this.scripted(method, args);
     if (answer === null) {
@@ -7072,6 +7884,32 @@ async function createTestServer(options = {}) {
         }))
       };
     },
+    launchSource: (id) => {
+      const defined = machine.launchSources.get(id);
+      if (defined === undefined) {
+        throw new Error(`No launch source ${id}. defineLaunchSource says what there is`);
+      }
+      return {
+        title: defined.title,
+        get changes() {
+          return defined.changes;
+        },
+        list: async (project = {}) => {
+          const asked = { ...machine.project, ...project };
+          const listed = launchesListed(wire(await machine.core.askLaunchSource(id, "list", asked)), (reason) => {
+            machine.logs.push(`${id} ${reason}`);
+          });
+          await machine.core.askLaunchSource(id, "watch", asked);
+          return listed;
+        },
+        stop: async (project = {}) => {
+          await machine.core.askLaunchSource(id, "unwatch", { ...machine.project, ...project });
+        }
+      };
+    },
+    problems: machine.problems,
+    files: machine.files,
+    writeFile: (path, text) => machine.writeFile(path, text),
     tool: (id) => ({ run: (input = {}, context = {}) => machine.runTool(id, input, context.caller ?? "test") }),
     nodeContext: async (nodeType, data) => wire(await machine.core.readNodeContext(nodeType, wire(data)))
   };
@@ -8283,7 +9121,9 @@ function clientApi(host) {
       "launch.read",
       "launch.start",
       "launch.restart",
-      "launch.stop"
+      "launch.stop",
+      "launch.create",
+      "launch.edit"
     ]),
     routines: machineCalls(host, "routines", ["routine.list", "routine.run", "routine.pause", "routine.resume"]),
     artifacts: machineCalls(host, "artifacts", ["artifact.list", "artifact.read", "artifact.publish"]),
@@ -8781,6 +9621,10 @@ var server = {
   schedule: through("schedule"),
   defineLanguageServer: through("defineLanguageServer"),
   defineTerminalProfile: through("defineTerminalProfile"),
+  defineLaunchSource: through("defineLaunchSource"),
+  defineProblemSource: through("defineProblemSource"),
+  problems: forwarded2("problems"),
+  files: forwarded2("files"),
   terminals: forwarded2("terminals"),
   agents: forwarded2("agents"),
   chats: forwarded2("chats"),

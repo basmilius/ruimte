@@ -8,7 +8,7 @@ import { Console } from 'node:console';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type * as PublicServer from '../../../../packages/extension/server';
-import { callHandler, createServerApi, MissingHandler, ownValue, parseKeyValues, type KeyValues } from './server-api.ts';
+import { callHandler, createServerApi, MissingHandler, ownValue, parseKeyValues, type KeyValues, type LaunchSourceMethod } from './server-api.ts';
 
 type Result<Value> = PublicServer.Result<Value>;
 
@@ -177,6 +177,8 @@ interface Incoming {
     data: unknown;
     context: { caller: string };
     profile: string;
+    source: string;
+    watch: number;
     input: unknown;
     // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
     result?: unknown;
@@ -214,6 +216,14 @@ function handle(message: Incoming): void {
 
             return core.askProfile(message.profile, message.method as 'available' | 'spawn', message.input);
         });
+    } else if (message.type === 'launchSource') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askLaunchSource(message.source, message.method as LaunchSourceMethod, message.input as PublicServer.ProjectInfo);
+        });
+    } else if (message.type === 'fileChanged') {
+        core.fileChanged(message.watch);
     } else if (message.type === 'nodeContext') {
         void answer(message.id, async () => {
             await loaded;

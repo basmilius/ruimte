@@ -23,8 +23,18 @@ export interface ExtensionProviderPoint {
  * one row here, with its permission in `EXTENSION_PERMISSIONS`.
  */
 export const EXTENSION_PROVIDER_POINTS: Readonly<Record<string, ExtensionProviderPoint>> = {
-    terminalProfiles: { define: 'defineTerminalProfile', permission: 'terminals.profiles', proposed: true }
+    terminalProfiles: { define: 'defineTerminalProfile', permission: 'terminals.profiles', proposed: true },
+    launchSources: { define: 'defineLaunchSource', permission: 'launches.provide', proposed: true },
+    problemSources: { define: 'defineProblemSource', permission: 'problems.provide', proposed: true }
 };
+
+// The most launches one launch source lists in a project; the rest is cut, so a source cannot fill the menu.
+export const MAX_SOURCED_LAUNCHES = 64;
+
+/* The id a launch of a source goes by among a project's launches, which says the extension and the source it has to come from. */
+export function sourcedLaunchId(extension: string, source: string, launch: string): string {
+    return `${extension}:${source}:${launch}`;
+}
 
 /* The names a manifest may list under `proposed`. */
 export const EXTENSION_PROPOSED_PARTS: readonly string[] = Object.keys(EXTENSION_PROVIDER_POINTS).filter(

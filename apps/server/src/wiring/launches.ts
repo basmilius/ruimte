@@ -5,6 +5,7 @@ import type { LaunchHost } from '../launches/agent-host.ts';
 import { agentLaunches } from '../launches/agent-host.ts';
 import { LaunchRunner } from '../launches/runner.ts';
 import { managerSessions } from '../launches/sessions.ts';
+import type { LaunchSources } from '../launches/sources.ts';
 import { LaunchStore } from '../launches/store.ts';
 import { foregroundGroup } from '../processes/foreground.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -31,17 +32,20 @@ interface LaunchesInput {
     agents: AgentsBundle;
     work: AgentWorkBundle;
     projects: ProjectStore;
+    /* What the launch sources of extensions list, which the store resolves and the runner starts like a project's own. */
+    sources: LaunchSources;
     later: Later<Pick<DaemonBundles, 'git'>>;
 }
 
-export function wireLaunches({ home, stores, agents, work, projects, later }: LaunchesInput): LaunchesBundle {
+export function wireLaunches({ home, stores, agents, work, projects, sources, later }: LaunchesInput): LaunchesBundle {
     const { sessions, chats } = agents;
     const secretStore = new SecretStore(home);
     const store = new LaunchStore({
         projects: { folderOf: (projectId) => projects.index.folderOf(projectId), worktreePaths: (folder) => later.git().checkouts.paths(folder) },
         approvals: stores.commandApprovals,
         secrets: secretStore,
-        afterSettle: work.afterSettleStore
+        afterSettle: work.afterSettleStore,
+        sources
     });
     const runner = new LaunchRunner({
         store,

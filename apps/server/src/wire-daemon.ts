@@ -109,7 +109,8 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const databases = provide('databases', await wireDatabases(home, machine.machineHome, projects.store, later));
     const remote = provide('remote', await wireRemote({ home, identity, machine, outbox: stores.outbox, later }));
     const work = provide('work', wireAgentWork({ home, identity, stores, agents, projects: projects.store, remote, providers, seams, later }));
-    const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, later }));
+    const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, sources: extensions.launchSources, later }));
+    launches.runner.observe((status) => extensions.host.forwardEvent('launch.status', status));
     const secrets = provide('secrets', wireSecrets({ home, stores, agents, launches }));
     const routines = provide('routines', await wireRoutines({ home, machineId: identity.id, stores, agents, projects, launches, artifacts }));
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.

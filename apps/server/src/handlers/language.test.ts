@@ -37,7 +37,7 @@ beforeEach(async () => {
         })
     });
     host.subscribe('client-1', () => undefined);
-    languageArea({ host }).handlers?.(dispatcher);
+    languageArea({ host, reported: { subscribe: () => () => undefined, replay: () => undefined } }).handlers?.(dispatcher);
 });
 
 afterEach(async () => {

@@ -595,7 +595,7 @@ export const DEVELOPER_ACTIONS = {
     'launch.list': {
         title: 'List launches',
         description: 'Lists the launches of the project with what runs of each on this machine and whether a person approved it here.',
-        agentDescription: 'Lists the launches of the project: id, name, kind, state, approved, port, url',
+        agentDescription: 'Lists the launches of the project: id, name, kind, state, approved, port, url, members, source',
         effect: 'read',
         domain: 'developer',
         actors: PERSON_AGENT_AND_EXTENSION,
@@ -613,7 +613,9 @@ export const DEVELOPER_ACTIONS = {
                     port: z.number().int().nullable(),
                     url: z.string().nullable(),
                     // The launches a group starts; empty for any other kind.
-                    members: z.array(z.string())
+                    members: z.array(z.string()),
+                    // What a person calls the extension's source that lists it; null for a launch of the project's own files.
+                    source: z.string().nullable().optional()
                 })
             )
         })
@@ -637,13 +639,16 @@ export const DEVELOPER_ACTIONS = {
             'Adds a launch to the project: a service, a task or a group of launches. It never starts until a person approves it on this machine as it stands.',
         effect: 'shared',
         domain: 'developer',
-        // An agent's launch is never approved by its save; a person approves it from the launch chip.
-        actors: PERSON_AND_AGENT,
+        // A launch an agent or an extension adds is never approved by its save; a person approves it from the launch chip.
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({
             name: launchFieldName,
             kind: LaunchConfigKindSchema.describe('service runs until stopped, task runs once and ends, group starts other launches'),
             ...optionalFields(launchRunFields),
-            shared: z.boolean().optional().describe("Puts it in the project's shared file, which a team commits; this person's own file when omitted")
+            // What a team commits is not an extension's to add to.
+            shared: forActors(PERSON_AND_AGENT, z.boolean()).describe(
+                "Puts it in the project's shared file, which a team commits; this person's own file when omitted"
+            )
         }),
         output: launchSaved
     },
@@ -652,7 +657,7 @@ export const DEVELOPER_ACTIONS = {
         description: 'Changes fields of a launch of the project; a change to what it runs waits on a person to approve it again before it starts.',
         effect: 'shared',
         domain: 'developer',
-        actors: PERSON_AND_AGENT,
+        actors: PERSON_AGENT_AND_EXTENSION,
         input: z.object({ launch: launchName, ...optionalFields(launchFields) }),
         output: launchSaved
     },

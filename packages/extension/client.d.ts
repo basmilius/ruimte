@@ -589,6 +589,20 @@ export interface LaunchSummary {
     url: string | null;
     /** The launches a group starts. */
     members: string[];
+    /** What a person calls the launch source of an extension that lists it; null for a launch of the project's own files. */
+    source: string | null;
+}
+
+/** What a launch an extension adds or changes runs. A variable set to null is removed, and one that holds a secret stays the person's. */
+export interface LaunchFields {
+    command?: string;
+    /** A folder of the project or of one of its worktrees; the project folder without one. */
+    cwd?: string;
+    /** The address of a service, whose port tells when it is up. */
+    url?: string;
+    env?: Record<string, string | null>;
+    /** The launches a group starts, by id or name, in order. */
+    members?: string[];
 }
 
 export interface RoutineSummary {
@@ -657,6 +671,13 @@ export interface MachineActions {
     'launch.start': { input: { launch: string }; output: { id: string; name: string } };
     'launch.restart': { input: { launch: string }; output: { id: string; name: string } };
     'launch.stop': { input: { launch: string }; output: { id: string; name: string; stopping: number } };
+    /**
+     * Adds a launch to this person's own launches. It starts only after a person approved it on this machine, so `launch.start`
+     * answers `refused` until then.
+     */
+    'launch.create': { input: { name: string; kind: 'service' | 'task' | 'group' } & LaunchFields; output: { id: string; name: string } };
+    /** Changes a launch of the project's files. A change to what it runs waits for a person's approval again. */
+    'launch.edit': { input: { launch: string; name?: string } & LaunchFields; output: { id: string; name: string } };
     'routine.list': { input: {}; output: { routines: RoutineSummary[] } };
     'routine.run': { input: { routine: string }; output: { id: string; title: string; runId: string } };
     'routine.pause': { input: { routine: string }; output: { id: string; title: string } };
@@ -702,13 +723,18 @@ export type MachineActionName = keyof MachineActions;
 export type MachineInput<Name extends MachineActionName> = MachineActions[Name]['input'];
 export type MachineOutput<Name extends MachineActionName> = MachineActions[Name]['output'];
 
-/** The machine's own actions, in the project in front: `launches.start({ launch })` is `launch.start`. `list` and `read` need `launches.read`, the rest `launches.run`. */
+/**
+ * The machine's own actions, in the project in front: `launches.start({ launch })` is `launch.start`. `list` and `read` need
+ * `launches.read`, `create` and `edit` need `launches.write`, the rest `launches.run`.
+ */
 export const launches: {
     list(): Promise<Result<MachineOutput<'launch.list'>>>;
     read(input: MachineInput<'launch.read'>): Promise<Result<MachineOutput<'launch.read'>>>;
     start(input: MachineInput<'launch.start'>): Promise<Result<MachineOutput<'launch.start'>>>;
     restart(input: MachineInput<'launch.restart'>): Promise<Result<MachineOutput<'launch.restart'>>>;
     stop(input: MachineInput<'launch.stop'>): Promise<Result<MachineOutput<'launch.stop'>>>;
+    create(input: MachineInput<'launch.create'>): Promise<Result<MachineOutput<'launch.create'>>>;
+    edit(input: MachineInput<'launch.edit'>): Promise<Result<MachineOutput<'launch.edit'>>>;
 };
 /** `list` needs `routines.read`, the rest `routines.run`. */
 export const routines: {

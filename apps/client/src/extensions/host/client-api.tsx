@@ -1513,7 +1513,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     }));
                 })
         },
-        launches: machineActions(['launch.list', 'launch.read', 'launch.start', 'launch.restart', 'launch.stop']),
+        launches: machineActions(['launch.list', 'launch.read', 'launch.start', 'launch.restart', 'launch.stop', 'launch.create', 'launch.edit']),
         routines: machineActions(['routine.list', 'routine.run', 'routine.pause', 'routine.resume']),
         artifacts: machineActions(['artifact.list', 'artifact.read', 'artifact.publish']),
         browser: machineActions(['browser.inspect', 'browser.navigate', 'browser.back', 'browser.forward', 'browser.reload', 'browser.screenshot']),

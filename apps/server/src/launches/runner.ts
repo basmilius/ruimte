@@ -120,6 +120,7 @@ export class LaunchRunner {
     private readonly probe: LaunchProbe;
     private readonly resolveEnv: LaunchEnvResolver;
     private readonly sinks = new ClientSinks();
+    private readonly observers = new Set<(status: LaunchStatus) => void>();
     private readonly runs = new Map<string, Run>();
     // Per project, since a group starts several launches: a start checks what runs and only sets its run after awaits.
     private readonly starts = new KeyedSerializer();
@@ -205,9 +206,8 @@ export class LaunchRunner {
      * period, SIGTERM.
      */
     async stop(projectId: string, launchId: string, options: { force?: boolean } = {}): Promise<number> {
-        const members = await this.membersOf(projectId, launchId);
-        const running = members.flatMap((member) => {
-            const run = this.runs.get(launchSessionIdOf(projectId, member.launch.id));
+        const running = (await this.sessionsOf(projectId, launchId)).flatMap((sessionId) => {
+            const run = this.runs.get(sessionId);
             return run && run.state !== 'exited' ? [run] : [];
         });
         for (const run of running) {
@@ -272,6 +272,8 @@ export class LaunchRunner {
     }
 
     private async runNow(projectId: string, launchId: string, options: LaunchStartOptions, restart: boolean): Promise<LaunchStartResult> {
+        await this.store.fresh(projectId, launchId);
+
         const members = await this.membersOf(projectId, launchId);
         for (const member of members) {
             await this.checkCwd(member.folder, member.cwd);
@@ -334,6 +336,24 @@ export class LaunchRunner {
         const still = runs.find((run) => run.state !== 'exited');
         if (still) {
             throw new LaunchError('launch-stuck', `${still.name} did not stop within ${STOP_WAIT_MS / 1_000} seconds; Force stop ends it`);
+        }
+    }
+
+    /*
+     * The sessions a stop reaches. A launch that still runs after its source stopped listing it is in no list any more,
+     * and its own session is then all there is to stop.
+     */
+    private async sessionsOf(projectId: string, launchId: string): Promise<string[]> {
+        const own = launchSessionIdOf(projectId, launchId);
+
+        try {
+            return (await this.membersOf(projectId, launchId)).map((member) => launchSessionIdOf(projectId, member.launch.id));
+        } catch (e) {
+            if (e instanceof LaunchError && e.code === 'launch-not-found' && this.runs.has(own)) {
+                return [own];
+            }
+
+            throw e;
         }
     }
 
@@ -452,8 +472,23 @@ export class LaunchRunner {
         run.markExited();
     }
 
+    /* Hears every change of what a launch does, as each client does. */
+    observe(listener: (status: LaunchStatus) => void): () => void {
+        this.observers.add(listener);
+
+        return () => {
+            this.observers.delete(listener);
+        };
+    }
+
     private emit(run: Run): void {
-        this.sinks.emit({ event: 'launch.status', payload: statusOf(run) });
+        const status = statusOf(run);
+
+        this.sinks.emit({ event: 'launch.status', payload: status });
+
+        for (const observer of this.observers) {
+            observer(status);
+        }
     }
 }
 
@@ -479,6 +514,7 @@ function heldOf(resolved: ResolvedLaunch): LaunchHeld {
         launchId: resolved.launch.id,
         command: resolved.command,
         cwd: resolved.cwd,
-        ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {})
+        ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {}),
+        ...(resolved.sourced === undefined ? {} : { source: resolved.sourced.source })
     };
 }

@@ -414,6 +414,8 @@ export const LanguageWorkspaceProblemsResultSchema = z.object({
     files: z.number().int().nonnegative()
 });
 
+export const LanguageReportedProblemsPayloadSchema = z.object({ projectId: ProjectIdSchema });
+
 /* The answer to a `language.message` that has `actions`: the title of the one chosen, or null when the person dismissed it. */
 export const LanguageMessageAnswerPayloadSchema = z.object({
     projectId: ProjectIdSchema,
@@ -488,6 +490,8 @@ export const LANGUAGE_REQUEST_SCHEMAS = {
     'language.willSave': { payload: LanguageWillSavePayloadSchema, result: EmptySchema },
     // A whole-project pull on a person's press; the reports come as `language.diagnostics`.
     'language.workspaceProblems': { payload: LanguageWorkspaceProblemsPayloadSchema, result: LanguageWorkspaceProblemsResultSchema },
+    // What the problem sources of extensions hold for the project now, sent to the asking client as `language.diagnostics`.
+    'language.reportedProblems': { payload: LanguageReportedProblemsPayloadSchema, result: EmptySchema },
     'language.messageAnswer': { payload: LanguageMessageAnswerPayloadSchema, result: EmptySchema },
     // A debugging switch like restart: any client of the machine may set it.
     'language.trace': { payload: LanguageTracePayloadSchema, result: LanguageServerStatusResultSchema }

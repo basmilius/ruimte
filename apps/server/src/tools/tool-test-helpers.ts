@@ -43,7 +43,7 @@ export async function toolAnswer(name: string, input: Readonly<Record<string, un
 
 /* An approved service that has not run, as `launch_list` reads one. */
 export function launchReading(launchId: string, overrides: Partial<LaunchReading> = {}): LaunchReading {
-    return { launchId, name: launchId, kind: 'service', approved: true, url: null, port: null, members: [], status: null, ...overrides };
+    return { launchId, name: launchId, kind: 'service', approved: true, url: null, port: null, members: [], status: null, source: null, ...overrides };
 }
 
 /* The code of a refusal, or undefined for an answer. */

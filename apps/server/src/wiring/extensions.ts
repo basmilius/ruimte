@@ -3,13 +3,16 @@ import { CustomLanguageServerInputSchema, extensionChatOf, type ExtensionTermina
 import { extensionActionCall } from '../actions/context.ts';
 import { errorText } from '../error-text.ts';
 import { extensionChatStarter } from '../extensions/extension-chat.ts';
-import { ExtensionHost, type ExtensionAsks, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
+import { ExtensionHost, type ExtensionAsks, type ExtensionFilesPort, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
 import { terminalWriteRefusal } from '../extensions/policy.ts';
+import { ExtensionProblems } from '../extensions/problems.ts';
+import { extensionProjectFiles } from '../extensions/project-files.ts';
 import { ExtensionRefusal } from '../extensions/refusal.ts';
 import { ExtensionStore } from '../extensions/store.ts';
 import { ExtensionTerminals, extensionTerminalOpener, insideProject } from '../extensions/terminals.ts';
 import { runExtensionPrompt, type ExtensionHandlerDeps } from '../handlers/extensions.ts';
+import { LaunchSources } from '../launches/sources.ts';
 import { HEADLESS_TERMINAL } from '../outbox/start-agent.ts';
 import { markDrawnChat } from '../projects/drawn-chat.ts';
 import { quote } from '../providers/launch.ts';
@@ -23,6 +26,13 @@ export interface ExtensionsBundle {
     host: ExtensionHost;
     /* The terminals an extension opened or a profile starts, which a project's `placed` event prunes. */
     terminals: ExtensionTerminals;
+    /* What the problem sources of extensions report, which a client and an agent read beside the language servers'. */
+    problems: ExtensionProblems;
+    /* What the launch sources of extensions list, which the launch store resolves beside a project's own. */
+    launchSources: LaunchSources;
+    /* A client put a project on screen, or the last one closed it: what an extension with `projects.read` follows. */
+    projectOpened(projectId: string): void;
+    projectClosed(projectId: string): void;
     /* The terminal profiles a person may pick in this project. */
     terminalProfiles(projectId: string): Promise<ExtensionTerminalProfile[]>;
     /* What the profile of this node starts its session with; null for a node without one. */
@@ -36,7 +46,10 @@ export interface ExtensionsBundle {
 }
 
 type ExtensionsLater = Later<
-    Pick<DaemonBundles, 'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git'>
+    Pick<
+        DaemonBundles,
+        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches'
+    >
 >;
 
 /*
@@ -120,11 +133,30 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
 
         return { id: projectId, name: known?.name ?? basename(folder), folder };
     };
+    const problems = new ExtensionProblems({
+        folderOf: (projectId) => index().folderOf(projectId),
+        holders: (projectId) => later.projects().store.holdersOf(projectId)
+    });
+    // Made on the first ask, since the watcher it stands on is wired after the extensions.
+    let files: ExtensionFilesPort | null = null;
+    const projectFiles = (): ExtensionFilesPort => {
+        files ??= extensionProjectFiles({
+            folderOf: (projectId) => index().folderOf(projectId),
+            machineHome: later.machine().machineHome,
+            watcher: later.git().folders
+        });
+
+        return files;
+    };
     const host = new ExtensionHost({
         store: new ExtensionStore(home),
         developmentRoots,
         asks: () => asks,
         terminals: () => terminalPort,
+        projectFiles,
+        problems: () => problems,
+        launchesChanged: (_id, _source, projectId) => void launchSources.refresh(projectId),
+        providersChanged: (id) => launchSources.extensionChanged(id),
         startChat: async (...args) => startChat(...args),
         runAction: async (id, projectId, action, input) => {
             const folder = folderOfProject(projectId);
@@ -150,10 +182,40 @@ export function wireExtensions(home: string, developmentRoots: readonly string[]
         removeLanguageServers: async (id) => later.language().host.customRemoveOwned(id),
         languageServerOwners: () => later.language().host.customOwners()
     });
+    const launchSources: LaunchSources = new LaunchSources({
+        host: {
+            list: (project) => host.launchSources(project),
+            watch: (extension, source, project, watch) => host.watchLaunchSource(extension, source, project, watch)
+        },
+        projectOf: async (projectId) => (index().folderOf(projectId) === null ? null : projectOf(projectId)),
+        changed: (projectId) => later.launches().store.sourcesChanged(projectId)
+    });
+    // The projects a client has open, so each opening and each close is told once.
+    const open = new Set<string>();
 
     return {
         host,
         terminals,
+        problems,
+        launchSources,
+        projectOpened: (projectId) => {
+            if (open.has(projectId)) {
+                return;
+            }
+
+            open.add(projectId);
+            void projectOf(projectId).then(
+                (project) => host.forwardEvent('project.opened', { project }),
+                (e: unknown) => console.warn(`No extension heard that ${projectId} opened: ${errorText(e)}`)
+            );
+        },
+        projectClosed: (projectId) => {
+            if (open.delete(projectId)) {
+                host.forwardEvent('project.closed', { projectId });
+            }
+
+            problems.dropProject(projectId);
+        },
         terminalProfiles: async (projectId) => host.terminalProfiles(await projectOf(projectId)),
         profileStart: async (sessionId, cwd) => {
             const profile = terminals.get(sessionId)?.profile;

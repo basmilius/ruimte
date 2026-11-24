@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { EXTENSION_CALLS_WITHOUT_PERMISSION, EXTENSION_CLIENT_PERMISSIONS } from '../src/extension-client.ts';
+import { EXTENSION_CALLS_WITHOUT_PERMISSION, EXTENSION_CLIENT_PERMISSIONS, EXTENSION_SERVER_PERMISSIONS } from '../src/extension-client.ts';
 import { EXTENSION_SLOT_NAMES } from '../src/extension-vocabularies.generated.ts';
 import { checkInventory, inventoryProblems, readInventory, render, rowsOf, scenariosOf } from './generate-extension-inventory.ts';
 
@@ -51,7 +51,9 @@ describe('the inventory of the extension API', () => {
             ['call', 'hook', 'provider'].some((kind) => ids.has(`client/${kind}/${name}`) || ids.has(`server/${kind}/${name}`));
 
         expect(EXTENSION_SLOT_NAMES.filter((slot) => !ids.has(`client/slot/${slot}`))).toEqual([]);
-        expect([...Object.keys(EXTENSION_CLIENT_PERMISSIONS), ...EXTENSION_CALLS_WITHOUT_PERMISSION].filter((call) => !named(call))).toEqual([]);
+        const calls = [...Object.keys(EXTENSION_CLIENT_PERMISSIONS), ...Object.keys(EXTENSION_SERVER_PERMISSIONS), ...EXTENSION_CALLS_WITHOUT_PERMISSION];
+
+        expect(calls.filter((call) => !named(call))).toEqual([]);
     });
 
     test('has a scenario of the contract suite or a known gap for every row', async () => {

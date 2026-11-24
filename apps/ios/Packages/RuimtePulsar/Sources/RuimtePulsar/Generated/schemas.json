@@ -51750,6 +51750,24 @@
       "status"
     ]
   },
+  "request.language.reportedProblems.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.language.reportedProblems.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.language.request.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -53189,6 +53207,28 @@
               "additionalProperties": {
                 "type": "string"
               }
+            },
+            "source": {
+              "type": "object",
+              "properties": {
+                "extension": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "extension",
+                "id",
+                "title"
+              ]
             }
           },
           "required": [
@@ -53283,6 +53323,28 @@
               "additionalProperties": {
                 "type": "string"
               }
+            },
+            "source": {
+              "type": "object",
+              "properties": {
+                "extension": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "extension",
+                "id",
+                "title"
+              ]
             }
           },
           "required": [
@@ -53371,6 +53433,34 @@
     ]
   },
   "request.launches.afterSettle.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.launches.approveSource.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "extension": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "extension",
+      "source"
+    ]
+  },
+  "request.launches.approveSource.result": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
@@ -53658,6 +53748,76 @@
           "launchId",
           "approved"
         ]
+      },
+      "sourced": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "service",
+                "task"
+              ]
+            },
+            "command": {
+              "type": "string"
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "env": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "url": {
+              "type": "string"
+            },
+            "source": {
+              "type": "object",
+              "properties": {
+                "extension": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "title": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "extension",
+                "id",
+                "title"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "kind",
+            "command",
+            "source"
+          ]
+        }
       }
     },
     "required": [
@@ -92398,6 +92558,76 @@
               "launchId",
               "approved"
             ]
+          },
+          "sourced": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "service",
+                    "task"
+                  ]
+                },
+                "command": {
+                  "type": "string"
+                },
+                "cwd": {
+                  "type": "string"
+                },
+                "env": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "extension": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "extension",
+                    "id",
+                    "title"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "kind",
+                "command",
+                "source"
+              ]
+            }
           }
         },
         "required": [

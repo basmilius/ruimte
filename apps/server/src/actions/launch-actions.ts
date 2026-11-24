@@ -155,7 +155,8 @@ export const launchActions: ActionHandlers<ServerActionContext> = {
                     approved: launch.approved,
                     port: launch.port,
                     url: launch.url,
-                    members: launch.members
+                    members: launch.members,
+                    source: launch.source
                 }))
             }
         };
