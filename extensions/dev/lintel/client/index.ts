@@ -1,4 +1,4 @@
-import { defineCommand, defineEditorDecoration, defineFileIcon, defineLanguage, files, getServer, host, onEvent } from '@ruimte/extension/client';
+import { defineAction, defineCommand, defineEditorDecoration, defineFileIcon, defineLanguage, files, getServer, host, onEvent } from '@ruimte/extension/client';
 import type { LintelServer } from '../server/index';
 
 // The file a project turns Lintel's rules on and off in. `server/` names the same id for the server it adds.
@@ -37,6 +37,24 @@ function follow(): void {
 
 follow();
 onEvent('project.opened', follow);
+
+// Where a person works on a file: its toolbar, its status bar and the menus of the editor and of the file's row.
+defineAction({
+    id: 'check-file',
+    title: 'Lintel: check this file',
+    icon: 'list-checks',
+    slots: { editorToolbar: true, editorMenu: true, fileMenu: true, editorStatusBar: ({ file }) => ({ title: `Lintel: ${file.extension || 'file'}` }) },
+    run: async ({ file }) => {
+        const found = await getServer<LintelServer>().marks(file.path);
+
+        if (!found.ok) {
+            throw new Error(found.error.message);
+        }
+
+        marks.refresh();
+        host.notify(found.value.length === 0 ? `Lintel found nothing in ${file.name}` : `Lintel found ${found.value.length} in ${file.name}`);
+    }
+});
 
 defineCommand({
     id: 'config-server',

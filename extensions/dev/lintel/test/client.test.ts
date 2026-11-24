@@ -60,6 +60,22 @@ describe('Lintel in the window', () => {
         expect(await server.call('marks', '/project/logo.png')).toEqual({ ok: true, value: [] });
         expect(await server.call('marks', '/elsewhere/app.ts')).toEqual({ ok: true, value: [] });
     });
+
+    test("checks the file a person works on from the editor's toolbar, its status bar and the menus of the editor and of the file", async () => {
+        const server = await createTestServer<LintelServer>({ files: { 'src/app.ts': '// TODO: one\n// FIXME: two\n' } });
+        const host = await createTestHost({ project: { id: 'project-1', folder: '/project' }, answers: { server } });
+        const file = { path: '/project/src/app.ts', name: 'app.ts', extension: 'ts' };
+        const check = host.action('check-file');
+
+        server.fire('project.opened', { project: { id: 'project-1', name: 'Project', folder: '/project' } });
+
+        expect(host.slot(check, 'editorToolbar', { file })?.title).toBe('Lintel: check this file');
+        expect(host.slot(check, 'editorStatusBar', { file })?.title).toBe('Lintel: ts');
+        expect(host.slot(check, 'editorMenu', { file, files: [file] })).not.toBeNull();
+        expect(host.slot(check, 'fileMenu', { file, files: [file] })).not.toBeNull();
+        expect(await host.run(check, 'editorToolbar', { file })).toEqual({ ok: true, value: undefined });
+        expect(host.notifications).toEqual([{ text: 'Lintel found 2 in app.ts', tone: 'neutral' }]);
+    });
 });
 
 /* Turns of the event loop until the editor has its answer, which comes from `server/` over several awaits. */
