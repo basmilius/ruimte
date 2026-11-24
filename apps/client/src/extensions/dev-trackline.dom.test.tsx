@@ -65,20 +65,13 @@ afterAll(() => {
 });
 
 describe('Trackline', () => {
-    test('a slash command expands into the prompt, with what follows it and with what its server reads', async () => {
+    test("its slash command of the window expands into the prompt, and the issues after # and /issue are the machine's to offer", async () => {
         const commands = useContributions.getState().slashCommands;
 
-        expect(await commands.find((each) => each.name === 'triage')?.expand('the login loop')).toContain('as a Trackline issue');
-        expect(await commands.find((each) => each.name === 'triage')?.expand('the login loop')).toContain('the login loop');
-        expect(await commands.find((each) => each.name === 'issue')?.expand('TRK-101')).toContain('TRK-101: steps to reproduce are in Trackline.');
-    });
-
-    test('a reference comes down to text', async () => {
-        const [reference] = useContributions.getState().references;
-        const [issue] = (await reference?.list()) ?? [];
-
-        expect(issue).toEqual({ id: 'TRK-101', name: 'TRK-101 Sign-in loops back to the start' });
-        expect(await reference?.read(issue as { id: string; name: string })).toBe('TRK-101: steps to reproduce are in Trackline.');
+        expect(commands.map((each) => each.name)).toEqual(['triage']);
+        expect(await commands[0]?.expand('the login loop')).toContain('as a Trackline issue');
+        expect(await commands[0]?.expand('the login loop')).toContain('the login loop');
+        expect(useContributions.getState().references).toEqual([]);
     });
 
     test('offers a node, a card, a palette source and settings', () => {
