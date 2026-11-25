@@ -1,3 +1,4 @@
+import { LONG_MS } from '@adecore/ui';
 import { resolveStoredPath } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { openInSystemBrowser } from '@/desktop/bridge';
@@ -104,7 +105,7 @@ export function watchServerPrompts(
         useToasts.getState().show({
             id: `language-show:${projectId}:${address}`,
             kind: 'success',
-            persist: true,
+            lifetime: LONG_MS,
             title: i18next.t('panels:language.show.title', { name: nameOf(event.title) }),
             description: address,
             action: { label: i18next.t('panels:language.show.open'), run: () => openInSystemBrowser(address) }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { LONG_MS } from '@adecore/ui';
 import type { UpdateState } from '@/desktop/bridge';
 import { useReleaseNotes } from '@/state/release-notes';
 import { useToasts } from '@/state/toasts';
@@ -41,7 +42,7 @@ describe('noteVersionChange', () => {
         const { map, storage } = storageWith({ 'ruimte.seenVersion': '0.0.7' });
         expect(noteVersionChange('0.0.9', storage)).toBe('updated');
         expect(map.get('ruimte.seenVersion')).toBe('0.0.9');
-        expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.persist])).toEqual([['Updated to version 0.0.9', true]]);
+        expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.lifetime])).toEqual([['Updated to version 0.0.9', LONG_MS]]);
         expect(useReleaseNotes.getState().previousSeen).toBe('0.0.7');
         expect(noteVersionChange('0.0.9', storage)).toBe('same');
         expect(useToasts.getState().toasts).toHaveLength(1);

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { settle } from '@adecore/editor-react/testing';
+import { LONG_MS } from '@adecore/ui';
 import { useToasts, type Toast } from '@/state/toasts';
 import { FakeLanguageTransport } from './fake-daemon';
 import { watchServerPrompts } from './server-prompts';
@@ -133,7 +134,7 @@ describe('a document a server shows', () => {
 
             expect(toasts()[0]).toMatchObject({
                 kind: 'success',
-                persist: true,
+                lifetime: LONG_MS,
                 title: 'TypeScript wants to open a web page',
                 description: 'https://example.com/docs'
             });

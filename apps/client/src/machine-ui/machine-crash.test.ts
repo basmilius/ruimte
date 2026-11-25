@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { LONG_MS } from '@adecore/ui';
 import { machineCrashToast } from './machine-crash';
 
 describe('machineCrashToast', () => {
@@ -8,7 +9,7 @@ describe('machineCrashToast', () => {
             kind: 'error',
             title: 'Machine stopped unexpectedly',
             description: 'Ruimte starts it again. What was running on it has ended.',
-            persist: false
+            lifetime: LONG_MS
         });
         expect(machineCrashToast({ total: 1, restarting: true }, { total: 1, restarting: true })).toBeNull();
         expect(machineCrashToast({ total: 1, restarting: true }, { total: 2, restarting: true })).not.toBeNull();
