@@ -10,11 +10,16 @@ export function soundPackName(id: string, custom: readonly CustomSoundPack[], t:
     return isBuiltInPack(id) ? t(`agents.sounds.packs.${id}`) : (custom.find((pack) => pack.id === id)?.name ?? id);
 }
 
-/* Every pack a person can pick: no sound first and set apart, then the built-in ones, then their own. */
+/*
+ * Every pack a person can pick: no sound first and set apart, then the built-in ones, then their own. The
+ * last one is set apart too, from the row that makes a new pack, which every list puts under them.
+ */
 export function soundPackItems(custom: readonly CustomSoundPack[], t: TFunction<'settings'>): { value: string; label: string; separatorAfter?: boolean }[] {
-    return [NO_SOUND_PACK, ...SOUND_PACKS, ...custom.map((pack) => pack.id)].map((id) => ({
+    const ids = [NO_SOUND_PACK, ...SOUND_PACKS, ...custom.map((pack) => pack.id)];
+
+    return ids.map((id, i) => ({
         value: id,
         label: soundPackName(id, custom, t),
-        ...(id === NO_SOUND_PACK ? { separatorAfter: true } : {})
+        ...(id === NO_SOUND_PACK || i === ids.length - 1 ? { separatorAfter: true } : {})
     }));
 }
