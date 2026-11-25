@@ -1,4 +1,3 @@
-import { useLocale } from '@ruimte/extension/client';
 import { useEffect, useState } from 'react';
 import { usePetSprites } from '../custom-sprites';
 import { usePrefersStill } from '../figure-support';
@@ -6,26 +5,22 @@ import { KID_HEIGHT, KID_SPACING } from '../kids';
 import { usePetSettings } from '../pet-settings';
 import { PET_HEIGHT, PET_PAINT_WIDTH, petChoiceOfKey, WORLD_CELL, type PetMood } from '../pet-state';
 import { PetFigure } from '../PetFigure';
-import type { PetPose } from '../pixel';
 import { lookOf, usePetPool } from '../use-pet-look';
 
-/* The moods the preview runs through, a few seconds each. First the one reduced motion holds, so its one frame shows the bubble. */
-const MOODS: readonly PetMood[] = ['waiting', 'working', 'idle', 'stopped'];
+/* The moods the preview runs through, a few seconds each. First the one reduced motion holds, so its one frame shows the bubble. */ const MOODS: readonly PetMood[] =
+    ['waiting', 'working', 'idle', 'stopped'];
 const MOOD_MS = 3200;
-
-/* The words of a mood, from the states a figure of your own has a strip for. */
-const MOOD_STATES: Partial<Record<PetMood, PetPose>> = { waiting: 'wait', working: 'work', idle: 'sleep', stopped: 'stopped' };
 
 const SLOTS = [
     { agent: 'claude', left: '8%' },
     { agent: 'codex', left: '56%' }
 ] as const;
 
-const PREVIEW_HEIGHT = 188;
+const PREVIEW_HEIGHT = 212;
 const NODE_WIDTH = '34%';
-const NODE_HEIGHT = 64;
+const NODE_HEIGHT = 72;
 // The nodes hang from the top, so a pet on a node stands on its top edge and one along the bottom walks under it.
-const NODE_TOP = 60;
+const NODE_TOP = 76;
 const NODE_EDGE = PREVIEW_HEIGHT - NODE_TOP;
 const FLOOR_HEIGHT = 14;
 const PET_INSET = 12;
@@ -46,10 +41,16 @@ function usePreviewMood(still: boolean): number {
     return still ? 0 : step;
 }
 
+// The frame and header of a canvas node as the canvas draws them, without its buttons.
 function MiniNode({ left, title }: { left: string; title: string }) {
     return (
-        <div className="absolute rounded-lg border border-border bg-surface" style={{ left, top: NODE_TOP, width: NODE_WIDTH, height: NODE_HEIGHT }}>
-            <div className="truncate border-b border-border px-2 py-1 text-xs text-text-muted">{title}</div>
+        <div
+            className="absolute flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-node"
+            style={{ left, top: NODE_TOP, width: NODE_WIDTH, height: NODE_HEIGHT }}
+        >
+            <div className="flex h-[39px] shrink-0 items-center border-b border-border bg-surface-raised px-2.5">
+                <span className="truncate text-xs font-medium text-text">{title}</span>
+            </div>
         </div>
     );
 }
@@ -61,7 +62,6 @@ function MiniNode({ left, title }: { left: string; title: string }) {
  * and takes nothing: no press, no focus, no reading.
  */
 export function PetsPreview() {
-    const { t } = useLocale();
     const place = usePetSettings((s) => s.petsPlace);
     const withKids = usePetSettings((s) => s.petsSubagents);
     const sprites = usePetSprites((s) => s.sprites);
@@ -71,7 +71,6 @@ export function PetsPreview() {
     const still = usePrefersStill();
     const step = usePreviewMood(still);
     const mood = MOODS[step % MOODS.length];
-    const state = MOOD_STATES[mood];
     const onNodes = place === 'nodes';
 
     const petAt = (slot: number) => {
@@ -115,7 +114,6 @@ export function PetsPreview() {
             style={{ height: PREVIEW_HEIGHT }}
             className="pointer-events-none relative shrink-0 select-none overflow-hidden rounded-xl border border-border bg-surface-idle"
         >
-            {state !== undefined && <span className="absolute top-2 right-3 text-xs text-text-faint">{t(`pets.custom.states.${state}`)}</span>}
             <MiniNode left={SLOTS[0].left} title="Claude" />
             <MiniNode left={SLOTS[1].left} title="Codex" />
             {!onNodes && <div className="absolute inset-x-0 bottom-0 border-t border-border bg-surface" style={{ height: FLOOR_HEIGHT }} />}
