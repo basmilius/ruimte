@@ -93,6 +93,7 @@
             "stopped": "Microphone test stopped",
             "denied": "Microphone access was denied. Allow it in System Settings, then try again.",
             "missing": "No microphone was found.",
+            "unreadable": "The microphone did not open. Another app may be using it, or System Settings blocks it under Privacy & Security.",
             "failed": "Could not open the microphone."
         }
     },

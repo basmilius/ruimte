@@ -32,7 +32,7 @@ function Control({ targetRef, capture, disabled = false, buttonContainer, inline
     const dictationKey = useKeyOf('dictation');
     const latest = useRef(capture);
     const latestDisabled = useRef(disabled);
-    const enabled = useDictation((state) => state.model?.enabled === true);
+    const enabled = useDictation((state) => state.speech?.enabled === true);
     const targetId = useDictation((state) => state.targetId);
     const phase = useDictation((state) => (state.targetId === id ? state.phase : 'idle'));
     const text = useDictation((state) => (state.targetId === id ? state.text : ''));

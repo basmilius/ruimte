@@ -50,8 +50,6 @@ function fixture() {
     }
     const service = new SpeechService<string>(
         'helper',
-        'model',
-        'cache',
         (event, owner) => {
             events.push(event);
             delivered.push([owner, event.type]);
@@ -122,11 +120,13 @@ test('an old process closing cannot clear a new session', async () => {
     expect(run.children[1]!.getKilled()).toBe(false);
     run.service.dispose();
 });
-test('a load timeout rejects the start and kills the helper', async () => {
+test('a start timeout rejects the start and kills the helper', async () => {
     const run = fixture();
     const pending = run.service.start('slow', 'nl-NL');
     const rejection = pending.catch((error: Error) => error.message);
     run.advance(120_000);
+    expect(run.children[0]!.getKilled()).toBe(false);
+    run.advance(180_000);
     expect(await rejection).toContain('too long');
     expect(run.children[0]!.getKilled()).toBe(true);
     expect(run.events[0]?.type).toBe('failed');

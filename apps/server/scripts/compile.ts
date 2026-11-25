@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { chmod, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { BUILD_FILE } from '@ruimte/service/runtime';
@@ -100,8 +99,6 @@ const nativeDir = join(outDir, 'native');
 await rm(nativeDir, { recursive: true, force: true });
 await mkdir(nativeDir, { recursive: true });
 const rustTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-apple-darwin`;
-const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
-const cargo = process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo : 'cargo');
 
 // The daemon and every native helper write to places of their own, so they build side by side.
 const builds: Array<Promise<number>> = [
@@ -135,16 +132,17 @@ if (values.os === 'mac') {
     await chmod(cameraHelper, 0o755);
     await copyFile(join(dirname(middleware), 'simcam', 'libSimCameraInjector.dylib'), join(nativeDir, 'libSimCameraInjector.dylib'));
 
-    /* The speech helper links a prebuilt ONNX Runtime that needs a newer glibc and libstdc++ than
-       the Linux build targets, so Speech to Text stays macOS only until that floor moves. A build
-       without the helper reports the feature as unavailable. */
+    // Apple Speech exists only on macOS, so a Linux or Windows build has no helper and reports Speech to Text as unavailable.
     const speechRoot = join(root, '../speech-bridge');
-    const speechBuilt = join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge');
-    // CI restores a binary built from these exact sources (`cache-native-builds`), and cargo would only compile it again.
-    const speechBuild =
-        process.env.RUIMTE_RUST_CACHE_HIT === 'true' && existsSync(speechBuilt)
-            ? Promise.resolve(0)
-            : run([cargo, 'build', '--release', '--locked', '--target', rustTarget], speechRoot);
+    const speechSwift = ['swift', 'build', '-c', 'release', '--arch', values.arch === 'arm64' ? 'arm64' : 'x86_64', '--product', 'speech-bridge'];
+    const speechBuilt = join(
+        Bun.spawnSync([...speechSwift, '--show-bin-path'], { cwd: speechRoot })
+            .stdout.toString()
+            .trim(),
+        'speech-bridge'
+    );
+    // CI restores a binary built from these exact sources (`cache-native-builds`), and swift would only link it again.
+    const speechBuild = process.env.RUIMTE_SWIFT_CACHE_HIT === 'true' && existsSync(speechBuilt) ? Promise.resolve(0) : run(speechSwift, speechRoot);
     builds.push(
         speechBuild.then(async (exitCode) => {
             if (exitCode !== 0) {

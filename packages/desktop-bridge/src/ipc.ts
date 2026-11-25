@@ -101,7 +101,6 @@ export const IPC_INVOKE = {
     'database:secret-persistent': invoke<[], boolean>(),
     'speech:state': invoke<[], SpeechState>(),
     'speech:enable': invoke<[enabled: boolean], SpeechState>(),
-    'speech:remove': invoke<[], SpeechState>(),
     'speech:start': invoke<[sessionId: string, language: string]>(),
     'speech:samples': invoke<[sessionId: string, samples: Float32Array]>(),
     'speech:stop': invoke<[sessionId: string]>(),

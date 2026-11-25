@@ -9,6 +9,10 @@ export function knownMicrophoneFailure(error: unknown): string | null {
     if (error instanceof DOMException && error.name === 'NotFoundError') {
         return i18next.t('common:microphone.error.missing');
     }
+    // What Chromium reports when macOS holds the microphone back without asking, or another app holds it.
+    if (error instanceof DOMException && error.name === 'NotReadableError') {
+        return i18next.t('common:microphone.error.unreadable');
+    }
     return null;
 }
 

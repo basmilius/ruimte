@@ -2,10 +2,13 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import type { SpeechEvent } from '@ruimte/desktop-bridge';
 
+// macOS downloads a language's model on its first dictation, before the helper answers `ready`.
+const START_TIMEOUT_MS = 300_000;
+
 export function speechHelperPath(packaged: boolean, daemonExecutable: string, sourceRoot: string): string {
     return packaged
-        ? join(dirname(daemonExecutable), 'native', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge')
-        : join(sourceRoot, 'apps', 'speech-bridge', 'target', 'release', process.platform === 'win32' ? 'speech-bridge.exe' : 'speech-bridge');
+        ? join(dirname(daemonExecutable), 'native', 'speech-bridge')
+        : join(sourceRoot, 'apps', 'speech-bridge', '.build', 'release', 'speech-bridge');
 }
 
 interface Run<Owner> {
@@ -21,8 +24,6 @@ interface Run<Owner> {
 
 export class SpeechService<Owner = never> {
     readonly #helper: string;
-    readonly #model: string;
-    readonly #cache: string;
     readonly #emit: (event: SpeechEvent, owner: Owner | undefined) => void;
     readonly #createProcess: typeof spawn;
     readonly #setTimeout: typeof setTimeout;
@@ -33,15 +34,11 @@ export class SpeechService<Owner = never> {
 
     constructor(
         helper: string,
-        model: string,
-        cache: string,
         emit: (event: SpeechEvent, owner: Owner | undefined) => void,
         createProcess: typeof spawn = spawn,
         timers = { setTimeout, clearTimeout }
     ) {
         this.#helper = helper;
-        this.#model = model;
-        this.#cache = cache;
         this.#emit = emit;
         this.#createProcess = createProcess;
         this.#setTimeout = timers.setTimeout;
@@ -49,7 +46,7 @@ export class SpeechService<Owner = never> {
     }
 
     #spawn(): ChildProcessWithoutNullStreams {
-        const child = this.#createProcess(this.#helper, ['serve', '--model', this.#model, '--cache', this.#cache], { stdio: ['pipe', 'pipe', 'pipe'] });
+        const child = this.#createProcess(this.#helper, ['serve'], { stdio: ['pipe', 'pipe', 'pipe'] });
         this.#child = child;
         let buffer = '';
         let stderr = '';
@@ -177,7 +174,7 @@ export class SpeechService<Owner = never> {
                 stopping: false,
                 resolve,
                 reject,
-                deadline: this.#setTimeout(() => this.#fail('Speech model took too long to load'), 120_000)
+                deadline: this.#setTimeout(() => this.#fail('Speech recognition took too long to start'), START_TIMEOUT_MS)
             };
         });
         if (!this.#child) {

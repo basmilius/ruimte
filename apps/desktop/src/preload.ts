@@ -148,7 +148,6 @@ const bridge = {
     speech: {
         state: () => invoke('speech:state'),
         setEnabled: (enabled) => invoke('speech:enable', enabled),
-        removeModel: () => invoke('speech:remove'),
         start: (id, language) => invoke('speech:start', id, language),
         samples: (id, samples) => invoke('speech:samples', id, samples),
         stop: (id) => invoke('speech:stop', id),

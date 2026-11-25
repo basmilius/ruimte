@@ -23,7 +23,7 @@ import { SessionPorts } from '@/terminal/SessionPorts';
 export function ViewToolbar({ view, focused }: { view: CellView | null; focused: boolean }) {
     const host = useNodeHost(hostIdOf(view));
     const { mount } = useFileToolbarSlot();
-    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
+    const dictationEnabled = useDictation((state) => state.speech?.enabled === true);
     const forked = useIsFork(view);
     const planned = useHasPlans(chatIdOf(view));
     const endpointId = useEndpointId();

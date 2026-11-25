@@ -93,6 +93,7 @@
             "stopped": "Microfoontest gestopt",
             "denied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
             "missing": "Er is geen microfoon gevonden.",
+            "unreadable": "De microfoon ging niet open. Misschien gebruikt een andere app hem, of blokkeren de Systeeminstellingen hem onder Privacy en beveiliging.",
             "failed": "Kon de microfoon niet openen."
         }
     },

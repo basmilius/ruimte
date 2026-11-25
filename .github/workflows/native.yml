@@ -25,6 +25,7 @@ jobs:
       swift_voice: ${{ steps.paths.outputs.RuimteVoice }}
       swift_intelligent_ui: ${{ steps.paths.outputs.RuimteIntelligentUI }}
       computer_use: ${{ steps.paths.outputs.computer_use }}
+      speech_bridge: ${{ steps.paths.outputs.speech_bridge }}
       ios: ${{ steps.paths.outputs.ios }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,7 +38,6 @@ jobs:
             rust:
               - '.github/**'
               - 'apps/ios-device-bridge/**'
-              - 'apps/speech-bridge/**'
             RuimtePulsar:
               - '.github/**'
               - 'apps/ios/Packages/RuimtePulsar/**'
@@ -60,6 +60,9 @@ jobs:
             computer_use:
               - '.github/**'
               - 'apps/computer-use/**'
+            speech_bridge:
+              - '.github/**'
+              - 'apps/speech-bridge/**'
             ios:
               - '.github/workflows/native.yml'
               - 'apps/ios/**'
@@ -70,7 +73,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        crate: [ios-device-bridge, speech-bridge]
+        crate: [ios-device-bridge]
     defaults:
       run:
         working-directory: apps/${{ matrix.crate }}
@@ -158,6 +161,18 @@ jobs:
       - run: swift build
       - run: swift test
 
+  speech-bridge:
+    needs: changes
+    if: ${{ !cancelled() && (inputs.full || needs.changes.outputs.speech_bridge == 'true') }}
+    runs-on: xcode-27
+    defaults:
+      run:
+        working-directory: apps/speech-bridge
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: swift build
+      - run: swift test
+
   # Xcode Cloud builds the app only from a release tag, so a contract change that breaks it shows here first. Only on a
   # change under apps/ios and only a build: the app's own tests take long on these runners, and a release, whose full
   # run would wait on this job, already has Xcode Cloud building the app from its tag.
@@ -195,7 +210,7 @@ jobs:
   native:
     name: Native checks
     if: ${{ always() }}
-    needs: [changes, rust, swift-pulsar, swift-shared, swift-transport, swift-voice, swift-intelligent-ui, computer-use, ios-build]
+    needs: [changes, rust, swift-pulsar, swift-shared, swift-transport, swift-voice, swift-intelligent-ui, computer-use, speech-bridge, ios-build]
     runs-on: ubuntu-latest
     steps:
       - name: Check job results

@@ -1,8 +1,7 @@
 export interface SpeechState {
     enabled: boolean;
-    phase: 'missing' | 'downloading' | 'verifying' | 'ready' | 'error' | 'unavailable';
-    downloadedBytes: number;
-    totalBytes: number;
+    /* `unavailable` on a build without the helper, which is every build but macOS. */
+    phase: 'ready' | 'error' | 'unavailable';
     error: string | null;
 }
 
@@ -15,7 +14,6 @@ export type SpeechEvent =
 export interface SpeechBridge {
     state(): Promise<SpeechState>;
     setEnabled(enabled: boolean): Promise<SpeechState>;
-    removeModel(): Promise<SpeechState>;
     start(sessionId: string, language: string): Promise<void>;
     samples(sessionId: string, samples: Float32Array): Promise<void>;
     stop(sessionId: string): Promise<void>;

@@ -1,11 +1,10 @@
 import { join } from 'node:path';
 import { electron } from '../electron';
-import { heedBodyless } from '../net-response';
 import { SpeechService, speechHelperPath } from '../speech';
-import { SpeechModel } from '../speech-model';
+import { SpeechSetting } from '../speech-setting';
 import type { DesktopIpc } from './ipc';
 
-const { app, net, systemPreferences } = electron;
+const { app, systemPreferences } = electron;
 
 interface SpeechOptions {
     ruimteHome: string;
@@ -24,21 +23,15 @@ function dictationId(id: unknown): string {
 
 export function installSpeech(ipc: DesktopIpc, options: SpeechOptions): void {
     const speechHelper = speechHelperPath(app.isPackaged, join(process.resourcesPath, 'bin', 'ruimte'), options.repoRoot);
-    const speechModel = new SpeechModel(
-        options.ruimteHome,
-        speechHelper,
-        (state) => options.send('speech:state', state),
-        (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init).then(heedBodyless)
-    );
+    const speechSetting = new SpeechSetting(options.ruimteHome, speechHelper, (state) => options.send('speech:state', state));
     /* A run's words go back to the page that started it. There is one helper, so one run at a time. */
-    const speechService = new SpeechService<Electron.WebContents>(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event, owner) => {
+    const speechService = new SpeechService<Electron.WebContents>(speechHelper, (event, owner) => {
         if (owner && !owner.isDestroyed()) {
             owner.send('speech:event', event);
         }
     });
     app.on('before-quit', () => {
         speechService.dispose();
-        speechModel.dispose();
     });
     app.on('web-contents-created', (_event, contents) => {
         const endOwnRun = (): void => {
@@ -57,27 +50,22 @@ export function installSpeech(ipc: DesktopIpc, options: SpeechOptions): void {
     });
 
     ipc.handle('speech:state', async () => {
-        await speechModel.initialized;
-        return speechModel.state;
+        await speechSetting.initialized;
+        return speechSetting.state;
     });
     ipc.handle('speech:enable', async (_event, enabled: unknown) => {
         if (typeof enabled !== 'boolean') {
             throw new Error('Invalid speech setting');
         }
-        const state = await speechModel.setEnabled(enabled);
+        const state = await speechSetting.setEnabled(enabled);
         if (!enabled) {
             speechService.dispose();
         }
         return state;
     });
-    ipc.handle('speech:remove', async () => {
-        await speechModel.setEnabled(false);
-        speechService.dispose();
-        return speechModel.remove();
-    });
     ipc.handle('speech:start', async (event, id: unknown, language: unknown) => {
-        await speechModel.initialized;
-        if (!speechModel.state.enabled || speechModel.state.phase !== 'ready') {
+        await speechSetting.initialized;
+        if (!speechSetting.state.enabled || speechSetting.state.phase !== 'ready') {
             throw new Error('Enable speech to text in Settings first');
         }
         if (typeof id !== 'string' || typeof language !== 'string') {
