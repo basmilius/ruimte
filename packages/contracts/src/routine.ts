@@ -276,7 +276,12 @@ export const RoutineRunNowResultSchema = z.object({
 export type RoutineRunNowResult = z.infer<typeof RoutineRunNowResultSchema>;
 
 /* The skills an agent would run in a project, for a routine's prompt before any chat of it exists. */
-export const RoutineSkillsPayloadSchema = z.object({ projectId: ProjectIdSchema, provider: AgentKindSchema });
+export const RoutineSkillsPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    provider: AgentKindSchema,
+    // The account the routine runs on; the provider's default account without it.
+    account: ProviderAccountIdSchema.optional()
+});
 export type RoutineSkillsPayload = z.infer<typeof RoutineSkillsPayloadSchema>;
 
 export const RoutineSkillsResultSchema = z.object({ skills: z.array(ChatSkillSchema) });

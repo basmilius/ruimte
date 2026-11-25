@@ -98,6 +98,14 @@ export function startCwdGuard(deps: StartCwdDeps) {
         if (folder === null) {
             throw new ToolRefusal(CWD_RULE.outsideCode, `${nodeId} is in no project this machine knows, so ${cwd} cannot be held against its folder`);
         }
+        // A stored folder was put through the tool's check once; one that is gone now is no path to fix, such as a removed worktree.
+        const resolved = resolve(folder, cwd);
+        if ((await realOrNull(resolved)) === null) {
+            throw new ToolRefusal(
+                CWD_RULE.badCode,
+                `The folder ${resolved} is gone, so nothing can start in it until it is back or the chat moves to another folder`
+            );
+        }
         await checkCwd(folder, cwd, deps.worktreePaths);
     };
 }

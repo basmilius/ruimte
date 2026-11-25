@@ -221,12 +221,12 @@ export async function wireRoutines({ home, machineId, stores, agents, projects, 
             void routines.observe(chatId, chatEvent.info).catch((e: unknown) => console.error('Noting a routine run failed:', errorText(e)));
         }
     });
-    const skills = async ({ projectId, provider }: RoutineSkillsPayload): Promise<RoutineSkillsResult> => {
+    const skills = async ({ projectId, provider, account }: RoutineSkillsPayload): Promise<RoutineSkillsResult> => {
         const folder = project.index.folderOf(projectId);
         if (folder === null) {
             throw new RoutineError('project-not-found', `No project ${projectId} on this machine`);
         }
-        return { skills: await chats.skillsIn(provider, folder) };
+        return { skills: await chats.skillsIn(provider, folder, account) };
     };
     return { routines, store, watchers, skills };
 }
