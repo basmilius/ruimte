@@ -102,6 +102,11 @@ if (config.command === 'logout') {
     process.exit(await runLogout({ port: config.port, home: config.home }));
 }
 
+if (config.command === 'join') {
+    const { runJoin } = await import('./cli/join.ts');
+    process.exit(await runJoin({ port: config.port, home: config.home, accountId: config.args[0] ?? '' }));
+}
+
 if (config.command === 'notify') {
     const { runNotify } = await import('./cli/notify.ts');
     process.exit(

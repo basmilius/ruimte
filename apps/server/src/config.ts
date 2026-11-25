@@ -5,7 +5,7 @@ import { DEFAULT_STUN_SERVER, brokerUrlProblem, type BrokerOverride } from '@rui
 import { DEFAULT_PORT, ruimteHome } from '@ruimte/service/runtime';
 import { MCP_URL_VARIABLE } from './ruimte-mcp.ts';
 
-const COMMANDS = ['serve', 'login', 'logout', 'status', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
+const COMMANDS = ['serve', 'login', 'logout', 'join', 'status', 'extension', 'service', 'closed-lid', 'notify', 'voice', 'version'] as const;
 type Command = (typeof COMMANDS)[number];
 
 function isCommand(value: string): value is Command {
@@ -42,7 +42,7 @@ export interface ServerConfig {
     externalPort: number;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
-    // `login` puts it on an account with a code; `status` says how the running daemon is reached;
+    // `login` puts it on an account with a code; `join` signs it onto the account whoever started it names; `status` says how the running daemon is reached;
     // `service` installs, removes or reports the background service; `closed-lid` installs or removes the sudoers rule behind keep awake
     // with the lid closed; `notify` raises a notification; `voice` sets the key of Voice run by the daemon; `version` prints the version.
     command: Command;
@@ -172,6 +172,10 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
 
     if (command === 'voice' && positionals.length !== 3) {
         throw new Error('Usage: ruimte voice key set|clear|status');
+    }
+
+    if (command === 'join' && positionals.length !== 2) {
+        throw new Error('Usage: ruimte join <account id>');
     }
 
     if (command === 'closed-lid' && positionals.length !== 2) {
