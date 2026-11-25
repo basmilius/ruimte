@@ -1328,16 +1328,15 @@
                 "description": "Hoe je meldingen klinken."
             },
             "packs": {
-                "bar": "Staaf",
-                "glass": "Glas",
-                "wood": "Hout",
-                "string": "Snaar",
-                "air": "Lucht",
-                "grand": "Vleugel",
-                "felt": "Vilt",
-                "nylon": "Nylon",
-                "steel": "Staal",
-                "duo": "Duo"
+                "marimba-low": "Marimba laag",
+                "marimba": "Marimba",
+                "kalimba-low": "Kalimba laag",
+                "kalimba": "Kalimba",
+                "log": "Spleettrommel",
+                "vibes": "Vibrafoon",
+                "tine": "Tine",
+                "music-box": "Speeldoos",
+                "string": "Snaar"
             },
             "newPack": "Nieuw pack",
             "newPackName": "Mijn pack",

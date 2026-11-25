@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,11 +12,20 @@ import { fileURLToPath } from 'node:url';
 
 const OUT = fileURLToPath(new URL('../apps/client/src/attention/sounds/', import.meta.url));
 
-// Half the usual rate halves the files, and the highest overtone of any voice still lies well under half of it.
-const SAMPLE_RATE = 22_050;
+// The usual rate: a mallet's tick and a tine's ping lie above what half of it holds.
+const SAMPLE_RATE = 44_100;
 
 // Well under full scale, so a sound never tops whatever else the computer is playing.
 const PEAK = 0.4;
+
+// A sound stays under a second whatever its voice sustains.
+const LONGEST_SECONDS = 0.98;
+
+// So the file never ends on a step.
+const FADE_SECONDS = 0.012;
+
+// The note a mode's ring time is written for; a shorter note of a motif rings shorter.
+const REFERENCE_DECAY = 0.12;
 
 const NOTES = { A3: 220, C4: 261.63, D4: 293.66, G4: 392, A4: 440, C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880 };
 
@@ -35,66 +44,184 @@ interface Motif {
     notes: readonly Note[];
 }
 
+/* What hits: how long the contact lasts, how bright it is, and how much of the contact itself is heard. */
+interface Strike {
+    milliseconds: number;
+    hertz: number;
+    click: number;
+}
+
+interface Mode {
+    /* The mode's pitch as a multiple of the note's; a whole number rings in tune, any other like metal. */
+    ratio: number;
+    loudness: number;
+    /* Seconds it rings before it is gone, for a note of the reference decay at C5. */
+    seconds: number;
+}
+
+/*
+ * Something that is hit: a burst of noise (the mallet, the thumb, the hammer) sets a resonator ringing
+ * for every mode of the bar or the tine, and a small room sits behind it. The noise is what keeps it
+ * from sounding like a sum of sines.
+ */
+interface Struck {
+    kind: 'struck';
+    id: string;
+    strike: Strike;
+    modes: readonly Mode[];
+    /* Moves every note, 0.5 being an octave down. */
+    pitch: number;
+    /* How much of the small room is mixed in. */
+    room: number;
+    /* Stretches the sound's length beyond the motif's own; a sound still ends within a second. */
+    tail: number;
+    /* Its own, so a voice sounds the same after the list around it changes. */
+    seed: number;
+}
+
 interface Overtone {
-    /* The overtone's pitch as a multiple of the note's; a whole number rings in tune, any other like metal or glass. */
+    /* The overtone's pitch as a multiple of the note's. */
     multiple: number;
     loudness: number;
     /* How soon it is gone, as a part of the note's own decay. */
     decay: number;
 }
 
-interface Voice {
+/* Sines that die away, one per overtone, with nothing hitting and no room. */
+interface Summed {
+    kind: 'summed';
     id: string;
     partials: readonly Overtone[];
     attackSeconds: number;
     /* Stretches every note's decay and the sound's length; a sound still ends within a second. */
     sustain: number;
-    /* Moves every note, 0.5 being an octave down. */
     pitch: number;
 }
 
-// A sound stays under a second whatever its voice sustains.
-const LONGEST_SECONDS = 0.98;
+type Voice = Struck | Summed;
 
 const VOICES: readonly Voice[] = [
     {
-        // A struck metal bar: round, with two soft overtones in tune.
-        id: 'bar',
-        partials: [
-            { multiple: 1, loudness: 1, decay: 1 },
-            { multiple: 2, loudness: 0.22, decay: 0.55 },
-            { multiple: 3, loudness: 0.07, decay: 0.35 }
+        // The marimba's low end: a longer bar over a tube, under a softer mallet.
+        kind: 'struck',
+        id: 'marimba-low',
+        strike: { milliseconds: 5, hertz: 2200, click: 0.04 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.55 },
+            { ratio: 4, loudness: 0.28, seconds: 0.09 },
+            { ratio: 9.9, loudness: 0.08, seconds: 0.035 }
         ],
-        attackSeconds: 0.006,
-        sustain: 1,
-        pitch: 1
+        pitch: 0.5,
+        room: 0.08,
+        tail: 0.9,
+        seed: 11_000
     },
     {
-        // A small bell: overtones out of tune with the note, which is what makes glass ring.
-        id: 'glass',
-        partials: [
-            { multiple: 1, loudness: 1, decay: 1 },
-            { multiple: 2.76, loudness: 0.3, decay: 0.7 },
-            { multiple: 5.4, loudness: 0.08, decay: 0.3 }
+        // A rosewood bar under a soft mallet: the fundamental, the overtone two octaves up and a short tick.
+        kind: 'struck',
+        id: 'marimba',
+        strike: { milliseconds: 4, hertz: 3200, click: 0.05 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.42 },
+            { ratio: 4, loudness: 0.3, seconds: 0.07 },
+            { ratio: 9.9, loudness: 0.1, seconds: 0.03 }
         ],
-        attackSeconds: 0.003,
-        sustain: 1.3,
-        pitch: 1
+        pitch: 1,
+        room: 0.08,
+        tail: 0.8,
+        seed: 3000
     },
     {
-        // A marimba: the overtone two octaves up is a short tick of the mallet, and the note is dry.
-        id: 'wood',
-        partials: [
-            { multiple: 1, loudness: 1, decay: 1 },
-            { multiple: 4, loudness: 0.35, decay: 0.12 },
-            { multiple: 9.2, loudness: 0.08, decay: 0.05 }
+        // The kalimba's low tines, which sit over the box and sound rounder.
+        kind: 'struck',
+        id: 'kalimba-low',
+        strike: { milliseconds: 1.5, hertz: 6000, click: 0.06 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.8 },
+            { ratio: 6.27, loudness: 0.18, seconds: 0.12 }
         ],
-        attackSeconds: 0.003,
-        sustain: 0.6,
-        pitch: 1
+        pitch: 0.5,
+        room: 0.1,
+        tail: 1.1,
+        seed: 12_000
+    },
+    {
+        // A steel tine plucked by a thumb: a clear note that lingers, with the tine's own high ping.
+        kind: 'struck',
+        id: 'kalimba',
+        strike: { milliseconds: 1, hertz: 9000, click: 0.07 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.7 },
+            { ratio: 6.27, loudness: 0.22, seconds: 0.12 },
+            { ratio: 17.5, loudness: 0.05, seconds: 0.03 }
+        ],
+        pitch: 1,
+        room: 0.1,
+        tail: 1.1,
+        seed: 7000
+    },
+    {
+        // A slit drum an octave down under a soft mallet: a warm, round thud.
+        kind: 'struck',
+        id: 'log',
+        strike: { milliseconds: 6, hertz: 1600, click: 0.04 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.32 },
+            { ratio: 2.7, loudness: 0.22, seconds: 0.1 },
+            { ratio: 5.2, loudness: 0.08, seconds: 0.05 }
+        ],
+        pitch: 0.5,
+        room: 0.1,
+        tail: 0.8,
+        seed: 6000
+    },
+    {
+        // An aluminum bar under a soft mallet: the marimba's overtones, but it sings on.
+        kind: 'struck',
+        id: 'vibes',
+        strike: { milliseconds: 4, hertz: 2800, click: 0.03 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 1.1 },
+            { ratio: 4, loudness: 0.18, seconds: 0.35 },
+            { ratio: 10, loudness: 0.05, seconds: 0.1 }
+        ],
+        pitch: 1,
+        room: 0.1,
+        tail: 1.3,
+        seed: 13_000
+    },
+    {
+        // The tine of an electric piano an octave down, under a felt hammer: warm, with a faint bell on top.
+        kind: 'struck',
+        id: 'tine',
+        strike: { milliseconds: 3, hertz: 2400, click: 0.03 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 1 },
+            { ratio: 2, loudness: 0.12, seconds: 0.4 },
+            { ratio: 7.1, loudness: 0.12, seconds: 0.06 }
+        ],
+        pitch: 0.5,
+        room: 0.08,
+        tail: 1.2,
+        seed: 17_000
+    },
+    {
+        // The comb of a music box an octave up: the kalimba's tine, small and thin.
+        kind: 'struck',
+        id: 'music-box',
+        strike: { milliseconds: 0.8, hertz: 10_000, click: 0.05 },
+        modes: [
+            { ratio: 1, loudness: 1, seconds: 0.9 },
+            { ratio: 6.27, loudness: 0.12, seconds: 0.1 }
+        ],
+        pitch: 2,
+        room: 0.12,
+        tail: 1.2,
+        seed: 18_000
     },
     {
         // A plucked string an octave down: every overtone of the series, the high ones gone first.
+        kind: 'summed',
         id: 'string',
         partials: [
             { multiple: 1, loudness: 1, decay: 1 },
@@ -107,17 +234,6 @@ const VOICES: readonly Voice[] = [
         attackSeconds: 0.002,
         sustain: 1.2,
         pitch: 0.5
-    },
-    {
-        // A breath of a flute: almost a pure tone that swells in and lingers.
-        id: 'air',
-        partials: [
-            { multiple: 1, loudness: 1, decay: 1 },
-            { multiple: 2, loudness: 0.08, decay: 0.8 }
-        ],
-        attackSeconds: 0.035,
-        sustain: 1.5,
-        pitch: 1
     }
 ];
 
@@ -170,189 +286,181 @@ const MOTIFS: readonly Motif[] = [
     }
 ];
 
-function render(motif: Motif, voice: Voice): Float64Array {
-    const samples = new Float64Array(Math.round(Math.min(LONGEST_SECONDS, motif.seconds * voice.sustain) * SAMPLE_RATE));
+/* The same numbers on every run, so a sound only changes when its voice does. */
+function randomFrom(seed: number): () => number {
+    let state = seed >>> 0;
 
-    for (const note of motif.notes) {
-        const start = Math.round(note.at * SAMPLE_RATE);
+    return () => {
+        state = (state + 0x6d2b79f5) >>> 0;
 
-        for (let i = start; i < samples.length; i++) {
-            const seconds = (i - start) / SAMPLE_RATE;
-            const attack = Math.min(1, seconds / voice.attackSeconds);
+        let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
 
-            for (const partial of voice.partials) {
-                const fade = Math.exp(-seconds / (note.decay * voice.sustain * partial.decay));
+        mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
 
-                samples[i]! += note.loudness * partial.loudness * attack * fade * Math.sin(2 * Math.PI * note.hertz * voice.pitch * partial.multiple * seconds);
-            }
+        return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
+    };
+}
+
+function peakOf(samples: Float64Array): number {
+    let most = 0;
+
+    for (const sample of samples) {
+        most = Math.max(most, Math.abs(sample));
+    }
+
+    return most;
+}
+
+/* The contact itself: noise under half a sine, rolled off above `hertz`, at a peak of one. */
+function burst(strike: Strike, random: () => number): Float64Array {
+    const samples = new Float64Array(Math.max(2, Math.round((strike.milliseconds / 1000) * SAMPLE_RATE)));
+    const keep = Math.exp((-2 * Math.PI * strike.hertz) / SAMPLE_RATE);
+    let last = 0;
+
+    for (let i = 0; i < samples.length; i++) {
+        const noise = (random() * 2 - 1) * Math.sin((Math.PI * i) / samples.length);
+
+        last = (1 - keep) * noise + keep * last;
+        samples[i] = last;
+    }
+
+    const peak = peakOf(samples);
+
+    return samples.map((sample) => sample / peak);
+}
+
+/* One mode of the thing that was hit: a resonator the burst sets ringing, gone after `seconds`, at a peak of one. */
+function ring(input: Float64Array, hertz: number, seconds: number, length: number): Float64Array {
+    const out = new Float64Array(length);
+    // 6.91 is the natural logarithm of a thousand, the sixty decibels a ring falls before it counts as gone.
+    const radius = Math.exp(-6.91 / (seconds * SAMPLE_RATE));
+    const first = 2 * radius * Math.cos((2 * Math.PI * hertz) / SAMPLE_RATE);
+    const second = radius * radius;
+    let before = 0;
+    let twoBefore = 0;
+
+    for (let i = 0; i < length; i++) {
+        const now = (i < input.length ? input[i]! : 0) + first * before - second * twoBefore;
+
+        out[i] = now;
+        twoBefore = before;
+        before = now;
+    }
+
+    const peak = peakOf(out);
+
+    return peak === 0 ? out : out.map((sample) => sample / peak);
+}
+
+function addAt(mix: Float64Array, start: number, part: Float64Array, loudness: number): void {
+    for (let i = 0; i < part.length && start + i < mix.length; i++) {
+        mix[start + i]! += part[i]! * loudness;
+    }
+}
+
+function struck(voice: Struck, note: Note, mix: Float64Array, random: () => number): void {
+    const start = Math.round(note.at * SAMPLE_RATE);
+    const hertz = note.hertz * voice.pitch;
+    const hit = burst(voice.strike, random);
+    // A shorter note of the motif rings shorter, and so does a higher bar.
+    const shorter = Math.pow(note.decay / REFERENCE_DECAY, 0.7) * Math.pow(NOTES.C5 / note.hertz, 0.35);
+
+    for (const mode of voice.modes) {
+        // A mode near half the rate would come back as a lower pitch that is not the instrument's.
+        if (hertz * mode.ratio < SAMPLE_RATE * 0.45) {
+            addAt(mix, start, ring(hit, hertz * mode.ratio, mode.seconds * shorter, mix.length - start), note.loudness * mode.loudness);
         }
     }
 
-    // A hundredth of a second, so the file never ends on a step.
-    return finished(samples, 0.01);
+    addAt(mix, start, hit, note.loudness * voice.strike.click);
 }
 
-/* The sound faded to nothing over its last `fadeSeconds` and brought to the one peak every sound has. */
-function finished(samples: Float64Array, fadeSeconds: number): Float64Array {
-    const tail = Math.round(fadeSeconds * SAMPLE_RATE);
+function summed(voice: Summed, note: Note, mix: Float64Array): void {
+    const start = Math.round(note.at * SAMPLE_RATE);
+
+    for (let i = start; i < mix.length; i++) {
+        const seconds = (i - start) / SAMPLE_RATE;
+        const attack = Math.min(1, seconds / voice.attackSeconds);
+
+        for (const partial of voice.partials) {
+            const fade = Math.exp(-seconds / (note.decay * voice.sustain * partial.decay));
+
+            mix[i]! += note.loudness * partial.loudness * attack * fade * Math.sin(2 * Math.PI * note.hertz * voice.pitch * partial.multiple * seconds);
+        }
+    }
+}
+
+/* A small room after Schroeder: four short echoes that feed themselves, then two that smear them. */
+function room(dry: Float64Array, amount: number): Float64Array {
+    const wet = new Float64Array(dry.length);
+
+    for (const [milliseconds, feedback] of [
+        [11.3, 0.72],
+        [13.7, 0.7],
+        [16.1, 0.68],
+        [18.9, 0.66]
+    ] as const) {
+        const delay = Math.round((milliseconds / 1000) * SAMPLE_RATE);
+        const line = new Float64Array(dry.length);
+        let dull = 0;
+
+        for (let i = 0; i < dry.length; i++) {
+            const back = i >= delay ? line[i - delay]! : 0;
+
+            // Each round loses highs, as a wall takes them.
+            dull = 0.6 * back + 0.4 * dull;
+            line[i] = dry[i]! + feedback * dull;
+            wet[i]! += back * 0.25;
+        }
+    }
+
+    for (const milliseconds of [5.1, 1.7]) {
+        const delay = Math.round((milliseconds / 1000) * SAMPLE_RATE);
+        const input = Float64Array.from(wet);
+
+        for (let i = 0; i < wet.length; i++) {
+            const delayedIn = i >= delay ? input[i - delay]! : 0;
+            const delayedOut = i >= delay ? wet[i - delay]! : 0;
+
+            wet[i] = -0.5 * input[i]! + delayedIn + 0.5 * delayedOut;
+        }
+    }
+
+    return dry.map((sample, i) => sample + amount * wet[i]!);
+}
+
+/* The sound faded to nothing at its end and brought to the one peak every sound has. */
+function finished(samples: Float64Array): Float64Array {
+    const tail = Math.round(FADE_SECONDS * SAMPLE_RATE);
 
     for (let i = 0; i < tail; i++) {
         samples[samples.length - 1 - i]! *= i / tail;
     }
 
-    const loudest = samples.reduce((most, sample) => Math.max(most, Math.abs(sample)), 0);
+    const loudest = peakOf(samples);
 
     return samples.map((sample) => (sample / loudest) * PEAK);
 }
 
-/*
- * The packs of recorded instruments play the same motifs on the CC0 instrument pack AfterMotion builds
- * (`packages/instruments/dist` there, each instrument's source and license in its `instrument.json`).
- * The pack is not in this repository, so without it only the synthesized voices are written.
- */
-const INSTRUMENTS = process.env.INSTRUMENT_PACK ?? fileURLToPath(new URL('../../aftermotion/packages/instruments/dist/', import.meta.url));
+function render(motif: Motif, motifIndex: number, voice: Voice): Float64Array {
+    const stretch = voice.kind === 'struck' ? voice.tail : voice.sustain;
+    const mix = new Float64Array(Math.round(Math.min(LONGEST_SECONDS, motif.seconds * stretch) * SAMPLE_RATE));
 
-interface Region {
-    file: string;
-    keys: [number, number];
-    root: number;
-    velocity: [number, number];
-    articulation: string;
-    take: number;
-    trigger: string;
-    /* Decibels that bring the recording to the level of its neighbors. */
-    volume: number;
-    /* Cents the recording is off its root. */
-    tune: number;
-}
-
-interface Part {
-    /* The instrument's folder in the pack: `keys/grand`. */
-    instrument: string;
-    /* Octaves the part plays above or below the motif. */
-    octaves: number;
-    velocity: number;
-    loudness: number;
-    /* Hertz above which the part is rolled off, which takes the bite out of a pluck or a hammer; absent leaves it as recorded. */
-    cutoff?: number;
-    /* Seconds a note swells in over, which rounds the pick or the hammer off; absent starts it as recorded. */
-    attack?: number;
-}
-
-interface Ensemble {
-    id: string;
-    /* One or two instruments, each playing every note of the motif. */
-    parts: readonly Part[];
-}
-
-const ENSEMBLES: readonly Ensemble[] = [
-    { id: 'grand', parts: [{ instrument: 'keys/grand', octaves: 0, velocity: 80, loudness: 1 }] },
-    { id: 'felt', parts: [{ instrument: 'keys/upright', octaves: 0, velocity: 40, loudness: 1, cutoff: 2200, attack: 0.008 }] },
-    { id: 'nylon', parts: [{ instrument: 'guitar/nylon', octaves: 0, velocity: 60, loudness: 1, cutoff: 3000, attack: 0.006 }] },
-    { id: 'steel', parts: [{ instrument: 'guitar/steel', octaves: 0, velocity: 60, loudness: 1, cutoff: 2600, attack: 0.008 }] },
-    {
-        id: 'duo',
-        parts: [
-            { instrument: 'keys/grand', octaves: 0, velocity: 50, loudness: 1, cutoff: 3000 },
-            { instrument: 'guitar/nylon', octaves: -1, velocity: 60, loudness: 0.5, cutoff: 2400, attack: 0.01 }
-        ]
-    }
-];
-
-const regions = new Map<string, Region[]>();
-const recordings = new Map<string, Float32Array>();
-
-function regionFor(part: Part, key: number): Region {
-    let listed = regions.get(part.instrument);
-
-    if (listed === undefined) {
-        listed = (JSON.parse(readFileSync(join(INSTRUMENTS, part.instrument, 'instrument.json'), 'utf8')) as { regions: Region[] }).regions;
-        regions.set(part.instrument, listed);
-    }
-
-    const found = listed
-        .filter((region) => region.trigger === 'attack' && region.articulation === 'sustain')
-        .filter((region) => region.keys[0] <= key && key <= region.keys[1] && region.velocity[0] <= part.velocity && part.velocity <= region.velocity[1])
-        // The narrowest layer that holds the velocity, and its first take.
-        .sort((a, b) => a.velocity[1] - a.velocity[0] - (b.velocity[1] - b.velocity[0]) || a.take - b.take)[0];
-
-    if (found === undefined) {
-        throw new Error(`${part.instrument} has no sustained note at key ${key} and velocity ${part.velocity}`);
-    }
-
-    return found;
-}
-
-/* A recording as mono samples at this script's rate, from its first sound on, so a note starts when the motif says. */
-function recording(path: string): Float32Array {
-    const known = recordings.get(path);
-
-    if (known !== undefined) {
-        return known;
-    }
-
-    const decoded = Bun.spawnSync(['ffmpeg', '-v', 'error', '-i', path, '-f', 'f32le', '-ac', '1', '-ar', String(SAMPLE_RATE), '-']);
-
-    if (decoded.exitCode !== 0) {
-        throw new Error(`ffmpeg does not decode ${path}: ${decoded.stderr.toString()}`);
-    }
-
-    const samples = new Float32Array(decoded.stdout.buffer, decoded.stdout.byteOffset, Math.floor(decoded.stdout.byteLength / 4));
-    const loudest = samples.reduce((most, sample) => Math.max(most, Math.abs(sample)), 0);
-    const first = samples.findIndex((sample) => Math.abs(sample) > loudest * 0.02);
-    const trimmed = samples.slice(Math.max(0, first - Math.round(0.002 * SAMPLE_RATE)));
-
-    recordings.set(path, trimmed);
-
-    return trimmed;
-}
-
-/* One note of a part mixed into the sound: its recording played faster or slower to reach the key, damped when the note is a dry one. */
-function play(samples: Float64Array, part: Part, key: number, at: number, loudness: number, damp: number | null): void {
-    const region = regionFor(part, key);
-    const source = recording(join(INSTRUMENTS, part.instrument, region.file));
-    const rate = 2 ** ((key - region.root - region.tune / 100) / 12);
-    const gain = loudness * part.loudness * 10 ** (region.volume / 20);
-    const start = Math.round(at * SAMPLE_RATE);
-    // How far a one-pole low-pass moves toward each new sample; 1 passes everything.
-    const follow = part.cutoff === undefined ? 1 : 1 - Math.exp((-2 * Math.PI * part.cutoff) / SAMPLE_RATE);
-    let filtered = 0;
-
-    for (let i = start; i < samples.length; i++) {
-        const position = (i - start) * rate;
-        const whole = Math.floor(position);
-
-        if (whole + 1 >= source.length) {
-            break;
-        }
-
-        const seconds = (i - start) / SAMPLE_RATE;
-        const between = source[whole]! + (source[whole + 1]! - source[whole]!) * (position - whole);
-        const swell = part.attack === undefined ? 1 : Math.min(1, seconds / part.attack);
-        const fade = damp === null ? 1 : Math.exp(-seconds / damp);
-
-        filtered += follow * (between - filtered);
-        samples[i]! += gain * swell * fade * filtered;
-    }
-}
-
-function keyOf(hertz: number): number {
-    return Math.round(69 + 12 * Math.log2(hertz / 440));
-}
-
-function perform(motif: Motif, ensemble: Ensemble): Float64Array {
-    const samples = new Float64Array(Math.round(Math.min(LONGEST_SECONDS, motif.seconds * 1.4) * SAMPLE_RATE));
-    // The knock is two dry notes, so a recorded one is damped where it would ring.
-    const damp = motif.id === 'knock' ? 0.09 : null;
-
-    for (const part of ensemble.parts) {
+    if (voice.kind === 'summed') {
         for (const note of motif.notes) {
-            play(samples, part, keyOf(note.hertz) + 12 * part.octaves, note.at, note.loudness, damp);
+            summed(voice, note, mix);
         }
+
+        return finished(mix);
     }
 
-    // A recorded note rings for seconds, so it leaves over a quarter of one instead of being cut.
-    return finished(samples, 0.25);
+    const random = randomFrom(voice.seed + motifIndex);
+
+    for (const note of motif.notes) {
+        struck(voice, note, mix, random);
+    }
+
+    return finished(room(mix, voice.room));
 }
 
 /* Mono, 16 bits: a WAV every browser and Electron plays without a decoder of its own. */
@@ -379,26 +487,13 @@ function wav(samples: Float64Array): Buffer {
     return Buffer.concat([header, data]);
 }
 
-function write(pack: string, motif: Motif, samples: Float64Array): void {
-    const file = wav(samples);
-
-    mkdirSync(join(OUT, pack), { recursive: true });
-    writeFileSync(join(OUT, pack, `${motif.id}.wav`), file);
-    console.log(`${pack}/${motif.id}.wav\t${file.length} bytes`);
-}
-
 for (const voice of VOICES) {
-    for (const motif of MOTIFS) {
-        write(voice.id, motif, render(motif, voice));
-    }
-}
+    mkdirSync(join(OUT, voice.id), { recursive: true });
 
-if (existsSync(INSTRUMENTS)) {
-    for (const ensemble of ENSEMBLES) {
-        for (const motif of MOTIFS) {
-            write(ensemble.id, motif, perform(motif, ensemble));
-        }
-    }
-} else {
-    console.log(`No instrument pack at ${INSTRUMENTS}, so the recorded packs stay as they are`);
+    MOTIFS.forEach((motif, motifIndex) => {
+        const file = wav(render(motif, motifIndex, voice));
+
+        writeFileSync(join(OUT, voice.id, `${motif.id}.wav`), file);
+        console.log(`${voice.id}/${motif.id}.wav\t${file.length} bytes`);
+    });
 }

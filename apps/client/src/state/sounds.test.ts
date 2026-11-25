@@ -4,20 +4,20 @@ import { announcementsFrom, customSoundPacksFrom, projectSoundsFrom, soundFor, w
 const OWN = { id: 'custom-1', name: 'Mine', files: { question: 'ping.wav' } };
 
 function settings(patch: Partial<SoundSettings> = {}): SoundSettings {
-    return { soundPack: 'bar', customSoundPacks: [OWN], projectSounds: {}, ...patch };
+    return { soundPack: 'marimba-low', customSoundPacks: [OWN], projectSounds: {}, ...patch };
 }
 
 describe('soundFor', () => {
     test('an event sounds in the pack of the settings', () => {
-        expect(soundFor(settings(), 'question', 'local:atlas')).toEqual({ pack: 'bar', event: 'question' });
-        expect(soundFor(settings(), 'alert', null)).toEqual({ pack: 'bar', event: 'alert' });
+        expect(soundFor(settings(), 'question', 'local:atlas')).toEqual({ pack: 'marimba-low', event: 'question' });
+        expect(soundFor(settings(), 'alert', null)).toEqual({ pack: 'marimba-low', event: 'alert' });
     });
 
     test('the pack that plays nothing is silent, for the settings and for a project that picks it', () => {
         expect(soundFor(settings({ soundPack: 'none' }), 'question', 'local:atlas')).toBeNull();
         expect(soundFor(settings({ projectSounds: { 'local:atlas': { pack: 'none' } } }), 'question', 'local:atlas')).toBeNull();
-        expect(soundFor(settings({ soundPack: 'none', projectSounds: { 'local:atlas': { pack: 'glass' } } }), 'question', 'local:atlas')).toEqual({
-            pack: 'glass',
+        expect(soundFor(settings({ soundPack: 'none', projectSounds: { 'local:atlas': { pack: 'kalimba' } } }), 'question', 'local:atlas')).toEqual({
+            pack: 'kalimba',
             event: 'question'
         });
     });
@@ -30,21 +30,21 @@ describe('soundFor', () => {
     });
 
     test('a project with a pack of its own sounds in that one, and another project does not', () => {
-        const chosen = settings({ projectSounds: { 'local:atlas': { pack: 'glass' } } });
+        const chosen = settings({ projectSounds: { 'local:atlas': { pack: 'kalimba' } } });
 
-        expect(soundFor(chosen, 'finished', 'local:atlas')).toEqual({ pack: 'glass', event: 'finished' });
-        expect(soundFor(chosen, 'finished', 'local:other')).toEqual({ pack: 'bar', event: 'finished' });
+        expect(soundFor(chosen, 'finished', 'local:atlas')).toEqual({ pack: 'kalimba', event: 'finished' });
+        expect(soundFor(chosen, 'finished', 'local:other')).toEqual({ pack: 'marimba-low', event: 'finished' });
     });
 
     test('a pack of a person’s own plays its file, and for an event without one what the settings play', () => {
-        const project = settings({ soundPack: 'glass', projectSounds: { 'local:atlas': { pack: OWN.id } } });
+        const project = settings({ soundPack: 'kalimba', projectSounds: { 'local:atlas': { pack: OWN.id } } });
 
         expect(soundFor(project, 'question', 'local:atlas')).toEqual({ pack: OWN.id, event: 'question' });
-        expect(soundFor(project, 'finished', 'local:atlas')).toEqual({ pack: 'glass', event: 'finished' });
+        expect(soundFor(project, 'finished', 'local:atlas')).toEqual({ pack: 'kalimba', event: 'finished' });
     });
 
     test('the settings’ own pack without a file for an event plays the default pack', () => {
-        expect(soundFor(settings({ soundPack: OWN.id }), 'finished', null)).toEqual({ pack: 'bar', event: 'finished' });
+        expect(soundFor(settings({ soundPack: OWN.id }), 'finished', null)).toEqual({ pack: 'marimba-low', event: 'finished' });
     });
 
     test('an event turned off in a pack is silent there, with or without a file, and also for a project that falls back on it', () => {
@@ -58,7 +58,7 @@ describe('soundFor', () => {
         expect(soundFor(muted, 'question', null)).toBeNull();
         expect(soundFor(muted, 'finished', null)).toBeNull();
         expect(soundFor(muted, 'finished', 'local:atlas')).toBeNull();
-        expect(soundFor(muted, 'error', 'local:atlas')).toEqual({ pack: 'bar', event: 'error' });
+        expect(soundFor(muted, 'error', 'local:atlas')).toEqual({ pack: 'marimba-low', event: 'error' });
     });
 });
 
@@ -78,18 +78,25 @@ describe('customSoundPacksFrom', () => {
 
 describe('withProjectSounds', () => {
     test('a project that follows the settings leaves the map', () => {
-        const chosen = withProjectSounds({}, 'local:atlas', { pack: 'glass' });
+        const chosen = withProjectSounds({}, 'local:atlas', { pack: 'kalimba' });
 
-        expect(chosen).toEqual({ 'local:atlas': { pack: 'glass' } });
+        expect(chosen).toEqual({ 'local:atlas': { pack: 'kalimba' } });
         expect(withProjectSounds(chosen, 'local:atlas', {})).toEqual({});
     });
 });
 
 describe('projectSoundsFrom', () => {
-    test('a project that was silent plays nothing, whatever pack it had, and a pack nobody has follows the settings', () => {
+    test('a project that was silent plays nothing, whatever pack it had, and a pack of their own nobody has follows the settings', () => {
         expect(
-            projectSoundsFrom({ 'local:a': { pack: 'gone' }, 'local:b': { silent: true, pack: 'glass' }, 'local:c': {}, 'local:d': { pack: 'nylon' } }, [])
-        ).toEqual({ 'local:b': { pack: 'none' }, 'local:d': { pack: 'nylon' } });
+            projectSoundsFrom(
+                { 'local:a': { pack: 'custom-gone' }, 'local:b': { silent: true, pack: 'kalimba' }, 'local:c': {}, 'local:d': { pack: 'tine' } },
+                []
+            )
+        ).toEqual({ 'local:b': { pack: 'none' }, 'local:d': { pack: 'tine' } });
+    });
+
+    test('a built-in pack that is gone becomes the default pack', () => {
+        expect(projectSoundsFrom({ 'local:a': { pack: 'glass' } }, [])).toEqual({ 'local:a': { pack: 'marimba-low' } });
     });
 });
 
@@ -101,22 +108,22 @@ describe('announcementsFrom', () => {
     });
 
     test('a blob from before keeps what it did: the two alerts always notified, the rest while its sound was on', () => {
-        expect(announcementsFrom({ soundPack: 'wood', soundEvents: { ...OFF, question: true, limit: true } }, [])).toEqual({
+        expect(announcementsFrom({ soundPack: 'log', soundEvents: { ...OFF, question: true, limit: true } }, [])).toEqual({
             notifyEvents: { ...OFF, question: true, alert: true, limit: true },
-            soundPack: 'wood'
+            soundPack: 'log'
         });
-        expect(announcementsFrom({ soundPack: 'wood', soundEvents: OFF }, [])).toEqual({
+        expect(announcementsFrom({ soundPack: 'log', soundEvents: OFF }, [])).toEqual({
             notifyEvents: { ...OFF, question: true, alert: true },
             soundPack: 'none'
         });
-        expect(announcementsFrom({ agentsTurnSound: true }, []).soundPack).toBe('bar');
+        expect(announcementsFrom({ agentsTurnSound: true }, []).soundPack).toBe('marimba-low');
     });
 
     test('the switches a person set win over what was stored before them, also with every one off', () => {
-        expect(announcementsFrom({ notifyEvents: OFF, soundPack: 'glass', soundEvents: { ...OFF, finished: true } }, [])).toEqual({
+        expect(announcementsFrom({ notifyEvents: OFF, soundPack: 'kalimba', soundEvents: { ...OFF, finished: true } }, [])).toEqual({
             notifyEvents: OFF,
-            soundPack: 'glass'
+            soundPack: 'kalimba'
         });
-        expect(announcementsFrom({ notifyEvents: { ...OFF, finished: true }, soundPack: 'gone' }, []).soundPack).toBe('bar');
+        expect(announcementsFrom({ notifyEvents: { ...OFF, finished: true }, soundPack: 'glass' }, []).soundPack).toBe('marimba-low');
     });
 });

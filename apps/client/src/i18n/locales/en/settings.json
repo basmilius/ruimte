@@ -1328,16 +1328,15 @@
                 "description": "How your notifications sound."
             },
             "packs": {
-                "bar": "Bar",
-                "glass": "Glass",
-                "wood": "Wood",
-                "string": "String",
-                "air": "Air",
-                "grand": "Grand",
-                "felt": "Felt",
-                "nylon": "Nylon",
-                "steel": "Steel",
-                "duo": "Duo"
+                "marimba-low": "Marimba Low",
+                "marimba": "Marimba",
+                "kalimba-low": "Kalimba Low",
+                "kalimba": "Kalimba",
+                "log": "Log",
+                "vibes": "Vibes",
+                "tine": "Tine",
+                "music-box": "Music Box",
+                "string": "String"
             },
             "newPack": "New pack",
             "newPackName": "My pack",

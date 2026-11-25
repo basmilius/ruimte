@@ -22,11 +22,11 @@ test('a built-in sound plays the file of its pack and motif', async () => {
     const played: string[] = [];
 
     restore = setSoundPorts({ play: async (url) => void played.push(url), now: () => 0 });
-    playSound({ pack: 'grand', event: 'question' });
+    playSound({ pack: 'vibes', event: 'question' });
     await settled();
 
     expect(played).toHaveLength(1);
-    expect(played[0]).toEndWith('/attention/sounds/grand/rise.wav');
+    expect(played[0]).toEndWith('/attention/sounds/vibes/rise.wav');
 });
 
 test('the same sound plays once a second, another sound right away', async () => {
@@ -34,12 +34,12 @@ test('the same sound plays once a second, another sound right away', async () =>
     let now = 0;
 
     restore = setSoundPorts({ play: async (url) => void played.push(url.slice(-9)), now: () => now });
-    playSound({ pack: 'bar', event: 'finished' });
+    playSound({ pack: 'marimba-low', event: 'finished' });
     now = 999;
-    playSound({ pack: 'bar', event: 'finished' });
-    playSound({ pack: 'bar', event: 'error' });
+    playSound({ pack: 'marimba-low', event: 'finished' });
+    playSound({ pack: 'marimba-low', event: 'error' });
     now = 1_000;
-    playSound({ pack: 'bar', event: 'finished' });
+    playSound({ pack: 'marimba-low', event: 'finished' });
     await settled();
 
     expect(played).toEqual(['/trio.wav', 'knock.wav', '/trio.wav']);
@@ -50,7 +50,7 @@ test('a play the page refuses is dropped', async () => {
 
     try {
         restore = setSoundPorts({ play: () => Promise.reject(new Error('NotAllowedError')), now: () => 0 });
-        playSound({ pack: 'bar', event: 'alert' });
+        playSound({ pack: 'marimba-low', event: 'alert' });
         await settled();
 
         expect(warned).toHaveBeenCalledTimes(1);
@@ -64,13 +64,13 @@ test('an alert every window hears plays only in the window that claims it', asyn
     const claims = [true, false];
 
     restore = setSoundPorts({ play: async (url) => void played.push(url), now: () => 0, claim: async () => claims.shift() ?? false });
-    playSound({ pack: 'bar', event: 'alert' }, 'ruimte-requested-local-node');
+    playSound({ pack: 'marimba-low', event: 'alert' }, 'ruimte-requested-local-node');
     await settled();
-    playSound({ pack: 'glass', event: 'alert' }, 'ruimte-requested-local-node');
+    playSound({ pack: 'kalimba', event: 'alert' }, 'ruimte-requested-local-node');
     await settled();
 
     expect(played).toHaveLength(1);
-    expect(played[0]).toEndWith('/bar/chime.wav');
+    expect(played[0]).toEndWith('/marimba-low/chime.wav');
 });
 
 test('a sound of a person’s own plays from its stored file, and a file that went missing plays nothing', async () => {

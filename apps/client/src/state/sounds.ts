@@ -7,11 +7,12 @@ export type SoundEvent = (typeof SOUND_EVENTS)[number];
 /* The motif every built-in pack plays for an event, which is its file's name: the motif says what happened, the pack where. */
 export const SOUND_MOTIFS: Readonly<Record<SoundEvent, string>> = { question: 'rise', alert: 'chime', limit: 'fall', error: 'knock', finished: 'trio' };
 
-/* The packs `scripts/make-sounds.ts` writes: five synthesized voices, then five recorded instruments. */
-export const SOUND_PACKS = ['bar', 'glass', 'wood', 'string', 'air', 'grand', 'felt', 'nylon', 'steel', 'duo'] as const;
+/* The packs `scripts/make-sounds.ts` writes, in the order a person picks from. */
+export const SOUND_PACKS = ['marimba-low', 'marimba', 'kalimba-low', 'kalimba', 'log', 'vibes', 'tine', 'music-box', 'string'] as const;
 export type BuiltInSoundPack = (typeof SOUND_PACKS)[number];
 
-export const DEFAULT_SOUND_PACK: BuiltInSoundPack = 'bar';
+/* Also what a stored built-in pack that is gone reads as, so a person who chose one still hears a sound. */
+export const DEFAULT_SOUND_PACK: BuiltInSoundPack = 'marimba-low';
 
 /* The choice that plays nothing: what notifies still does, without a sound. */
 export const NO_SOUND_PACK = 'none';
@@ -143,7 +144,8 @@ export function soundPackFrom(stored: unknown, custom: readonly CustomSoundPack[
 
 /*
  * A project that follows the settings is left out, so the map holds only what a person chose. The
- * `silent` switch a project had before reads as the pack that plays nothing.
+ * `silent` switch a project had before reads as the pack that plays nothing, and a built-in pack that
+ * is gone as the default one. A pack of a person's own that is gone follows the settings.
  */
 export function projectSoundsFrom(stored: unknown, custom: readonly CustomSoundPack[]): Record<string, ProjectSounds> {
     const projects = record(stored) ?? {};
@@ -156,7 +158,11 @@ export function projectSoundsFrom(stored: unknown, custom: readonly CustomSoundP
                 return [[key, { pack: NO_SOUND_PACK }]];
             }
 
-            return knownPack(choice?.pack, custom) ? [[key, { pack: choice.pack }]] : [];
+            if (knownPack(choice?.pack, custom)) {
+                return [[key, { pack: choice.pack }]];
+            }
+
+            return typeof choice?.pack === 'string' && !isCustomPack(choice.pack) ? [[key, { pack: DEFAULT_SOUND_PACK }]] : [];
         })
     );
 }

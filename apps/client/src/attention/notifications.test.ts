@@ -148,7 +148,7 @@ test.each(['chat', 'terminal'] as const)('%s requests settle into one notificati
     const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/'))), now: () => 0 });
     let stopNotifications = () => {};
     try {
-        useSettings.setState({ soundPack: 'bar' });
+        useSettings.setState({ soundPack: 'marimba-low' });
         useDocument.getState().load({ version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind, id: 'agent', name: 'Build', node: {} }] }, null);
         stopNotifications = startAgentNotifications();
         wait([request('first', 'bun test')]);
@@ -164,7 +164,7 @@ test.each(['chat', 'terminal'] as const)('%s requests settle into one notificati
         expect(shown).toEqual([{ title: 'Build', options: { body: 'Wants to run: bun test (+1 more)', silent: true } }]);
         expect(closed).toEqual([]);
         await settled();
-        expect(played).toEqual(['/sounds/bar/rise.wav']);
+        expect(played).toEqual(['/sounds/marimba-low/rise.wav']);
 
         jest.advanceTimersByTime(10_000);
         wait([request('first', 'bun test'), request('second', 'bun run check'), request('third', 'bun run build')]);
@@ -387,7 +387,7 @@ function soundStage(views: { kind: 'chat' | 'terminal'; id: string }[]): {
     const project = useProject.getState();
     const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/') + 8)), now: () => clock.now });
 
-    useSettings.setState({ soundPack: 'bar' });
+    useSettings.setState({ soundPack: 'marimba-low' });
     useProject.setState({ current: { projectId: 'atlas' } as never, currentEndpointId: currentEndpointId() });
     useDocument.getState().load(
         {
@@ -449,7 +449,7 @@ test('a turn that stops is announced with its own line and sound, and a usage li
             { title: 'review', options: { body: 'Stopped on a usage limit', silent: true } }
         ]);
         await settled();
-        expect(stage.played).toEqual(['bar/trio.wav', 'bar/knock.wav', 'bar/fall.wav']);
+        expect(stage.played).toEqual(['marimba-low/trio.wav', 'marimba-low/knock.wav', 'marimba-low/fall.wav']);
     } finally {
         stage.stop();
     }
@@ -501,11 +501,11 @@ test('a project sounds in its own pack, and one that plays nothing still raises 
     const project = endpointKey(currentEndpointId(), 'atlas');
 
     try {
-        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [project]: { pack: 'glass' } } });
+        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [project]: { pack: 'kalimba' } } });
         setStatus(key, 'running');
         setStatus(key, 'idle');
         await settled();
-        expect(stage.played).toEqual(['glass/trio.wav']);
+        expect(stage.played).toEqual(['kalimba/trio.wav']);
 
         useSettings.setState({ projectSounds: { [project]: { pack: 'none' } } });
         stage.clock.now = 5_000;
@@ -535,7 +535,7 @@ test('two turns that finish within a second sound once, and each still gets its 
         setStatus(key('lint'), 'idle');
         expect(stage.shown).toHaveLength(2);
         await settled();
-        expect(stage.played).toEqual(['bar/trio.wav']);
+        expect(stage.played).toEqual(['marimba-low/trio.wav']);
     } finally {
         stage.stop();
     }
@@ -592,10 +592,10 @@ test('an alert someone asked for sounds in the pack of its own project', async (
     });
 
     try {
-        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [endpointKey(endpointId, 'other')]: { pack: 'grand' } } });
+        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [endpointKey(endpointId, 'other')]: { pack: 'vibes' } } });
         notifyRequested(endpointId, { projectId: 'other', viewId: 'view', nodeId: 'node', title: 'Deploy', body: 'It is live.' });
         await settled();
-        expect(stage.played).toEqual(['grand/chime.wav']);
+        expect(stage.played).toEqual(['vibes/chime.wav']);
         expect(claimed).toEqual([`ruimte-requested-${endpointId}-node-It is live.`]);
     } finally {
         restoreSound();
@@ -629,7 +629,7 @@ test('every alert of a node gets a notification of its own, and one another wind
             { title: 'Deploy', options: { body: 'Migrations ran.', silent: true } },
             { title: 'Deploy', options: { body: 'It is live.', silent: true } }
         ]);
-        expect(stage.played).toEqual(['bar/chime.wav', 'bar/chime.wav']);
+        expect(stage.played).toEqual(['marimba-low/chime.wav', 'marimba-low/chime.wav']);
     } finally {
         restoreSound();
         stage.stop();
