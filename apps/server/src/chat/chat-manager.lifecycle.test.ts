@@ -353,7 +353,9 @@ test('a chat whose worktree is gone opens, and at its next start continues in th
     await mkdir(worktree);
     const facts = {
         checkCwd: startCwdGuard({ madeByAgent: () => true, folderOf: () => project, worktreePaths: async () => [worktree] }),
-        projectFolder: () => project
+        projectFolder: () => project,
+        // Windows finds Claude Code's folder through USERPROFILE, which the fixture leaves at the runner's own.
+        env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home, RUIMTE_HOOK_URL: 'x' }
     };
     manager = await remake(manager, facts);
     await open(manager, 'chat-wt', { cwd: worktree });
