@@ -101,6 +101,22 @@ describe('ruimte join', () => {
         expect(down.out).toEqual([]);
     });
 
+    test('waits for a daemon of a home with a secret from an earlier run that holds its port and is still starting', async () => {
+        const starting = (): Response => new Response('The machine is starting', { status: 503 });
+        const restarted = harness((_asked, attempt) => (attempt < 3 ? starting() : Response.json(REGISTRATION)));
+
+        expect(await restarted.run()).toBe(0);
+        expect(restarted.asked).toHaveLength(3);
+        expect(restarted.out.map((line) => JSON.parse(line))).toEqual([REGISTRATION]);
+        expect(restarted.err).toEqual([]);
+
+        const stuck = harness(starting);
+
+        expect(await stuck.run()).toBe(1);
+        expect(stuck.err).toEqual(['The daemon on port 4210 is still starting. Try again in a moment.']);
+        expect(stuck.out).toEqual([]);
+    });
+
     test('says that the machine is on another account, and prints nothing', async () => {
         const { out, err, run } = harness(() =>
             Response.json({ code: 'machine-has-account', message: 'This machine is on another account.' }, { status: 409 })

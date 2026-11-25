@@ -40,15 +40,20 @@ export async function runJoin(options: JoinOptions): Promise<number> {
                 ? null
                 : await askLocalDaemon(options, secret, MACHINE_REGISTRATION_PATH, { method: 'POST', body: { accountId: options.accountId } });
 
-        if (response !== null) {
+        // A daemon that holds its port and is not wired yet answers 503 to everything: its home has a secret from an earlier run, so only the wait tells it from one that is ready.
+        const starting = response?.status === 503;
+
+        if (response !== null && !starting) {
             return answered(response, options, out, err);
         }
 
         if (now() >= giveUpAt) {
             err(
-                secret === null
-                    ? `No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`
-                    : `No daemon answers on port ${options.port}. ${startFirst(options.port)}`
+                starting
+                    ? `The daemon on port ${options.port} is still starting. Try again in a moment.`
+                    : secret === null
+                      ? `No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`
+                      : `No daemon answers on port ${options.port}. ${startFirst(options.port)}`
             );
 
             return 1;
