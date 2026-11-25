@@ -202,6 +202,8 @@ export default defineConfig(({ command, mode }) => ({
     },
     build: {
         sourcemap: telemetryVersion === '' ? false : 'hidden',
+        // The dev bundler would inline a small script such as the speech worklet as a `data:` URL, which the CSP refuses.
+        assetsInlineLimit: (file) => (file.endsWith('.js') ? false : undefined),
         rolldownOptions: {
             ...(mode === 'bench' ? { input: fileURLToPath(new URL('./bench.html', import.meta.url)) } : {}),
             // In dev, compile lazy features before their first open; production keeps its dynamic imports.
