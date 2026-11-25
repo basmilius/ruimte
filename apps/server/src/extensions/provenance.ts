@@ -9,6 +9,13 @@ import type { ExtensionProvenance } from '@ruimte/contracts';
 export const DEVELOPMENT_EXTENSION_FOLDERS = ['extensions/dev', 'extensions/poc'] as const;
 
 /*
+ * Extensions of this repository that are products of their own and use a proposed part, so they cannot be installed
+ * yet. The dev launch links each as its author would, which makes it a dev link and no development extension, and no
+ * build may carry one either.
+ */
+export const LINKED_EXTENSION_FOLDERS = ['extensions/devcontainers'] as const;
+
+/*
  * Those folders on this computer, for a daemon that runs from a checkout. A compiled daemon has no checkout, so to it
  * no extension is a development extension, whatever folder a person links.
  */

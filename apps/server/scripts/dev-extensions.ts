@@ -5,13 +5,14 @@ import { DEV_PORT, devRuimteHome } from '@ruimte/service/runtime';
 import { oneAtATime, watchAndBuild } from '../src/cli/extension.ts';
 import { askLocalDaemon, homeSecret } from '../src/cli/local-daemon.ts';
 import { buildExtension } from '../src/extensions/pack.ts';
-import { DEVELOPMENT_EXTENSION_FOLDERS } from '../src/extensions/provenance.ts';
+import { DEVELOPMENT_EXTENSION_FOLDERS, LINKED_EXTENSION_FOLDERS } from '../src/extensions/provenance.ts';
 
 /*
  * Puts Ruimte's development extensions into the development daemon, as `ruimte extension dev` would one by one: each is
  * built into its own `dist` and linked over the daemon's link route, and built and linked again on a save. Only
  * `scripts/dev.ts` starts this, so an installed Ruimte and a build never meet them. A link stays when `bun dev` ends,
- * since the development home is theirs alone; a folder added while it runs is linked at the next start.
+ * since the development home is theirs alone; a folder added while it runs is linked at the next start. The extensions
+ * of `LINKED_EXTENSION_FOLDERS` come along the same way, as a link of their author.
  */
 
 // Off until a person turns them on in Settings: they break on purpose.
@@ -45,13 +46,18 @@ export function developmentExtensions(repository: string): DevelopmentExtension[
     });
 }
 
+/* The extensions that are linked without being a development extension, where their folder has a manifest. */
+export function linkedExtensions(repository: string): DevelopmentExtension[] {
+    return LINKED_EXTENSION_FOLDERS.filter((path) => existsSync(join(repository, path, 'manifest.json'))).map((path) => ({ path, startsOff: false }));
+}
+
 export interface DevLinkDeps {
     repository: string;
     extensions: readonly DevelopmentExtension[];
     /* Builds a folder and answers where the build is. */
     build(folder: string): Promise<string>;
     link(folder: string, startsOff: boolean): Promise<void>;
-    /* Tells of every change under a folder of development extensions, by its path from that folder. */
+    /* Tells of every change under a folder, by its path from that folder. */
     watch(folder: string, listener: (name: string | null) => void): void;
     debounce(key: string, run: () => void): void;
     failed(path: string, error: unknown): void;
@@ -70,6 +76,11 @@ export async function linkDevelopmentExtensions(deps: DevLinkDeps): Promise<void
 
             saves.get(`${parent}/${extension}`)?.(rest.length === 0 ? null : rest.join('/'));
         });
+    }
+
+    // One outside those folders has no siblings to tell apart, so its own folder is watched.
+    for (const { path } of deps.extensions.filter((extension) => !DEVELOPMENT_EXTENSION_FOLDERS.some((parent) => extension.path.startsWith(`${parent}/`)))) {
+        deps.watch(join(deps.repository, path), (name) => saves.get(path)?.(name));
     }
 
     await Promise.all(
@@ -124,7 +135,7 @@ async function linkOnDaemon(folder: string, startsOff: boolean): Promise<void> {
 
 if (import.meta.main) {
     const repository = join(import.meta.dir, '..', '..', '..');
-    const extensions = developmentExtensions(repository);
+    const extensions = [...developmentExtensions(repository), ...linkedExtensions(repository)];
     const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
     await linkDevelopmentExtensions({
@@ -143,6 +154,8 @@ if (import.meta.main) {
         },
         failed: (path, e) => console.error(`${path} is not loaded: ${e instanceof Error ? e.message : String(e)}`)
     });
-    console.log(`Linked the development extensions of ${DEVELOPMENT_EXTENSION_FOLDERS.join(' and ')}. A save builds and loads one again.`);
+    console.log(
+        `Linked the development extensions of ${DEVELOPMENT_EXTENSION_FOLDERS.join(' and ')}, and ${LINKED_EXTENSION_FOLDERS.join(' and ')}. A save builds and loads one again.`
+    );
     await new Promise(() => undefined);
 }

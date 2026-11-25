@@ -6,8 +6,9 @@ import { DEV_PORT, devRuimteHome } from '@ruimte/service/runtime';
  * rather than `RUIMTE_HOME=${RUIMTE_DEV_HOME:-$HOME/.ruimte-dev}` in package.json: Bun's shell on
  * Windows has neither that default nor a HOME.
  */
-const env = { ...process.env, RUIMTE_HOME: devRuimteHome() };
 const cwd = join(import.meta.dir, '..');
+// The checkout by name, for an extension that takes the machine it puts somewhere else from here (`extensions/devcontainers`).
+const env = { ...process.env, RUIMTE_HOME: devRuimteHome(), RUIMTE_DEV_CHECKOUT: join(cwd, '..', '..') };
 const child = Bun.spawn(['bun', '--conditions=source', '--watch', 'src/main.ts', '--port', String(DEV_PORT), ...process.argv.slice(2)], {
     cwd,
     env,

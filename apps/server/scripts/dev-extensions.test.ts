@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { developmentExtensions, linkDevelopmentExtensions, type DevLinkDeps } from './dev-extensions.ts';
+import { developmentExtensions, linkDevelopmentExtensions, linkedExtensions, type DevLinkDeps } from './dev-extensions.ts';
 
 const root = mkdtempSync(join(tmpdir(), 'ruimte-dev-extensions-'));
 
@@ -127,5 +127,30 @@ describe('the development extensions the dev launch links', () => {
         await linked;
 
         expect(world.linked).toEqual([{ folder: join(repository, 'extensions/dev/trackline', 'dist'), startsOff: false }]);
+    });
+
+    test('have the extension that is a product of its own beside them, linked and built again for a save in its own folder', async () => {
+        const repository = repositoryWith('products', ['extensions/dev/harbor', 'extensions/devcontainers', 'extensions/pets']);
+        const world = worldOf(repository);
+        const product = join(repository, 'extensions/devcontainers');
+
+        expect(developmentExtensions(repository).map((extension) => extension.path)).toEqual(['extensions/dev/harbor']);
+        expect(linkedExtensions(repository)).toEqual([{ path: 'extensions/devcontainers', startsOff: false }]);
+        expect(linkedExtensions(repositoryWith('without', ['extensions/dev/harbor']))).toEqual([]);
+
+        await linkDevelopmentExtensions({ ...world.deps, extensions: [...world.deps.extensions, ...linkedExtensions(repository)] });
+
+        expect(world.linked.map((link) => link.folder)).toEqual([join(repository, 'extensions/dev/harbor', 'dist'), join(product, 'dist')]);
+
+        world.linked.length = 0;
+        mkdirSync(join(product, 'server'), { recursive: true });
+        writeFileSync(join(product, 'server/index.ts'), '');
+
+        const linked = world.nextLink();
+
+        world.save('extensions/devcontainers', 'server/index.ts');
+        await linked;
+
+        expect(world.linked).toEqual([{ folder: join(product, 'dist'), startsOff: false }]);
     });
 });

@@ -16,6 +16,14 @@ describe('what a build may not hold of a development extension', () => {
         expect(needles.every((needle) => needle.text.length > 4)).toBe(true);
     });
 
+    test('is the id and the folder of an extension the dev launch links beside them too, and of none that ships', () => {
+        const needles = needlesOf(join(import.meta.dir, '..'));
+
+        expect(needles).toContainEqual({ text: 'ruimte.devcontainers', whole: true });
+        expect(needles).toContainEqual({ text: 'extensions/devcontainers/', whole: false });
+        expect(needles.map((needle) => needle.text).filter((text) => /pets|limits|umbra/.test(text))).toEqual([]);
+    });
+
     test('is found as an id of its own and as a path, also in a binary', () => {
         expect(leaksIn(Buffer.from('register("poc.chat",load)'), NEEDLES)).toEqual(['poc.chat']);
         expect(leaksIn(Buffer.from('//# source=../../extensions/poc/chat/client/index.ts'), NEEDLES)).toEqual(['extensions/poc/chat/']);

@@ -1,12 +1,12 @@
 import { Glob } from 'bun';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { DEVELOPMENT_EXTENSION_FOLDERS } from '../apps/server/src/extensions/provenance.ts';
+import { DEVELOPMENT_EXTENSION_FOLDERS, LINKED_EXTENSION_FOLDERS } from '../apps/server/src/extensions/provenance.ts';
 
 /*
- * No build carries a development extension: this searches what a build wrote for the id of each and for the path of
- * its folder, and fails on a hit. The dev launch alone loads them (`apps/server/scripts/dev-extensions.ts`), so either
- * in a bundle or a binary means something imports one.
+ * No build carries a development extension, or one the dev launch links beside them: this searches what a build wrote
+ * for the id of each and for the path of its folder, and fails on a hit. The dev launch alone loads them
+ * (`apps/server/scripts/dev-extensions.ts`), so either in a bundle or a binary means something imports one.
  *
  *   bun scripts/check-build-outputs.ts               the outputs of this checkout that exist
  *   bun scripts/check-build-outputs.ts <path>...     these files and folders instead
@@ -22,29 +22,27 @@ export interface Needle {
     whole: boolean;
 }
 
-/* The id and the folder of every development extension of a checkout. */
+/* The id and the folder of every development extension of a checkout, and of every extension the dev launch links beside them. */
 export function needlesOf(repository: string): Needle[] {
-    return DEVELOPMENT_EXTENSION_FOLDERS.flatMap((parent) => {
+    const development = DEVELOPMENT_EXTENSION_FOLDERS.flatMap((parent) => {
         const folder = join(repository, parent);
 
-        if (!existsSync(folder)) {
+        return existsSync(folder) ? readdirSync(folder).map((name) => `${parent}/${name}`) : [];
+    });
+
+    return [...development, ...LINKED_EXTENSION_FOLDERS].flatMap((path) => {
+        const manifest = join(repository, path, 'manifest.json');
+
+        if (!existsSync(manifest)) {
             return [];
         }
 
-        return readdirSync(folder).flatMap((name) => {
-            const manifest = join(folder, name, 'manifest.json');
+        const { id } = JSON.parse(readFileSync(manifest, 'utf8')) as { id: string };
 
-            if (!existsSync(manifest)) {
-                return [];
-            }
-
-            const { id } = JSON.parse(readFileSync(manifest, 'utf8')) as { id: string };
-
-            return [
-                { text: id, whole: true },
-                { text: `${parent}/${name}/`, whole: false }
-            ];
-        });
+        return [
+            { text: id, whole: true },
+            { text: `${path}/`, whole: false }
+        ];
     });
 }
 
