@@ -7,7 +7,7 @@ export type SoundEvent = (typeof SOUND_EVENTS)[number];
 /* The motif every built-in pack plays for an event, which is its file's name: the motif says what happened, the pack where. */
 export const SOUND_MOTIFS: Readonly<Record<SoundEvent, string>> = { question: 'rise', alert: 'chime', limit: 'fall', error: 'knock', finished: 'trio' };
 
-/* The packs `scripts/make-sounds.ts` writes, in the order a person picks from. */
+/* The packs `scripts/make-sounds.ts` writes. A person picks from them by name (`soundPackItems`). */
 export const SOUND_PACKS = ['marimba', 'marimba-low', 'kalimba', 'kalimba-low', 'log', 'vibes', 'tine', 'music-box', 'string'] as const;
 export type BuiltInSoundPack = (typeof SOUND_PACKS)[number];
 

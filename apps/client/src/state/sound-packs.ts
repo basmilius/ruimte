@@ -1,3 +1,4 @@
+import { labelCollator } from '@adecore/ui/format';
 import type { TFunction } from 'i18next';
 import { isBuiltInPack, NO_SOUND_PACK, SOUND_PACKS, type CustomSoundPack } from '@/state/sounds';
 
@@ -11,15 +12,15 @@ export function soundPackName(id: string, custom: readonly CustomSoundPack[], t:
 }
 
 /*
- * Every pack a person can pick: no sound first and set apart, then the built-in ones, then their own. The
- * last one is set apart too, from the row that makes a new pack, which every list puts under them.
+ * Every pack a person can pick: no sound first and set apart, then the built-in ones by their name in the
+ * person's language, then their own. The last one is set apart too, from the row that makes a new pack,
+ * which every list puts under them.
  */
 export function soundPackItems(custom: readonly CustomSoundPack[], t: TFunction<'settings'>): { value: string; label: string; separatorAfter?: boolean }[] {
-    const ids = [NO_SOUND_PACK, ...SOUND_PACKS, ...custom.map((pack) => pack.id)];
+    const order = labelCollator();
+    const named = (id: string) => ({ value: id, label: soundPackName(id, custom, t) });
+    const builtIn = SOUND_PACKS.map(named).sort((one, other) => order.compare(one.label, other.label));
+    const items = [named(NO_SOUND_PACK), ...builtIn, ...custom.map((pack) => named(pack.id))];
 
-    return ids.map((id, i) => ({
-        value: id,
-        label: soundPackName(id, custom, t),
-        ...(id === NO_SOUND_PACK || i === ids.length - 1 ? { separatorAfter: true } : {})
-    }));
+    return items.map((item, i) => (i === 0 || i === items.length - 1 ? { ...item, separatorAfter: true } : item));
 }

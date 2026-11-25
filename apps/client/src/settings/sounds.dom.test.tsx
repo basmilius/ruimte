@@ -135,10 +135,24 @@ describe('Settings > General > Notifications', () => {
         }
     });
 
-    test('a pack plays a sample from the list without being picked, and the list stays open', async () => {
+    test('the list has the packs by name, and one plays a sample without being picked while the list stays open', async () => {
         await openNotifications();
         await clickOn(buttonWithText('Marimba Low'));
         await until(() => labelled('Play Vibes') !== null);
+        expect([...document.querySelectorAll('[role="option"]')].map((row) => row.textContent)).toEqual([
+            'No sound',
+            'Kalimba',
+            'Kalimba Low',
+            'Log',
+            'Marimba',
+            'Marimba Low',
+            'Music Box',
+            'String',
+            'Tine',
+            'Vibes',
+            'New pack'
+        ]);
+
         await clickOn(labelled('Play Vibes'));
         await until(() => played.length === 1);
 
