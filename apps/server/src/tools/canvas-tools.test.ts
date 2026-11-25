@@ -624,7 +624,12 @@ describe('reaching another open project', () => {
         await mkdir(fresh);
         const real = await realpath(fresh);
         const asked: SessionEvent[] = [];
-        fx.store.subscribe('client-2', (event) => asked.push(event));
+        // Only what the tool asks: a summary of an earlier write may still reach the client while this runs.
+        fx.store.subscribe('client-2', (event) => {
+            if (event.event === 'project.askOpen') {
+                asked.push(event);
+            }
+        });
 
         expect((await fx.invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
             `asked\t${real}`,
