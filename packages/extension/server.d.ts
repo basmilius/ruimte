@@ -66,7 +66,7 @@ export interface ServerEvents {
     'session.status': { nodeId: string; status: AgentStatus };
     /** A launch started, came up, is being stopped or ended. `exitCode` is null until it ended. Needs `launches.read`. */
     'launch.status': { project: ProjectRef; launch: string; state: 'starting' | 'running' | 'stopping' | 'exited'; exitCode: number | null };
-    /** The first client opened a project on this machine. Needs `projects.read`. */
+    /** The first client opened a project on this machine. A project already open when you start to follow comes first. Needs `projects.read`. */
     'project.opened': { project: ProjectInfo };
     /** The last client closed a project, so nothing of it runs here any more. Needs `projects.read`. */
     'project.closed': { project: ProjectRef };

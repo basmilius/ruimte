@@ -51,7 +51,9 @@ interface Hosted {
 
 function hostWith(
     manifest: Partial<ExtensionManifest>,
-    options: Partial<Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now' | 'files' | 'runAction' | 'startChat' | 'terminals'>> = {},
+    options: Partial<
+        Pick<ExtensionHostOptions, 'removeLanguageServers' | 'asks' | 'now' | 'files' | 'runAction' | 'startChat' | 'terminals' | 'openProjects'>
+    > = {},
     // With `devFolder` it is a dev link, where a proposed part works; without, one a person installed.
     stored: Partial<Pick<StoredExtension, 'devFolder'>> = {}
 ): Hosted {
@@ -179,6 +181,21 @@ describe('ExtensionHost', () => {
 
         await expect(call).rejects.toThrow('The extension stopped');
         expect(children.every((child) => child.killed)).toBe(true);
+    });
+
+    test('tells a process that starts to follow project.opened of the projects already open, once', async () => {
+        const project = { id: 'p1', name: 'Shop', folder: '/work/shop' };
+        const hosted = hostWith({ permissions: { 'projects.read': 'Follows your projects' } }, { openProjects: async () => [project] });
+        const child = await runningChild(hosted);
+
+        child.say({ type: 'subscribe', name: 'project.opened' });
+        child.say({ type: 'subscribe', name: 'project.opened' });
+        await until(() => child.told.some((message) => message.type === 'event'));
+        // A second telling would arrive within these turns.
+        await new Promise((resolve) => setImmediate(resolve));
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(child.told.filter((message) => message.type === 'event')).toEqual([{ type: 'event', name: 'project.opened', payload: { project } }]);
     });
 
     test('hands on only the events its permissions cover, as much of them as the API names', async () => {

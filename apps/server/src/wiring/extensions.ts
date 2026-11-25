@@ -164,8 +164,11 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
 
         return files;
     };
+    // The projects a client has open, so each opening and each close is told once.
+    const open = new Set<string>();
     const host = new ExtensionHost({
         store: new ExtensionStore(home),
+        openProjects: () => Promise.all([...open].map(projectOf)),
         developmentRoots: seams.developmentExtensions,
         asks: () => asks,
         terminals: () => terminalPort,
@@ -248,9 +251,6 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
             invalidate: (kind) => later.providers().providers.invalidate(kind)
         }
     });
-    // The projects a client has open, so each opening and each close is told once.
-    const open = new Set<string>();
-
     return {
         host,
         terminals,

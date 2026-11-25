@@ -304,6 +304,8 @@ export interface ExtensionHostOptions {
     terminals?: () => ExtensionTerminalPort;
     projectFiles?: () => ExtensionFilesPort;
     problems?: () => ExtensionProblemsPort;
+    // The projects a client has open now, which a process that starts to follow `project.opened` hears first.
+    openProjects?: () => Promise<ExtensionProject[]>;
     // A launch source said its list changed, through the `changed` of its `watch`.
     launchesChanged?: (extensionId: string, source: string, projectId: string) => void;
     // What an extension supplies may differ from here on: it was turned on or off, changed, removed, or its process ended by itself.
@@ -1141,11 +1143,40 @@ export class ExtensionHost {
         }
     }
 
+    /* A process that starts after a project opened, with the machine or once it is turned on, would never hear of that project otherwise. */
+    private async tellOpenProjects(id: string, running: Running): Promise<void> {
+        let projects: ExtensionProject[] = [];
+
+        try {
+            projects = (await this.options.openProjects?.()) ?? [];
+        } catch (e) {
+            await bestEffort('files.append', this.files.append(this.options.store.logFile(id), `The open projects were not told: ${errorText(e)}\n`));
+        }
+
+        if (this.running.get(id) !== running) {
+            return;
+        }
+
+        for (const project of projects) {
+            const heard = eventPayload('project.opened', { project });
+
+            if (heard !== null) {
+                running.child.stdin.write(`${JSON.stringify({ type: 'event', name: 'project.opened', payload: heard })}\n`);
+            }
+        }
+    }
+
     private followEvent(id: string, running: Running, name: string): void {
         const reason = eventRefusal(name, running.permissions);
 
         if (reason === null) {
+            const first = !running.subscriptions.has(name);
+
             running.subscriptions.add(name);
+
+            if (first && name === 'project.opened') {
+                void this.tellOpenProjects(id, running);
+            }
 
             return;
         }
