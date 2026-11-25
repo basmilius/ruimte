@@ -87,7 +87,7 @@ export function servicesIn(text: string): ComposeService[] {
  *       image: harbor/workbench:1
  *       prepare: sh scripts/prepare.sh
  *       start: sh scripts/start.sh
- *       login: sh scripts/login.sh
+ *       inside: sh scripts/inside.sh
  */
 export interface ComposeMachine {
     name: string;
@@ -96,8 +96,8 @@ export interface ComposeMachine {
     prepare?: string;
     /* Puts the machine there and starts it. */
     start: string;
-    /* Runs `ruimte login` on the new machine, so a person can put it on their account. */
-    login?: string;
+    /* Runs what follows it where the machine lives, as an engine's `exec` would. With it, Ruimte has the new machine join the person's account. */
+    inside?: string;
 }
 
 const MACHINE_NAME = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -133,9 +133,9 @@ export function machineIn(text: string): ComposeMachine | null {
         return null;
     }
 
-    const optional = (key: 'image' | 'prepare' | 'login'): Partial<ComposeMachine> => (fields.has(key) ? { [key]: fields.get(key) } : {});
+    const optional = (key: 'image' | 'prepare' | 'inside'): Partial<ComposeMachine> => (fields.has(key) ? { [key]: fields.get(key) } : {});
 
-    return { name, start, ...optional('image'), ...optional('prepare'), ...optional('login') };
+    return { name, start, ...optional('image'), ...optional('prepare'), ...optional('inside') };
 }
 
 /* A digest of the whole file: any change to it, also to a comment, has a person look at the launches again. */

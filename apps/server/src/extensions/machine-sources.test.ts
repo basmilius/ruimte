@@ -12,10 +12,20 @@ const START: MachineStartDescription = {
         { title: 'Prepare workbench', spawn: { command: 'sh', args: ['-c', 'sh prepare.sh'], env: { HARBOR_MACHINE: 'workbench' } } },
         { title: 'Start workbench', spawn: { command: 'sh', args: ['-c', 'sh start.sh'], cwd: 'ops' } }
     ],
-    login: { command: 'sh', args: ['-c', 'sh login.sh'] },
+    inside: { command: 'box', args: ['exec', 'workbench'], env: { BOX: 'workbench' } },
     fingerprint: 'revision-1'
 };
-const LOGIN = 'sh -c sh login.sh';
+const ACCOUNT = 'account-1';
+const JOIN = `box exec workbench ruimte join ${ACCOUNT}`;
+const REGISTRATION = {
+    id: 'workbench',
+    name: 'workbench',
+    icon: null,
+    brokerUrl: 'wss://broker.ruimte.app',
+    publicKey: Buffer.from(Uint8Array.from({ length: 32 }, (_value, i) => i)).toString('base64url'),
+    issuedAt: 1_000_000,
+    signature: 's'.repeat(86)
+};
 
 interface World {
     sources: MachineSources;
@@ -25,6 +35,8 @@ interface World {
     approved: string[];
     /* What the source describes from here on. */
     describes(start: MachineStartDescription | Error): void;
+    /* The account this machine is on from here on; null takes it off. */
+    onAccount(accountId: string | null): void;
     /* Whether the source says a machine runs there, and whether it lists the place at all. */
     lists(candidates: { running: boolean }[]): void;
     /* The signal the source was handed for the start it describes now, and an answer it holds back when a test sets one. */
@@ -37,6 +49,7 @@ async function world(): Promise<World> {
     const approved: string[] = [];
     let start: MachineStartDescription | Error = START;
     let candidates = [{ running: false }];
+    let account: string | null = ACCOUNT;
     const describing: World['describing'] = { signal: null, answer: null };
     const host: MachineSourceHost = {
         list: async () => [
@@ -77,8 +90,11 @@ async function world(): Promise<World> {
             }
 
             return cwd === undefined ? folder : `${folder}/${cwd}`;
-        }
+        },
+        account: async () => account
     });
+
+    steps.script(JOIN, { lines: [JSON.stringify(REGISTRATION)] });
 
     sources.subscribe('client-1', (event) => void heard.push((event.payload as MachineSourceChangedEvent).candidate));
     await sources.list(PROJECT.id, 'client-1');
@@ -90,6 +106,9 @@ async function world(): Promise<World> {
         approved,
         describes: (next) => {
             start = next;
+        },
+        onAccount: (next) => {
+            account = next;
         },
         lists: (next) => {
             candidates = next;
@@ -127,7 +146,7 @@ describe('MachineSources', () => {
                 programs: [
                     { title: 'Prepare workbench', command: "sh -c 'sh prepare.sh'", cwd: '/work/shop', env: { HARBOR_MACHINE: 'workbench' } },
                     { title: 'Start workbench', command: "sh -c 'sh start.sh'", cwd: '/work/shop/ops' },
-                    { login: true, command: "sh -c 'sh login.sh'", cwd: '/work/shop' }
+                    { join: true, command: JOIN, cwd: '/work/shop', env: { BOX: 'workbench' } }
                 ]
             }
         });
@@ -142,7 +161,6 @@ describe('MachineSources', () => {
         const digest = (await sources.start(TARGET)).held?.digest;
 
         steps.script('sh -c sh prepare.sh', { lines: ['Pulled the image'] });
-        steps.script(LOGIN, { lines: ['Open https://station.ruimte.app/link?code=BCDF-GHJK', 'BCDF-GHJK'], stays: true });
 
         expect((await sources.start(TARGET, digest)).state).toBe('starting');
         await settled();
@@ -150,25 +168,121 @@ describe('MachineSources', () => {
         expect(steps.ran).toEqual([
             { command: 'sh', args: ['-c', 'sh prepare.sh'], cwd: '/work/shop', env: { PATH: '/bin', HARBOR_MACHINE: 'workbench' } },
             { command: 'sh', args: ['-c', 'sh start.sh'], cwd: '/work/shop/ops', env: { PATH: '/bin' } },
-            { command: 'sh', args: ['-c', 'sh login.sh'], cwd: '/work/shop', env: { PATH: '/bin' } }
+            { command: 'box', args: ['exec', 'workbench', 'ruimte', 'join', ACCOUNT], cwd: '/work/shop', env: { PATH: '/bin', BOX: 'workbench' } }
         ]);
-        // The sign-in waits for the person, and its lines are what they act on.
+        // What the new machine printed is its registration, which no client reads as a line.
         expect(heard.at(-1)).toMatchObject({
             state: 'joining',
-            lines: [
-                'Reading harbor.yaml',
-                'Prepare workbench',
-                'Pulled the image',
-                'Start workbench',
-                'Open https://station.ruimte.app/link?code=BCDF-GHJK',
-                'BCDF-GHJK'
-            ]
+            join: 'signed',
+            lines: ['Reading harbor.yaml', 'Prepare workbench', 'Pulled the image', 'Start workbench']
         });
+        expect(JSON.stringify(heard)).not.toContain(REGISTRATION.signature);
+    });
 
-        steps.finish(LOGIN);
+    test('hands the registration to a client on the same account, has the machine sign again for the next, and ends once one posted it', async () => {
+        const { sources, steps, heard } = await world();
+
+        await expect(sources.registration(TARGET, ACCOUNT)).rejects.toMatchObject({ code: 'not-joining' });
+        await sources.start(TARGET, (await sources.start(TARGET)).held?.digest);
+        await settled();
+
+        await expect(sources.registration(TARGET, 'account-2')).rejects.toMatchObject({ code: 'other-account' });
+        expect(await sources.registration(TARGET, ACCOUNT)).toEqual(REGISTRATION);
+        expect(steps.ran).toHaveLength(3);
+
+        // The client that took it went away before it posted, so the next one asks the machine again.
+        steps.script(JOIN, { lines: [JSON.stringify({ ...REGISTRATION, issuedAt: 2_000_000, automatic: true })] });
+
+        expect(await sources.registration(TARGET, ACCOUNT)).toEqual({ ...REGISTRATION, issuedAt: 2_000_000 });
+        expect(steps.ran).toHaveLength(4);
+        expect(heard.at(-1)).toMatchObject({ state: 'joining', join: 'signed' });
+
+        sources.joined(TARGET);
+
+        expect(heard.at(-1)).toMatchObject({ state: 'done', join: 'joined' });
+        await expect(sources.registration(TARGET, ACCOUNT)).rejects.toMatchObject({ code: 'not-joining' });
+    });
+
+    test('signs nothing and runs nothing on a machine that is on no account, and says so', async () => {
+        const { sources, steps, onAccount } = await world();
+
+        onAccount(null);
+
+        expect(await sources.start(TARGET)).toMatchObject({
+            state: 'failed',
+            failure: 'This computer is on no account, so the new machine has none to join. Put this computer on your account first.'
+        });
+        expect(steps.ran).toEqual([]);
+    });
+
+    test('asks again for another account, and signs for none the yes did not cover', async () => {
+        const { sources, steps, heard, onAccount } = await world();
+        const digest = (await sources.start(TARGET)).held?.digest;
+
+        onAccount('account-2');
+
+        const again = await sources.start(TARGET, digest);
+
+        expect(again.state).toBe('held');
+        expect(again.held?.programs.at(-1)?.command).toBe('box exec workbench ruimte join account-2');
+
+        // The machine changes its account while the programs of an approved start run.
+        steps.script('sh -c sh prepare.sh', { stays: true });
+        await sources.start(TARGET, again.held?.digest);
+        await settled();
+        onAccount(ACCOUNT);
+        steps.finish('sh -c sh prepare.sh');
+        await settled();
+
+        expect(heard.at(-1)).toMatchObject({ state: 'failed', failure: 'This computer is no longer on the account this start was approved for. Start again.' });
+        expect(steps.ran.map((step) => step.command)).toEqual(['sh', 'sh']);
+    });
+
+    test('says why the new machine would not join, in its own words, and takes nothing that is no registration', async () => {
+        const { sources, steps, heard } = await world();
+        const digest = (await sources.start(TARGET)).held?.digest;
+
+        steps.script(JOIN, { errors: ['This machine is on another account. Take it off that account first, with `ruimte logout` on this machine.'], code: 1 });
+        await sources.start(TARGET, digest);
+        await settled();
+
+        expect(heard.at(-1)).toMatchObject({
+            state: 'failed',
+            failure: 'This machine is on another account. Take it off that account first, with `ruimte logout` on this machine.'
+        });
+        expect(heard.at(-1)?.join).toBeUndefined();
+
+        steps.script(JOIN, { lines: ['{"id":"workbench"}'] });
+        await sources.start(TARGET);
+        await settled();
+
+        expect(heard.at(-1)).toMatchObject({ state: 'failed', failure: 'The new machine answered with something Ruimte cannot read, so it is on no account.' });
+    });
+
+    test('a start without a way in ends once its programs did, on no account', async () => {
+        const { sources, steps, heard, describes, onAccount } = await world();
+        const { inside: _inside, ...start } = START;
+
+        onAccount(null);
+        describes(start);
+        await sources.start(TARGET, (await sources.start(TARGET)).held?.digest);
         await settled();
 
         expect(heard.at(-1)?.state).toBe('done');
+        expect(heard.at(-1)?.join).toBeUndefined();
+        expect(steps.ran).toHaveLength(2);
+    });
+
+    test("a person's stop lets go of a registration that waits for a client", async () => {
+        const { sources, heard } = await world();
+
+        await sources.start(TARGET, (await sources.start(TARGET)).held?.digest);
+        await settled();
+        sources.stop(TARGET);
+
+        expect(heard.at(-1)?.state).toBe('stopped');
+        expect(heard.at(-1)?.join).toBeUndefined();
+        await expect(sources.registration(TARGET, ACCOUNT)).rejects.toMatchObject({ code: 'not-joining' });
     });
 
     test('starts at once what a person approved before, and asks again once the source read something else', async () => {
@@ -177,10 +291,12 @@ describe('MachineSources', () => {
 
         await sources.start(TARGET, digest);
         await settled();
+        sources.joined(TARGET);
 
         expect((await sources.start(TARGET)).state).toBe('starting');
         await settled();
         expect(steps.ran).toHaveLength(6);
+        sources.joined(TARGET);
 
         // The programs are the same. The file they came from is not.
         describes({ ...START, fingerprint: 'revision-2' });

@@ -7,9 +7,9 @@ interface MachineSourcesDeps {
 
 /*
  * The machine sources of extensions, apart from `extensionsArea` since they hold something for a client. Owner only,
- * all three: a start runs programs on this machine, so the yes to it comes from the app on this machine and from nobody
- * a statement let in. What a start writes holds the page and the code that put a machine on the account, which is why
- * only a client that asked for the list hears it.
+ * all of them: a start runs programs on this machine and puts the machine it starts on this machine's account, so the
+ * yes to it comes from the app on this machine and from nobody a statement let in. The registration the new machine
+ * signed goes to the owner alone for the same reason: whoever holds it can post it.
  */
 export function machineSourcesArea({ sources }: MachineSourcesDeps): Area {
     return {
@@ -29,6 +29,22 @@ export function machineSourcesArea({ sources }: MachineSourcesDeps): Area {
                 'extension.machineStop',
                 (target) => {
                     sources.stop(target);
+
+                    return {};
+                },
+                { owner: true }
+            );
+
+            dispatcher.register(
+                'extension.machineRegistration',
+                async ({ accountId, ...target }) => ({ registration: await sources.registration(target, accountId) }),
+                { owner: true }
+            );
+
+            dispatcher.register(
+                'extension.machineJoined',
+                (target) => {
+                    sources.joined(target);
 
                     return {};
                 },

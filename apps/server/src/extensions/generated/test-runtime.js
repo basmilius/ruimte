@@ -7541,7 +7541,7 @@ var MachineCandidateDescriptionSchema = object({
 });
 var MachineStartDescriptionSchema = object({
   steps: array(object({ title: string2().trim().min(1).max(200), spawn: SpawnDescriptionSchema })).min(1).max(MAX_MACHINE_STEPS),
-  login: SpawnDescriptionSchema.optional(),
+  inside: SpawnDescriptionSchema.optional(),
   fingerprint: string2().min(1).max(256)
 });
 function candidatesListed(answer, refused) {

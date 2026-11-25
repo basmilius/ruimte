@@ -23,7 +23,7 @@ const MACHINE = [
     '  image: harbor/workbench:1',
     '  prepare: sh scripts/prepare.sh',
     '  start: sh scripts/start.sh',
-    '  login: sh scripts/login.sh',
+    '  inside: sh scripts/inside.sh',
     ''
 ].join('\n');
 const PERMISSIONS: Record<string, string> = manifest.permissions;
@@ -228,7 +228,7 @@ describe('Harbor on the machine', () => {
         expect(await source.list()).toEqual([]);
     });
 
-    test('describes the shell lines of the file as the steps of a start, with its sign-in last and the digest of the file', async () => {
+    test('describes the shell lines of the file as the steps of a start, with the way in to the machine and the digest of the file', async () => {
         const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': `${COMPOSE}${MACHINE}` } });
         const source = server.machineSource('compose-machine');
         const env = { HARBOR_MACHINE: 'workbench' };
@@ -240,7 +240,7 @@ describe('Harbor on the machine', () => {
                 { title: 'Prepare workbench', spawn: { command: 'sh', args: ['-c', 'sh scripts/prepare.sh'], env } },
                 { title: 'Start workbench', spawn: { command: 'sh', args: ['-c', 'sh scripts/start.sh'], env } }
             ],
-            login: { command: 'sh', args: ['-c', 'sh scripts/login.sh'], env },
+            inside: { command: 'sh', args: ['-c', 'sh scripts/inside.sh "$@"', 'harbor'], env },
             fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/)
         });
         // It described and ran nothing: all it asked the machine was to read the file.
@@ -251,7 +251,7 @@ describe('Harbor on the machine', () => {
         expect((await source.start('workbench')).start.fingerprint).not.toBe(start.fingerprint);
     });
 
-    test('describes a start without a sign-in or a preparation the file leaves out', async () => {
+    test('describes a start without a way in or a preparation the file leaves out', async () => {
         const server = await createTestServer<HarborServer>({ files: { 'harbor.yaml': 'machine:\n  name: bare\n  start: sh up.sh\n' } });
         const source = server.machineSource('compose-machine');
 

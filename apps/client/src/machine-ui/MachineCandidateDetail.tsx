@@ -4,7 +4,7 @@ import type { MachineCandidate, MachineStartProgram } from '@ruimte/contracts';
 import { Container } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { signInPageOf, underWay, useCandidateActions } from '@/machine-ui/machine-candidates';
+import { underWay, useCandidateActions, useCandidateJoin } from '@/machine-ui/machine-candidates';
 import { SettingsSection } from '@/machines/SettingsSection';
 
 function Program({ program }: { program: MachineStartProgram }) {
@@ -12,7 +12,7 @@ function Program({ program }: { program: MachineStartProgram }) {
 
     return (
         <SettingsRow
-            label={program.login === true ? t('machines.sources.held.signIn') : program.title}
+            label={program.join === true ? t('machines.sources.held.join') : program.title}
             description={
                 <span className="flex min-w-0 flex-col gap-0.5">
                     <code className="font-mono break-all text-text">{program.command}</code>
@@ -24,15 +24,16 @@ function Program({ program }: { program: MachineStartProgram }) {
 }
 
 /*
- * One place an extension can start a machine in. A start shows what would run on this computer and waits for a yes.
- * The new machine joins the account through its own sign-in, which this pane only relays: the page and the code are
- * in what the start wrote, and the person opens the page and approves there.
+ * One place an extension can start a machine in. A start shows what would run on this computer and waits for a yes,
+ * which also says that the new machine comes on the person's account. Once it signed, this pane posts that with the
+ * person's session, and says so when nobody is signed in or the account would not take it.
  */
 export function MachineCandidateDetail({ projectId, candidate }: { projectId: string; candidate: MachineCandidate }) {
     const { t } = useTranslation('settings');
     const { failure, start, stop } = useCandidateActions(projectId, candidate);
     const source = candidate.source.title;
-    const page = candidate.state === 'joining' ? signInPageOf(candidate.lines) : null;
+    const join = useCandidateJoin(projectId, candidate);
+    const joins = candidate.held?.programs.some((program) => program.join === true) === true;
     const stopButton = (
         <Button variant="secondary" onClick={stop}>
             {t('machines.sources.stop')}
@@ -52,7 +53,13 @@ export function MachineCandidateDetail({ projectId, candidate }: { projectId: st
     let outcome: ReactNode = null;
 
     if (candidate.state === 'done') {
-        outcome = <SettingsRow muted label={t('machines.sources.done.label')} description={t('machines.sources.done.description')} />;
+        outcome = (
+            <SettingsRow
+                muted
+                label={t('machines.sources.done.label')}
+                description={t(candidate.join === 'joined' ? 'machines.sources.done.joined' : 'machines.sources.done.description')}
+            />
+        );
     } else if (candidate.state === 'stopped') {
         outcome = <SettingsRow muted label={t('machines.sources.stopped.label')} description={t('machines.sources.stopped.description')} />;
     } else if (candidate.state === 'failed') {
@@ -88,20 +95,32 @@ export function MachineCandidateDetail({ projectId, candidate }: { projectId: st
                 {!candidate.running && !underWay(candidate) && candidate.state !== 'held' && startRow}
                 {candidate.state === 'preparing' && <SettingsRow label={t('machines.sources.preparing.label', { source })} control={stopButton} />}
                 {candidate.state === 'starting' && <SettingsRow label={t('machines.sources.starting.label')} control={stopButton} />}
-                {candidate.state === 'joining' && (
+                {candidate.state === 'joining' && !join.needsSignIn && join.failure === null && (
+                    <SettingsRow label={t('machines.sources.joining.label')} control={stopButton} />
+                )}
+                {join.needsSignIn && (
                     <SettingsRow
-                        label={t('machines.sources.joining.label')}
+                        label={t('machines.sources.joining.signIn.label')}
+                        description={t('machines.sources.joining.signIn.description')}
+                        control={stopButton}
+                    />
+                )}
+                {join.failure !== null && (
+                    <SettingsRow
+                        label={t('machines.sources.joining.failed.label')}
                         description={
-                            <span className="flex min-w-0 flex-col items-start gap-1">
-                                <span>{t('machines.sources.joining.description')}</span>
-                                {page !== null && (
-                                    <a className="text-accent hover:underline" href={page} target="_blank" rel="noreferrer">
-                                        {t('machines.sources.joining.open')}
-                                    </a>
-                                )}
+                            <span className="break-words text-status-error" role="alert">
+                                {join.failure}
                             </span>
                         }
-                        control={stopButton}
+                        control={
+                            <span className="flex shrink-0 items-center gap-2">
+                                {stopButton}
+                                <Button variant="secondary" onClick={join.retry}>
+                                    {t('machines.sources.joining.failed.retry')}
+                                </Button>
+                            </span>
+                        }
                     />
                 )}
                 {failure !== null && (
@@ -122,6 +141,7 @@ export function MachineCandidateDetail({ projectId, candidate }: { projectId: st
                     ))}
                     <SettingsRow
                         label={t('machines.sources.held.ask')}
+                        description={joins ? t('machines.sources.held.joins') : undefined}
                         control={
                             <span className="flex shrink-0 items-center gap-2">
                                 <Button variant="secondary" onClick={stop}>

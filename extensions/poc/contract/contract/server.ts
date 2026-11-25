@@ -426,7 +426,7 @@ export function serverContract(open: OpenServerWorld): void {
             expect(await world.machineStart('probe-machines', 'box', false)).toEqual({
                 start: {
                     steps: [{ title: 'Start the box', spawn: { command: 'sh', args: ['-c', 'box up'] } }],
-                    login: { command: 'sh', args: ['-c', 'box login'] },
+                    inside: { command: 'box', args: ['exec', 'box'] },
                     fingerprint: 'revision-1'
                 },
                 reports: ['Describing box'],

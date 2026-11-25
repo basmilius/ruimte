@@ -49,7 +49,7 @@ export const MachineStartDescriptionSchema = z.object({
         .array(z.object({ title: z.string().trim().min(1).max(200), spawn: SpawnDescriptionSchema }))
         .min(1)
         .max(MAX_MACHINE_STEPS),
-    login: SpawnDescriptionSchema.optional(),
+    inside: SpawnDescriptionSchema.optional(),
     fingerprint: z.string().min(1).max(256)
 });
 export type MachineStartDescription = z.infer<typeof MachineStartDescriptionSchema>;

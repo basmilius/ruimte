@@ -9,8 +9,8 @@ export interface MachineStepRun {
 }
 
 interface MachineStepHooks {
-    /* A line the program wrote, on either stream. */
-    line(text: string): void;
+    /* A line the program wrote, and on which stream: what Ruimte reads from a program is on `out` alone. */
+    line(text: string, stream: 'out' | 'err'): void;
     /* Aborted by a person's stop, which asks the program to end once and waits for it. */
     signal: AbortSignal;
 }
@@ -45,8 +45,8 @@ function lineReader(line: (text: string) => void): { read(chunk: string): void; 
 export const runMachineStep: RunMachineStep = (step, hooks) =>
     new Promise((resolve, reject) => {
         const child = spawn(step.command, [...step.args], { cwd: step.cwd, env: step.env, stdio: ['ignore', 'pipe', 'pipe'] });
-        const out = lineReader(hooks.line);
-        const err = lineReader(hooks.line);
+        const out = lineReader((text) => hooks.line(text, 'out'));
+        const err = lineReader((text) => hooks.line(text, 'err'));
         const stop = (): void => void child.kill('SIGTERM');
 
         hooks.signal.addEventListener('abort', stop);

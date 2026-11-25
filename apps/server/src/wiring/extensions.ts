@@ -227,7 +227,8 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         },
         run: seams.machineSteps,
         env: seams.env,
-        cwdOf: async (folder, cwd) => (cwd === undefined ? folder : insideProject(folder, cwd, worktreePaths))
+        cwdOf: async (folder, cwd) => (cwd === undefined ? folder : insideProject(folder, cwd, worktreePaths)),
+        account: async () => (await later.machine().auth.accountBinding())?.id ?? null
     });
     const notificationChannels = new NotificationChannels(
         {

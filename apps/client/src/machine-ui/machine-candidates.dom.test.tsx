@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { MachineCandidate } from '@ruimte/contracts';
 import { act } from 'react';
+import { startPulsarAccount, usePulsarAccount } from '@/pulsar/account';
 import { useUi } from '@/state/ui';
+import { TransportError } from '@/transport-api/transport';
+import { forgetAccountMachines } from '@/workspace/account-machines';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { buttonWithText, everything, installDesktop, removeDesktop } from '../../testing/dom-helpers';
 import { FakeMachine } from '../../testing/fake-machine';
@@ -28,10 +31,78 @@ const HELD: MachineCandidate = {
         digest: 'digest-1',
         programs: [
             { title: 'Start workbench', command: "sh -c 'sh scripts/start.sh'", cwd: '/work/atlas', env: { HARBOR_MACHINE: 'workbench' } },
-            { login: true, command: "sh -c 'sh scripts/login.sh'", cwd: '/work/atlas' }
+            { join: true, command: 'sh -c \'sh scripts/inside.sh "$@"\' harbor ruimte join account-1', cwd: '/work/atlas' }
         ]
     }
 };
+
+const ACCOUNT = { id: 'account-1', provider: 'github' as const, login: 'someone', displayName: null };
+const ACCESS_TOKEN = 'a'.repeat(43);
+const FAR = Date.UTC(2100, 0, 1);
+const REGISTRATION = {
+    id: 'workbench',
+    name: 'workbench',
+    icon: null,
+    brokerUrl: 'wss://broker.ruimte.app',
+    publicKey: Buffer.from(Uint8Array.from({ length: 32 }, (_value, i) => i)).toString('base64url'),
+    issuedAt: 1_000_000,
+    signature: 's'.repeat(86)
+};
+const realFetch = globalThis.fetch;
+
+/* The address book as this window meets it: what was posted to it, and whether it takes a registration. */
+interface Book {
+    posted: Array<{ authorization: string | null; body: unknown }>;
+    listed: number;
+    refuses: boolean;
+}
+
+/* A person signed in to the account, with an address book that keeps what this window posts. */
+async function signIn(): Promise<Book> {
+    const book: Book = { posted: [], listed: 0, refuses: false };
+
+    globalThis.fetch = (async (input: string, init: RequestInit = {}) => {
+        const path = new URL(input).pathname;
+
+        if (path === '/v1/providers') {
+            return Response.json({ providers: ['github'] });
+        }
+
+        if (path !== '/v1/machines') {
+            return Response.json({ error: { code: 'not-found', message: 'Not found' } }, { status: 404 });
+        }
+
+        if (init.method !== 'POST') {
+            book.listed += 1;
+
+            return Response.json({ machines: [] });
+        }
+
+        book.posted.push({ authorization: new Headers(init.headers).get('authorization'), body: JSON.parse(String(init.body)) });
+
+        if (book.refuses) {
+            return Response.json({ error: { code: 'bad-signature', message: 'The signature does not match this machine' } }, { status: 403 });
+        }
+
+        const { issuedAt: _issuedAt, signature: _signature, ...listed } = REGISTRATION;
+
+        return Response.json({ machine: { ...listed, lastSeenAt: 1_000_000 } });
+    }) as typeof fetch;
+
+    await startPulsarAccount({
+        addressBook: async () => 'https://pulsar.test',
+        keeper: {
+            exchange: async () => {
+                throw new Error('not used');
+            },
+            refresh: async () => ({ accessToken: ACCESS_TOKEN, accessExpiresAt: FAR, expiresAt: FAR, account: ACCOUNT }),
+            restore: async () => ({ account: ACCOUNT, expiresAt: FAR }),
+            signOut: async () => undefined
+        }
+    });
+
+    return book;
+}
 
 let machine: FakeMachine;
 let workspace: FakeWorkspace;
@@ -68,6 +139,10 @@ afterEach(async () => {
     await page.unmount();
     workspace.close();
     removeDesktop();
+    globalThis.fetch = realFetch;
+    await startPulsarAccount(null);
+    usePulsarAccount.setState(usePulsarAccount.getInitialState());
+    forgetAccountMachines();
 });
 
 describe('Settings > Machines with a place an extension can start a machine in', () => {
@@ -95,7 +170,6 @@ describe('Settings > Machines with a place an extension can start a machine in',
 
         expect(machine.requests('extension.machineStart')).toEqual([TARGET]);
         expect(everything()).toContain("sh -c 'sh scripts/start.sh'");
-        expect(everything()).toContain('Sign in on the new machine');
         expect(everything()).toContain('In /work/atlas');
         expect(everything()).toContain('Harbor read this from a file in this project.');
         expect(everything()).toContain('Waits for your approval');
@@ -126,21 +200,129 @@ describe('Settings > Machines with a place an extension can start a machine in',
         expect(machine.requests('extension.machineStop')).toEqual([TARGET, TARGET]);
     });
 
-    test('brings the person to the sign-in of the new machine, with the page it named, and says when it runs', async () => {
+    test('says that the approval also puts the new machine on the account', async () => {
+        candidates = [HELD];
         await open();
         await until(() => row('workbench') !== null);
         await clickOn(row('workbench'));
-        await tell({ ...WORKBENCH, state: 'joining', lines: ['Open this page and sign in:', '  https://station.ruimte.app/link?code=BCDF-GHJK', 'BCDF-GHJK'] });
-        await until(() => everything().includes('Add the new machine to your account'));
+        await until(() => everything().includes('Run this on this computer?'));
 
-        expect(everything()).toContain('check that it shows the same code');
-        expect(document.querySelector<HTMLAnchorElement>('a[href="https://station.ruimte.app/link?code=BCDF-GHJK"]')?.textContent).toBe('Open the page');
-        expect(everything()).toContain('Waits for you to sign in');
+        expect(everything()).toContain('Put the new machine on your account');
+        expect(everything()).toContain('Your approval also puts the new machine on your account.');
+    });
 
+    test('posts what the new machine signed with the session of the person, and says that it joined', async () => {
+        const book = await signIn();
+
+        machine.answer('extension.machineRegistration', () => ({ registration: REGISTRATION }));
+        candidates = [{ ...WORKBENCH, state: 'joining' }];
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
+        await until(() => everything().includes('Putting the new machine on your account'));
+
+        // Nothing is asked before the new machine signed.
+        expect(machine.requests('extension.machineRegistration')).toEqual([]);
+
+        await tell({ ...WORKBENCH, state: 'joining', join: 'signed' });
+        await until(() => machine.requests('extension.machineJoined').length === 1);
+
+        expect(machine.requests('extension.machineRegistration')).toEqual([{ ...TARGET, accountId: ACCOUNT.id }]);
+        expect(book.posted).toEqual([{ authorization: `Bearer ${ACCESS_TOKEN}`, body: REGISTRATION }]);
+        expect(machine.requests('extension.machineJoined')).toEqual([TARGET]);
+
+        await tell({ ...WORKBENCH, state: 'done', join: 'joined' });
+        await until(() => everything().includes('It is on your account, in the list of machines.'));
+        // The account's own list is read again, which is where the machine shows like any other.
+        await until(() => book.listed > 0);
+    });
+
+    test('finishes a start another window left signed, as soon as someone looks at the place', async () => {
+        const book = await signIn();
+
+        machine.answer('extension.machineRegistration', () => ({ registration: REGISTRATION }));
+        candidates = [{ ...WORKBENCH, state: 'joining', join: 'signed' }];
+        await open();
+        await until(() => row('workbench') !== null);
+
+        expect(book.posted).toEqual([]);
+
+        await clickOn(row('workbench'));
+        await until(() => machine.requests('extension.machineJoined').length === 1);
+
+        expect(book.posted).toHaveLength(1);
+    });
+
+    test('asks a person who is not signed in to sign in, and posts nothing until then', async () => {
+        candidates = [{ ...WORKBENCH, state: 'joining', join: 'signed' }];
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
+        await until(() => everything().includes('Sign in to put the new machine on your account'));
+
+        expect(everything()).toContain('The machine runs. Sign in to your account in this app, and Ruimte adds it.');
+        expect(machine.requests('extension.machineRegistration')).toEqual([]);
+        expect(buttonWithText('Stop')).not.toBeNull();
+    });
+
+    test('says why a new machine that is on another account did not join', async () => {
+        const failure = 'This machine is on another account. Take it off that account first, with `ruimte logout` on this machine.';
+
+        await signIn();
+        candidates = [{ ...WORKBENCH, state: 'failed', failure }];
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
+        await until(() => everything().includes(failure));
+
+        expect(everything()).toContain('The machine did not start');
+        expect(machine.requests('extension.machineRegistration')).toEqual([]);
+    });
+
+    test('says why the account did not take the registration, and posts a fresh one on Try again', async () => {
+        const book = await signIn();
+
+        book.refuses = true;
+        machine.answer('extension.machineRegistration', () => ({ registration: REGISTRATION }));
+        candidates = [{ ...WORKBENCH, state: 'joining', join: 'signed' }];
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
+        await until(() => everything().includes('The new machine is not on your account yet'));
+
+        expect(everything()).toContain('The signature does not match this machine');
+        expect(machine.requests('extension.machineJoined')).toEqual([]);
+
+        book.refuses = false;
+        await clickOn(buttonWithText('Try again'));
+        await until(() => machine.requests('extension.machineJoined').length === 1);
+
+        expect(machine.requests('extension.machineRegistration')).toHaveLength(2);
+        expect(book.posted).toHaveLength(2);
+    });
+
+    test('says so when the machine on this computer is on another account than the person', async () => {
+        await signIn();
+        machine.answer('extension.machineRegistration', () => {
+            throw new TransportError('other-account', 'The machine on this computer is on another account than the one you are signed in to');
+        });
+        candidates = [{ ...WORKBENCH, state: 'joining', join: 'signed' }];
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
+        await until(() => everything().includes('The machine on this computer is on another account than the one you are signed in to.'));
+
+        expect(machine.requests('extension.machineJoined')).toEqual([]);
+    });
+
+    test('says that a machine without a way on to the account runs, and where it shows once it is on it', async () => {
+        await open();
+        await until(() => row('workbench') !== null);
+        await clickOn(row('workbench'));
         await tell({ ...WORKBENCH, state: 'done' });
         await until(() => everything().includes('The machine runs'));
 
-        expect(document.querySelector('a[href^="https://station.ruimte.app/link"]')).toBeNull();
+        expect(everything()).toContain('Once it is on your account, it is in the list of machines.');
     });
 
     test('says why a start failed, and offers no start where a machine already runs', async () => {

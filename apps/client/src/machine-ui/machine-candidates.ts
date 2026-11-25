@@ -1,13 +1,14 @@
 import { messageOf } from '@adecore/ui';
 import type { MachineCandidate } from '@ruimte/contracts';
 import { useEffect, useState } from 'react';
+import { usePulsarAccount } from '@/pulsar/account';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { useProject } from '@/state/project';
 import { transportFor } from '@/transport';
 import { orNull } from '@/transport-api/transport';
 import { useMachineAnswers } from '@/transport/features';
 import { useEndpointConnection } from '@/transport/status';
-import { refreshAccountMachines } from '@/workspace/account-machines';
+import { joinStartedMachine, refreshAccountMachines } from '@/workspace/account-machines';
 
 /* Which place of which source, as the row and the detail name it. */
 export function candidateKey(candidate: MachineCandidate): string {
@@ -18,19 +19,6 @@ const UNDER_WAY: readonly MachineCandidate['state'][] = ['preparing', 'starting'
 
 export function underWay(candidate: MachineCandidate): boolean {
     return UNDER_WAY.includes(candidate.state);
-}
-
-/* The page a new machine's sign-in names in what it wrote, for a link beside its lines. */
-export function signInPageOf(lines: readonly string[]): string | null {
-    for (const line of lines.toReversed()) {
-        const page = /https:\/\/[^\s"'<>]+/.exec(line)?.[0];
-
-        if (page !== undefined) {
-            return page;
-        }
-    }
-
-    return null;
 }
 
 interface Listed {
@@ -95,6 +83,54 @@ export function useMachineCandidates(): { projectId: string | null; candidates: 
     }, [asks, projectId]);
 
     return { projectId, candidates: asks && listed?.projectId === projectId ? listed.candidates : [] };
+}
+
+interface CandidateJoin {
+    /* The new machine signed, and nobody is signed in here to post it. */
+    needsSignIn: boolean;
+    /* Why the account did not take it. */
+    failure: string | null;
+    retry(): void;
+}
+
+/*
+ * Finishes what a start left for a client: the new machine signed itself onto the account, and a client signed in to it
+ * posts that. Whoever looks at the place does, so a start whose window closed in between is finished by the next one.
+ */
+export function useCandidateJoin(projectId: string, candidate: MachineCandidate): CandidateJoin {
+    const accountId = usePulsarAccount((s) => s.account?.id ?? null);
+    const [failure, setFailure] = useState<string | null>(null);
+    const [attempt, setAttempt] = useState(0);
+    const signed = candidate.state === 'joining' && candidate.join === 'signed';
+    const { extension, id: source } = candidate.source;
+    const place = candidate.id;
+
+    useEffect(() => {
+        if (!signed || accountId === null) {
+            return;
+        }
+
+        let alive = true;
+
+        joinStartedMachine({ projectId, extension, source, candidate: place }).catch((e: unknown) => {
+            if (alive) {
+                setFailure(messageOf(e));
+            }
+        });
+
+        return () => {
+            alive = false;
+        };
+    }, [signed, accountId, attempt, projectId, extension, source, place]);
+
+    return {
+        needsSignIn: signed && accountId === null,
+        failure: signed ? failure : null,
+        retry() {
+            setFailure(null);
+            setAttempt((before) => before + 1);
+        }
+    };
 }
 
 interface CandidateActions {

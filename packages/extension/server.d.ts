@@ -216,11 +216,13 @@ export interface MachineStart {
     /** In order, at most 16. A step that ends with another code than 0 ends the start. */
     steps: MachineStep[];
     /**
-     * Runs `ruimte login` on the new machine and stays until it ends. The person reads its lines, opens the page they
-     * name, signs in and approves the code, which puts the machine on their account. Leave it out for a machine that is
-     * on the account already. Nothing else puts a machine on an account.
+     * How Ruimte runs a command where the new machine lives, such as the `exec` of a container engine with the name of
+     * the container. After the steps, Ruimte appends a command of its own and its arguments to `args` and runs that:
+     * it has the new machine sign itself onto the account of the machine that started it, which the person's approval
+     * of the start covers. The extension never sees the command's answer. Leave it out for a machine that is on the
+     * account already, or that a person adds with `ruimte login`.
      */
-    login?: SpawnDescription;
+    inside?: SpawnDescription;
     /** A digest of every file that decides what runs. A change to it asks a person again. */
     fingerprint: string;
 }
@@ -237,10 +239,11 @@ export interface PrepareContext {
  * Needs `machines.provide`. Proposed: name `machineSources` under `proposed` in the manifest, and the id under
  * `provides.machineSources`. Its places show in Settings, Machines of the app on this computer, under `title`. A start
  * asks `start` what to run, and runs it only after a person approved the programs, their folder, their variables and
- * the fingerprint together. The new machine has an identity of its own and joins the person's account through its own
- * `ruimte login`, as every machine does: no call hands an extension a key, a token or a connection to it, and nothing
- * mounts the login of a CLI on this computer into it. Ruimte stops or removes nothing a start made. At most 16 places
- * per source. Throws for an id the manifest does not list.
+ * the fingerprint together. The new machine has an identity of its own and signs itself onto the account of the machine
+ * that started it, through `inside`, on that same approval: no call hands an extension a key, a token, a registration
+ * or a connection to it, and nothing mounts the login of a CLI on this computer into it. A start with `inside` on a
+ * machine that is on no account ends before anything runs. Ruimte stops or removes nothing a start made. At most 16
+ * places per source. Throws for an id the manifest does not list.
  */
 export function defineMachineSource(source: {
     id: string;

@@ -1,10 +1,13 @@
 import type { MachineStepRun, RunMachineStep } from '../extensions/machine-steps.ts';
 
 interface Outcome {
+    /* What it writes on its output. */
     lines?: readonly string[];
+    /* What it writes beside its output, as a program says why it failed. */
+    errors?: readonly string[];
     /* 0 without one. */
     code?: number | null;
-    /* Stays up until `finish` is called or a person stops it, as a login that waits for its code does. */
+    /* Stays up until `finish` is called or a person stops it, as a build that takes long does. */
     stays?: boolean;
 }
 
@@ -32,7 +35,11 @@ export class FakeMachineSteps {
         this.ran.push(step);
 
         for (const line of outcome.lines ?? []) {
-            hooks.line(line);
+            hooks.line(line, 'out');
+        }
+
+        for (const line of outcome.errors ?? []) {
+            hooks.line(line, 'err');
         }
 
         if (outcome.stays !== true) {

@@ -26,7 +26,7 @@ const MACHINE = [
     '  image: harbor/workbench:1',
     '  prepare: sh scripts/prepare.sh',
     '  start: sh scripts/start.sh',
-    '  login: sh scripts/login.sh',
+    '  inside: sh scripts/inside.sh',
     ''
 ].join('\n');
 const CONTENT: ProjectContent = {
@@ -121,7 +121,17 @@ afterAll(async () => {
 describe('Harbor, a machine source in a process of its own', () => {
     const target = { projectId: '', extension: HARBOR, source: 'compose-machine', candidate: 'workbench' };
     const heard: MachineCandidate[] = [];
-    const LOGIN = 'sh -c sh scripts/login.sh';
+    const ACCOUNT = 'account-1';
+    const JOIN = `sh -c sh scripts/inside.sh "$@" harbor ruimte join ${ACCOUNT}`;
+    const REGISTRATION = {
+        id: 'workbench',
+        name: 'workbench',
+        icon: null,
+        brokerUrl: 'wss://broker.ruimte.app',
+        publicKey: Buffer.from(Uint8Array.from({ length: 32 }, (_value, i) => i)).toString('base64url'),
+        issuedAt: 1_000_000,
+        signature: 's'.repeat(86)
+    };
 
     async function start(approve?: string): Promise<MachineCandidate> {
         const frame = await owner('extension.machineStart', { ...target, ...(approve === undefined ? {} : { approve }) });
@@ -165,7 +175,17 @@ describe('Harbor, a machine source in a process of its own', () => {
         expect(await daemon.request('extension.machineStart', target)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
     });
 
-    test('holds the start until a person approved it, and then runs the programs Harbor described up to the sign-in of the new machine', async () => {
+    test('starts nothing and signs nothing while this machine is on no account', async () => {
+        expect(await start()).toMatchObject({
+            state: 'failed',
+            failure: 'This computer is on no account, so the new machine has none to join. Put this computer on your account first.'
+        });
+        expect(daemon.machineSteps.ran).toEqual([]);
+    });
+
+    test('holds the start until a person approved it, then runs the programs Harbor described and has the new machine sign onto the account of this one', async () => {
+        await daemon.bundles.machine.auth.bindAccount(ACCOUNT);
+
         const held = await start();
 
         expect(held).toMatchObject({
@@ -175,34 +195,52 @@ describe('Harbor, a machine source in a process of its own', () => {
                 programs: [
                     { title: 'Prepare workbench', command: "sh -c 'sh scripts/prepare.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } },
                     { title: 'Start workbench', command: "sh -c 'sh scripts/start.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } },
-                    { login: true, command: "sh -c 'sh scripts/login.sh'", cwd: folder, env: { HARBOR_MACHINE: 'workbench' } }
+                    {
+                        join: true,
+                        command: `sh -c 'sh scripts/inside.sh "$@"' harbor ruimte join ${ACCOUNT}`,
+                        cwd: folder,
+                        env: { HARBOR_MACHINE: 'workbench' }
+                    }
                 ]
             }
         });
         expect(daemon.machineSteps.ran).toEqual([]);
 
         daemon.machineSteps.script('sh -c sh scripts/start.sh', { lines: ['workbench is up'] });
-        daemon.machineSteps.script(LOGIN, { lines: ['Open https://station.ruimte.app/link?code=BCDF-GHJK'], stays: true });
+        daemon.machineSteps.script(JOIN, { lines: [JSON.stringify(REGISTRATION)] });
 
         expect((await start(held.held?.digest)).state).toBe('starting');
-        await until(async () => (heard.at(-1)?.state === 'joining' && heard.at(-1)?.lines.at(-1)?.startsWith('Open ') === true ? true : null));
+        await until(async () => (heard.at(-1)?.join === 'signed' ? true : null));
 
         expect(daemon.machineSteps.ran.map((step) => [step.command, ...step.args, step.cwd, step.env.HARBOR_MACHINE])).toEqual([
             ['sh', '-c', 'sh scripts/prepare.sh', folder, 'workbench'],
             ['sh', '-c', 'sh scripts/start.sh', folder, 'workbench'],
-            ['sh', '-c', 'sh scripts/login.sh', folder, 'workbench']
+            ['sh', '-c', 'sh scripts/inside.sh "$@"', 'harbor', 'ruimte', 'join', ACCOUNT, folder, 'workbench']
         ]);
-        expect(heard.at(-1)?.lines).toEqual([
-            'Reading harbor.yaml',
-            'Prepare workbench',
-            'Start workbench',
-            'workbench is up',
-            'Open https://station.ruimte.app/link?code=BCDF-GHJK'
-        ]);
+        expect(heard.at(-1)).toMatchObject({ state: 'joining', lines: ['Reading harbor.yaml', 'Prepare workbench', 'Start workbench', 'workbench is up'] });
+        // No event carries what the new machine signed.
+        expect(JSON.stringify(heard)).not.toContain(REGISTRATION.signature);
+    });
 
-        // The person approved the code on the page, so the sign-in of the new machine ended by itself.
-        daemon.machineSteps.finish(LOGIN);
-        await until(async () => (heard.at(-1)?.state === 'done' ? true : null));
+    test('hands the registration to the app on this machine alone, for the account it is signed in to, and ends once it posted', async () => {
+        expect(await daemon.request('extension.machineRegistration', { ...target, accountId: ACCOUNT })).toMatchObject({
+            ok: false,
+            error: { code: 'forbidden' }
+        });
+        expect(await daemon.request('extension.machineJoined', target)).toMatchObject({ ok: false, error: { code: 'forbidden' } });
+        expect(await owner('extension.machineRegistration', { ...target, accountId: 'account-2' })).toMatchObject({
+            ok: false,
+            error: { code: 'other-account' }
+        });
+        expect(await owner('extension.machineRegistration', { ...target, accountId: ACCOUNT })).toEqual({
+            id: 'request',
+            ok: true,
+            result: { registration: REGISTRATION }
+        });
+        expect(await owner('extension.machineJoined', target)).toMatchObject({ ok: true });
+        expect(heard.at(-1)).toMatchObject({ state: 'done', join: 'joined' });
+        // Signing for the new machine left this one where it was.
+        expect(await daemon.bundles.machine.auth.accountBinding()).toMatchObject({ id: ACCOUNT });
     });
 
     test('asks a person again once harbor.yaml changed, though the programs stayed the same', async () => {

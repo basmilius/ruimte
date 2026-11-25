@@ -95,10 +95,16 @@ function shell(line: string, machine: ComposeMachine): SpawnDescription {
     return { command: 'sh', args: ['-c', line], env: { HARBOR_MACHINE: machine.name } };
 }
 
+// No engine runs here, so "inside" is this computer: the line gets what Ruimte appends as its own arguments.
+function inside(line: string, machine: ComposeMachine): SpawnDescription {
+    return { command: 'sh', args: ['-c', `${line} "$@"`, 'harbor'], env: { HARBOR_MACHINE: machine.name } };
+}
+
 /*
  * The machine of the project's `harbor.yaml` as a place Ruimte can start one in. Harbor describes the shell lines of
  * the file and never runs them, and it has no engine to ask, so it cannot tell whether a machine already runs there.
- * The file's `login` is the new machine's own sign-in: Harbor sees neither its lines nor the account.
+ * The file's `inside` is how a command gets to where the machine lives. Ruimte appends its own command to it to have
+ * the new machine join the person's account: Harbor names no account and sees neither that command nor its answer.
  */
 defineMachineSource({
     id: MACHINE_SOURCE,
@@ -124,7 +130,7 @@ defineMachineSource({
                 ...(machine.prepare === undefined ? [] : [{ title: `Prepare ${machine.name}`, spawn: shell(machine.prepare, machine) }]),
                 { title: `Start ${machine.name}`, spawn: shell(machine.start, machine) }
             ],
-            ...(machine.login === undefined ? {} : { login: shell(machine.login, machine) }),
+            ...(machine.inside === undefined ? {} : { inside: inside(machine.inside, machine) }),
             fingerprint
         };
     }

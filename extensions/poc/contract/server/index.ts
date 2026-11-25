@@ -216,7 +216,7 @@ try {
 
             return {
                 steps: candidate.id === 'broken' ? [] : [{ title: 'Start the box', spawn: { command: 'sh', args: ['-c', 'box up'] } }],
-                login: { command: 'sh', args: ['-c', 'box login'] },
+                inside: { command: 'box', args: ['exec', 'box'] },
                 fingerprint: 'revision-1'
             };
         }

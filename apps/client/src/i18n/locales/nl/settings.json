@@ -2061,7 +2061,7 @@
                 "preparing": "Bezig met voorbereiden",
                 "held": "Wacht op je goedkeuring",
                 "starting": "Bezig met starten",
-                "joining": "Wacht tot je inlogt",
+                "joining": "Komt op je account",
                 "done": "Gestart",
                 "failed": "Niet gestart",
                 "stopped": "Gestopt"
@@ -2081,9 +2081,10 @@
             "held": {
                 "title": "Dit op deze computer uitvoeren?",
                 "description": "{{source}} las dit uit een bestand in dit project. Er draait niets tot je het goedkeurt, en na een wijziging van dat bestand vraagt Ruimte het opnieuw.",
-                "signIn": "Inloggen op de nieuwe machine",
+                "join": "De nieuwe machine op je account zetten",
                 "folder": "In {{folder}}",
                 "ask": "Dit draait na elkaar, in deze volgorde.",
+                "joins": "Met je goedkeuring komt de nieuwe machine ook op je account.",
                 "approve": "Goedkeuren en starten",
                 "cancel": "Annuleren"
             },
@@ -2091,13 +2092,20 @@
                 "label": "De machine start"
             },
             "joining": {
-                "label": "Zet de nieuwe machine op je account",
-                "description": "Open de pagina die hieronder staat, log in en controleer of daar dezelfde code staat. Daarna staat de machine in de lijst.",
-                "open": "Pagina openen"
+                "label": "De nieuwe machine komt op je account",
+                "signIn": {
+                    "label": "Log in om de nieuwe machine op je account te zetten",
+                    "description": "De machine draait. Log in deze app in op je account, dan voegt Ruimte hem toe."
+                },
+                "failed": {
+                    "label": "De nieuwe machine staat nog niet op je account",
+                    "retry": "Opnieuw proberen"
+                }
             },
             "done": {
                 "label": "De machine draait",
-                "description": "Hij staat in de lijst met machines, op je account. Open hem daar."
+                "description": "Zodra hij op je account staat, vind je hem in de lijst met machines.",
+                "joined": "Hij staat op je account, in de lijst met machines. Open hem daar."
             },
             "failed": {
                 "label": "De machine is niet gestart"

@@ -47034,6 +47034,39 @@
     "type": "object",
     "properties": {}
   },
+  "request.extension.machineJoined.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "extension": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1
+      },
+      "candidate": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "extension",
+      "source",
+      "candidate"
+    ]
+  },
+  "request.extension.machineJoined.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.extension.machineList.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -47135,7 +47168,7 @@
                           "type": "string"
                         }
                       },
-                      "login": {
+                      "join": {
                         "type": "boolean"
                       }
                     },
@@ -47159,6 +47192,13 @@
             },
             "failure": {
               "type": "string"
+            },
+            "join": {
+              "type": "string",
+              "enum": [
+                "signed",
+                "joined"
+              ]
             }
           },
           "required": [
@@ -47175,6 +47215,125 @@
     },
     "required": [
       "candidates"
+    ]
+  },
+  "request.extension.machineRegistration.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "extension": {
+        "type": "string",
+        "minLength": 1
+      },
+      "source": {
+        "type": "string",
+        "minLength": 1
+      },
+      "candidate": {
+        "type": "string",
+        "minLength": 1
+      },
+      "accountId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "projectId",
+      "extension",
+      "source",
+      "candidate",
+      "accountId"
+    ]
+  },
+  "request.extension.machineRegistration.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "registration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "lucide"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "brokerUrl": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512,
+                "pattern": "^wss?:\\/\\/[^\\s]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publicKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "issuedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{86}$"
+          },
+          "automatic": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "icon",
+          "publicKey",
+          "issuedAt",
+          "signature"
+        ]
+      }
+    },
+    "required": [
+      "registration"
     ]
   },
   "request.extension.machineStart.payload": {
@@ -47295,7 +47454,7 @@
                         "type": "string"
                       }
                     },
-                    "login": {
+                    "join": {
                       "type": "boolean"
                     }
                   },
@@ -47319,6 +47478,13 @@
           },
           "failure": {
             "type": "string"
+          },
+          "join": {
+            "type": "string",
+            "enum": [
+              "signed",
+              "joined"
+            ]
           }
         },
         "required": [
@@ -92165,7 +92331,7 @@
                         "type": "string"
                       }
                     },
-                    "login": {
+                    "join": {
                       "type": "boolean"
                     }
                   },
@@ -92189,6 +92355,13 @@
           },
           "failure": {
             "type": "string"
+          },
+          "join": {
+            "type": "string",
+            "enum": [
+              "signed",
+              "joined"
+            ]
           }
         },
         "required": [

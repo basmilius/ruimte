@@ -366,6 +366,7 @@
     "event.endpoint.changed #/properties/agentIntegrations/properties/providers/items/properties/state": ["off", "on", "unset"],
     "event.endpoint.changed #/properties/keepAwake": ["always", "off", "working"],
     "event.endpoint.changed #/properties/nameSource": ["chosen", "default"],
+    "event.extension.machineChanged #/properties/candidate/properties/join": ["joined", "signed"],
     "event.extension.machineChanged #/properties/candidate/properties/state": [
         "done",
         "failed",
@@ -1412,6 +1413,7 @@
     "request.endpoint.settings.result #/properties/terminalShell": ["cmd", "git-bash", "powershell", "wsl"],
     "request.extension.install.result #/properties/status": ["crashed", "disabled", "idle", "running"],
     "request.extension.list.result #/properties/extensions/items/properties/status": ["crashed", "disabled", "idle", "running"],
+    "request.extension.machineList.result #/properties/candidates/items/properties/join": ["joined", "signed"],
     "request.extension.machineList.result #/properties/candidates/items/properties/state": [
         "done",
         "failed",
@@ -1422,6 +1424,7 @@
         "starting",
         "stopped"
     ],
+    "request.extension.machineStart.result #/properties/candidate/properties/join": ["joined", "signed"],
     "request.extension.machineStart.result #/properties/candidate/properties/state": [
         "done",
         "failed",
