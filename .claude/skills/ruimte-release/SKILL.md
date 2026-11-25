@@ -12,10 +12,11 @@ A release runs to the end without asking: Bas names a version, and the next thin
 1. **Version.** Bas names it, or a bump of the latest tag (`git tag --sort=-creatordate | head -5`). A beta is `v<x.y.z>-beta.<n>`, counting on from the last beta of that version.
 2. **Main is pushed.** `git fetch origin` and `git status`: the tagged commit is `origin/main`. Work of other agents that is not pushed stays out; never push it for them.
 3. **CI on that commit is green.** `gh run list --workflow ci.yml --commit <sha> --json status,conclusion`. While it runs, follow it in the background (`gh run watch <id> --exit-status`). When it is red: fix, push to main, wait for green, and tag the new commit. Nothing is built or tested locally for a release.
-4. **Notes.** Write them with the `release-notes` skill from the previous tag of the same track (the last stable for a stable, the last beta for a beta), in the shape of the last tags (`git tag -l --format='%(contents)' <tag>`):
+4. **Notes.** Write them with the `release-notes` skill from the previous tag of the same track (the last stable for a stable, the last beta for a beta). Take only the area names from the last tags (`git tag -l --format='%(contents)' <tag>`); everything else follows the skill and the lines below:
     - A beta opens with the quote block `> Pre-release. Install the \`<version>\` build, from the Pre-release update track in Settings, About, or as \`ruimte@next\` on npm.` and one line on what this beta brings.
     - A stable opens with one quote line on what the release brings.
-    - Sections `## 🚀 Features`, `## 🐛 Fixes`, `## ⚡ Performance`, `## 🧹 Chores`, each grouped under bold area names, each item one plain sentence a person understands, ending in `(by @<login>)` for whoever made it. Credit other contributors by their own commits.
+    - Sections, in this order and only those with content: `## ⚠️ Breaking changes`, `## 🚀 Features`, `## 🐛 Fixes`, `## 🔒 Security`, `## ⚡ Performance`, `## 🎨 Styles`, `## 🧹 Chores`. Each is grouped under bold area names, and each item is one plain sentence a person understands. An item made by someone other than @basmilius ends in `(by @<login>)`; read a commit's login with `gh api repos/basmilius/ruimte/commits/<sha> -q .author.login`. Bas's own items carry no credit.
+    - The user guide in `apps/site/src/app/docs/guide` describes new behavior from the reader's side; its diff over the range is the best source for wording.
     - Run the `unslop` skill over the notes.
 5. **Tag and push.** Write the notes to a file outside the repository, then:
 
