@@ -58,6 +58,20 @@ describe('the files of a project as an extension reads them', () => {
         await expect(files.readText('gone', 'harbor.yaml')).rejects.toMatchObject({ code: 'not-found' });
     });
 
+    test('take a file that is not there yet as inside a project folder reached through a link', async () => {
+        await symlink(folder, join(root, 'linked-project'));
+
+        const linked = extensionProjectFiles({
+            folderOf: () => join(root, 'linked-project'),
+            machineHome: new MachineHome(join(root, 'home')),
+            watcher: new FolderWatcher('darwin', new SharedWatch({ platform: 'darwin', seams: fake }), 0)
+        });
+
+        await expect(linked.readText('p1', 'later.yaml')).rejects.not.toMatchObject({ code: 'outside-project' });
+        await linked.watch('dev.harbor', 1, 'p1', 'later.yaml', () => undefined);
+        linked.unwatchAll('dev.harbor');
+    });
+
     test('tell a watch of one file of that file alone, also one a save swaps in or that is not there yet', async () => {
         let harbor = 0;
         let later = 0;

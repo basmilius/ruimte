@@ -1,6 +1,6 @@
 import { CodedError } from '@adecore/agents';
 import { isWithin } from '@adecore/utils/path';
-import { realOrSelf } from '../disk/real-path.ts';
+import { realOfNearest, realOrSelf } from '../disk/real-path.ts';
 
 class OutsideError extends CodedError<'outside-project'> {}
 
@@ -10,7 +10,8 @@ export async function refuseOutside(path: string, folder: string | undefined): P
         return;
     }
 
-    const [real, root] = await Promise.all([realOrSelf(path), realOrSelf(folder)]);
+    // A file that is not there yet has no real path of its own, and a folder reached through a link (macOS's /var) would then never hold it.
+    const [real, root] = await Promise.all([realOfNearest(path), realOrSelf(folder)]);
 
     if (!isWithin(root, real)) {
         throw new OutsideError('outside-project', `${path} is outside ${folder}`);
