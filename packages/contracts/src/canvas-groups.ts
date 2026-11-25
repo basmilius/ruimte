@@ -124,10 +124,35 @@ function frameAround(frame: NodeRect, member: NodeRect): NodeRect {
 }
 
 /* While a group is collapsed its own height is the header, so the height it opens to is what changes. */
-function withFrame(group: ProjectNode, frame: NodeRect): ProjectNode {
+function withFrame<Node extends ProjectNode>(group: Node, frame: NodeRect): Node {
     const { h, ...rest } = frame;
 
     return group.collapsed === true ? { ...group, ...rest, expandedHeight: h } : { ...group, ...frame };
+}
+
+/*
+ * The group each node stands in, by id. A node in nested frames is in both by geometry, and the
+ * smaller one is the one a person would say it is in.
+ */
+export function containerIds(nodes: readonly ProjectNode[], items: readonly GroupItem[] = nodes): Map<string, string> {
+    const containers = new Map<string, ProjectNode>();
+    const area = (group: ProjectNode): number => groupRect(group).w * groupRect(group).h;
+
+    for (const group of nodes) {
+        if (group.kind !== 'group') {
+            continue;
+        }
+
+        for (const member of groupMemberIds(group, items)) {
+            const current = containers.get(member);
+
+            if (current === undefined || area(group) < area(current)) {
+                containers.set(member, group);
+            }
+        }
+    }
+
+    return new Map([...containers].map(([id, group]) => [id, group.id]));
 }
 
 /*
@@ -136,11 +161,11 @@ function withFrame(group: ProjectNode, frame: NodeRect): ProjectNode {
  * the nodes changed, since a node that grew or moved may stand outside a frame that reads positions.
  * Such a frame stays as it is where growing would take in or let go a node that is not one of `ids`.
  */
-export function groupsGrownAround(
-    canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'>,
+export function groupsGrownAround<Node extends ProjectNode>(
+    canvas: { readonly nodes: readonly Node[]; readonly texts: ProjectCanvasView['texts'] },
     ids: readonly string[],
     containers: ReadonlyMap<string, string>
-): ProjectNode[] {
+): Node[] {
     const byId = new Map(canvas.nodes.map((node) => [node.id, node]));
     const named = new Set(ids);
 
@@ -166,9 +191,11 @@ export function groupsGrownAround(
             }
 
             const frame = groupRect(group);
-            const grown = withFrame(group, frameAround(frame, member.kind === 'group' ? groupRect(member) : member));
+            const around = frameAround(frame, member.kind === 'group' ? groupRect(member) : member);
+            const grows = around.x !== frame.x || around.y !== frame.y || around.w !== frame.w || around.h !== frame.h;
+            const grown = withFrame(group, around);
 
-            if (spellsOutMembers(group) || othersHeld(group, chain) === othersHeld(grown, chain)) {
+            if (grows && (spellsOutMembers(group) || othersHeld(group, chain) === othersHeld(grown, chain))) {
                 byId.set(group.id, grown);
             }
 

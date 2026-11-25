@@ -16,6 +16,7 @@ import { createTextAction } from '@/action-port/person-actions';
 import { editableGaps, gapOffsets, type EditableGap } from '@/canvas-model/editable-gaps';
 import { lineBounds } from '@/canvas-model/line-geometry';
 import { groundPlacement, snapToGrid, toWorld, type Camera, type Point, type Rect } from '@/canvas-model/math';
+import { resizedSelection } from '@/canvas-model/selection-resize';
 import { alignmentGuides, gapGuides, type AlignmentGuide, type GapGuide } from '@/canvas/alignment-guides';
 import { AlignmentGuides } from '@/canvas/AlignmentGuides';
 import { boxScreenRect, boxWorldRect, startBoxSelection, type BoxSelection } from '@/canvas/box-selection';
@@ -70,9 +71,32 @@ type Gesture =
           edge: string;
           start: Point;
           rect: Rect;
+          /* The selected nodes as they stood when the handle went down, the dragged one included; null when it resizes alone. */
+          selection: Record<string, Rect> | null;
       }
     /* A card beside a node (`derivedCards`): its size goes back to the card, never into the nodes. */
     | { kind: 'card-resize'; cardId: string; edge: string; start: Point; rect: Rect };
+
+/*
+ * The nodes one handle resizes together, as they stand now: every selected node when the handle is on
+ * one of them and at least two remain. Groups, texts and lines in the selection stay out. So does
+ * everything while moving is locked, since keeping the room between nodes moves them.
+ */
+function resizedTogether(state: Pick<CanvasState, 'nodes' | 'selection' | 'locks'>, nodeId: string): Record<string, Rect> | null {
+    if (state.locks.move || state.nodes[nodeId]?.kind === 'group' || !state.selection.includes(nodeId)) {
+        return null;
+    }
+
+    const rects = Object.fromEntries(
+        state.selection.flatMap((id) => {
+            const node = state.nodes[id];
+
+            return node === undefined || node.kind === 'group' ? [] : [[id, { x: node.x, y: node.y, w: node.w, h: node.h }] as const];
+        })
+    );
+
+    return Object.keys(rects).length < 2 ? null : rects;
+}
 
 /* World units between two files dropped at once: a node's own width and a gutter, so the second one
    stands beside the first instead of over it. */
@@ -227,7 +251,14 @@ export function Canvas() {
             return;
         }
         const movingGroups = gesture?.kind === 'move' || lineMove;
-        const ids = gesture?.kind === 'resize' ? [gesture.nodeId] : gesture?.kind === 'text-resize' ? [gesture.textId] : selection;
+        const ids =
+            gesture?.kind === 'resize'
+                ? gesture.selection === null
+                    ? [gesture.nodeId]
+                    : Object.keys(gesture.selection)
+                : gesture?.kind === 'text-resize'
+                  ? [gesture.textId]
+                  : selection;
         const active = new Set(ids);
         const excluded = new Set([...ids, ...(movingGroups ? carriedByGroups(state.nodes, state.texts, ids, state.lines) : [])]);
         const moving: Rect[] = [];
@@ -572,14 +603,16 @@ export function Canvas() {
         const resizeNode = resizeElement?.getAttribute('data-resize-node');
         if (resizeEdge && resizeNode && s.nodes[resizeNode] && !s.locks.resize) {
             e.preventDefault();
-            s.setResizing(resizeNode);
+            const selected = resizedTogether(s, resizeNode);
+            s.setResizing(resizeNode, selected === null ? [] : Object.keys(selected).filter((id) => id !== resizeNode));
             startGesture(
                 {
                     kind: 'resize',
                     nodeId: resizeNode,
                     edge: resizeEdge,
                     start: point,
-                    rect: { ...s.nodes[resizeNode] }
+                    rect: { ...s.nodes[resizeNode] },
+                    selection: selected
                 },
                 e
             );
@@ -739,7 +772,18 @@ export function Canvas() {
                     proportional: e.shiftKey && !folded
                 });
                 // A folded node is only its header, below the least height a node takes: it changes its width alone.
-                s.resizeNode(g.nodeId, folded ? { ...rect, y: g.rect.y, h: g.rect.h } : rect);
+                const dragged = folded ? { ...rect, y: g.rect.y, h: g.rect.h } : rect;
+                if (g.selection === null) {
+                    s.resizeNode(g.nodeId, dragged);
+                    break;
+                }
+                const sizes = Object.fromEntries(
+                    Object.entries(g.selection).map(([id, before]) => [
+                        id,
+                        { w: dragged.w, h: folded || s.nodes[id]?.collapsed === true ? before.h : dragged.h }
+                    ])
+                );
+                s.resizeNodes(resizedSelection(g.selection, sizes, g.nodeId, dragged));
                 break;
             }
             case 'card-resize': {

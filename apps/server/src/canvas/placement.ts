@@ -1,6 +1,7 @@
 import { ARRANGE_LAYOUTS } from '@ruimte/actions';
 import {
     arrangeRects,
+    containerIds,
     GROUP_HEADER,
     GROUP_PADDING,
     gridColumns,
@@ -70,24 +71,19 @@ export function groupMembers(group: ProjectNode, nodes: readonly ProjectNode[]):
     return nodes.filter((node) => ids.has(node.id));
 }
 
-/*
- * The group each node stands in, by node id. A node in nested frames is in both by geometry, and the
- * smaller one is the one a person would say it is in.
- */
+/* The group each node stands in, by node id, the smaller one for a node in nested frames (`containerIds`). */
 export function containersOf(nodes: readonly ProjectNode[]): Map<string, ProjectNode> {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
     const containers = new Map<string, ProjectNode>();
-    const area = (group: ProjectNode): number => {
-        const rect = groupRect(group);
-        return rect.w * rect.h;
-    };
-    for (const group of nodes.filter((node) => node.kind === 'group')) {
-        for (const member of groupMembers(group, nodes)) {
-            const current = containers.get(member.id);
-            if (!current || area(group) < area(current)) {
-                containers.set(member.id, group);
-            }
+
+    for (const [id, groupId] of containerIds(nodes)) {
+        const group = byId.get(groupId);
+
+        if (group !== undefined) {
+            containers.set(id, group);
         }
     }
+
     return containers;
 }
 
