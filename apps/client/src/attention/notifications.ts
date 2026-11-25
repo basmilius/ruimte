@@ -16,13 +16,9 @@ import { projectSoundKey, soundFor, type SoundChoice, type SoundEvent } from '@/
 import { projectNodes } from '@/state/view-nodes';
 import { bringPromptToFront } from '@/surface/canvas/prompt-stack';
 import { watchEveryMachine } from '@/workspace/connections';
-import { playEventSound, playSound } from './sounds';
+import { claimAnnouncement, playEventSound, playSound } from './sounds';
+import { mayNotify, raiseNotification } from './system-notification';
 import { waitAskLine } from './wait-ask';
-
-/* Whether this window may raise anything at all. What a person is looking at is asked per node. */
-export function mayNotify(): boolean {
-    return 'Notification' in window && Notification.permission === 'granted';
-}
 
 /*
  * Nothing is announced about a node somebody is already looking at. The question is per node, not per
@@ -36,32 +32,38 @@ function canNotify(nodeId: string, seen: ReadonlySet<string>): boolean {
  * Clicking any of these brings the window up and goes to the node, in whichever view it lives. Every one is
  * silent to the system: the sound is the client's own, so it is the same on every computer.
  */
-function notify(nodeId: string, title: string, body: string, tag: string, reveal?: () => void): Notification {
-    const notification = new Notification(title, { body, tag, silent: true });
-    notification.onclick = () => {
-        window.focus();
+function notify(nodeId: string, title: string, body: string, reveal?: () => void): Notification {
+    return raiseNotification(title, { body, silent: true }, () => {
         if (reveal) {
             reveal();
-        } else {
-            revealNode(nodeId);
-            bringPromptToFront(nodeId);
+
+            return;
         }
-        notification.close();
-    };
-    return notification;
+
+        revealNode(nodeId);
+        bringPromptToFront(nodeId);
+    });
 }
 
 export function notifyRequested(endpointId: string, alert: EventMap['push.notification']): void {
     if (!mayNotify() || (endpointId === currentEndpointId() && seenNodeIds().has(alert.nodeId))) {
         return;
     }
-    const tag = `ruimte-requested-${endpointId}-${alert.nodeId}`;
 
-    notify(alert.nodeId, alert.title, alert.body, tag, () => {
-        void openSidebarTarget({ endpointId, projectId: alert.projectId, viewId: alert.viewId, nodeId: alert.nodeId });
-    });
-    // Every window hears this alert, so the tag decides which one plays it.
-    playEventSound('alert', { endpointId, projectId: alert.projectId }, tag);
+    // Every window hears this alert, so one claims it. The text is part of the claim, so a second alert
+    // of the same node within the second a claim is held is still announced.
+    void claimAnnouncement(`ruimte-requested-${endpointId}-${alert.nodeId}-${alert.body}`)
+        .then((claimed) => {
+            if (!claimed) {
+                return;
+            }
+
+            notify(alert.nodeId, alert.title, alert.body, () => {
+                void openSidebarTarget({ endpointId, projectId: alert.projectId, viewId: alert.viewId, nodeId: alert.nodeId });
+            });
+            playEventSound('alert', { endpointId, projectId: alert.projectId });
+        })
+        .catch((e: unknown) => console.warn('An alert was not announced', e));
 }
 
 /* The sound an event makes in the project this window shows, or null for none. */
@@ -87,7 +89,7 @@ function stopEvent(status: string | undefined, usageLimited: boolean): SoundEven
 /* A machine that keeps the snoozes may end one by its own clock a little before this one gets there. */
 const CLOCK_SLACK_MS = 5_000;
 
-// Concurrent approvals must settle before same-tag replacement can withdraw the first banner.
+// Concurrent approvals must settle first: a line that changes closes the banner and raises a new one.
 const WAIT_SETTLE_MS = 1_000;
 
 // A timer holds at most this long; a longer wait comes back to the clock and arms again.
@@ -188,7 +190,7 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
             const sound = event === null ? null : soundHere(event);
 
             if (event !== null && sound !== null && canNotify(node.id, seen)) {
-                stopped.set(node.id, notify(node.id, node.title, i18next.t(`shell:notifications.${event}`), `ruimte-stopped-${node.id}`));
+                stopped.set(node.id, notify(node.id, node.title, i18next.t(`shell:notifications.${event}`)));
                 playSound(sound);
             }
 
@@ -205,7 +207,8 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
             // The request can land after the status, or a second one join it: the notification follows, without a second sound.
             if (shown.has(node.id)) {
                 if (lines.get(node.id) !== line && canNotify(node.id, seen)) {
-                    shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`));
+                    shown.get(node.id)?.close();
+                    shown.set(node.id, notify(node.id, node.title, line));
                     lines.set(node.id, line);
                 }
                 continue;
@@ -220,7 +223,7 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
             if (waiting) {
                 if (waiting.ready) {
                     pending.delete(node.id);
-                    shown.set(node.id, notify(node.id, node.title, line, `ruimte-${node.id}`));
+                    shown.set(node.id, notify(node.id, node.title, line));
                     lines.set(node.id, line);
 
                     if (waiting.sound !== null) {

@@ -223,6 +223,7 @@ describe('with no window in front', () => {
         static permission = 'granted';
         static raised: FakeNotification[] = [];
         onclick: (() => void) | null = null;
+        closed = false;
         readonly title: string;
         readonly options: NotificationOptions;
 
@@ -232,7 +233,9 @@ describe('with no window in front', () => {
             FakeNotification.raised.push(this);
         }
 
-        close(): void {}
+        close(): void {
+            this.closed = true;
+        }
     }
 
     const raised = FakeNotification.raised;
@@ -248,10 +251,20 @@ describe('with no window in front', () => {
         begin();
         await elapse(60);
         expect(raised).toHaveLength(1);
-        expect(raised[0]).toMatchObject({ title: 'Time for a break?', options: { tag: 'ruimte-break' } });
+        expect(raised[0]!.title).toBe('Time for a break?');
+        expect(raised[0]!.options).toEqual({ body: 'You have worked 50 min without a break.', silent: true });
         expect(toast()).toBeUndefined();
         raised[0]!.onclick!();
         expect(toast()).toBeDefined();
+    });
+
+    test('a reminder nobody opened is closed before the next stretch raises its own', async () => {
+        begin();
+        await elapse(60);
+        await elapse(10, 'idle');
+        await elapse(60);
+        expect(raised).toHaveLength(2);
+        expect(raised.map((notification) => notification.closed)).toEqual([true, false]);
     });
 
     test('shows the toast instead once a window comes to the front', async () => {
