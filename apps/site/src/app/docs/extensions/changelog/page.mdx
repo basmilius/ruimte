@@ -6,6 +6,11 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, a started machine joins the account (November 2026)
+
+- `inside` replaces `login` in what `start` of a machine source answers. It says how Ruimte runs a command where the new machine lives. With it, the new machine joins the person's account on their approval of the start, with no page and no code.
+- An extension that answered `login` answers `inside` now: the program without the `ruimte login` at its end, such as `docker exec dev`. Ruimte ignores a `login` it is still handed, and the machine then joins no account.
+
 ## 1, preview, agent providers (November 2026)
 
 - `defineAgentProvider` in `server/` offers an agent that speaks ACP in the model pickers. You describe its program and Ruimte starts it for a chat. It is a proposed part, behind the new permission `agents.provide`.
