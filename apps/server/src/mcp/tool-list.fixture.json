@@ -60,6 +60,7 @@
             "node_delete",
             "node_edit",
             "node_group",
+            "node_layout",
             "node_list",
             "node_new",
             "node_update",
@@ -161,6 +162,7 @@
             "node_delete",
             "node_edit",
             "node_group",
+            "node_layout",
             "node_list",
             "node_new",
             "node_update",
@@ -221,7 +223,10 @@
                         "description": "For several, JSON keyed by question id"
                     }
                 },
-                "required": ["id", "request"]
+                "required": [
+                    "id",
+                    "request"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -245,7 +250,9 @@
                         "description": "A new worktree on this branch"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -296,7 +303,12 @@
                     "mode": {
                         "type": "string",
                         "description": "Only when the person asks for another mode",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
+                        "enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                        ]
                     },
                     "model": {
                         "type": "string",
@@ -341,7 +353,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["cli"]
+                "required": [
+                    "cli"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -378,7 +392,12 @@
                     "mode": {
                         "type": "string",
                         "description": "Only when the person asks for another mode",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
+                        "enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                        ]
                     },
                     "machine": {
                         "type": "string",
@@ -398,7 +417,10 @@
                         "type": "integer"
                     }
                 },
-                "required": ["label", "roles"]
+                "required": [
+                    "label",
+                    "roles"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -415,7 +437,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["text"]
+                "required": [
+                    "text"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -445,7 +469,14 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["report", "image", "build", "export", "recording", "page"]
+                        "enum": [
+                            "report",
+                            "image",
+                            "build",
+                            "export",
+                            "recording",
+                            "page"
+                        ]
                     },
                     "key": {
                         "type": "string",
@@ -462,7 +493,9 @@
                         }
                     }
                 },
-                "required": ["paths"]
+                "required": [
+                    "paths"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -486,7 +519,9 @@
                         "description": "A file index, from 0"
                     }
                 },
-                "required": ["artifact_id"]
+                "required": [
+                    "artifact_id"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -512,7 +547,10 @@
                         "type": "integer"
                     }
                 },
-                "required": ["id", "url"]
+                "required": [
+                    "id",
+                    "url"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -527,7 +565,12 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["back", "forward", "reload", "stop"]
+                        "enum": [
+                            "back",
+                            "forward",
+                            "reload",
+                            "stop"
+                        ]
                     },
                     "id": {
                         "type": "string"
@@ -540,7 +583,10 @@
                         "description": "With reload, past the cache"
                     }
                 },
-                "required": ["action", "id"]
+                "required": [
+                    "action",
+                    "id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -560,7 +606,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -580,7 +628,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -600,7 +650,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["path"]
+                "required": [
+                    "path"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -615,7 +667,14 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["click", "type", "key", "set-value", "scroll", "drag"]
+                        "enum": [
+                            "click",
+                            "type",
+                            "key",
+                            "set-value",
+                            "scroll",
+                            "drag"
+                        ]
                     },
                     "app": {
                         "type": "string",
@@ -638,12 +697,18 @@
                     "button": {
                         "type": "string",
                         "description": "For click",
-                        "enum": ["left", "right"]
+                        "enum": [
+                            "left",
+                            "right"
+                        ]
                     },
                     "state": {
                         "type": "string",
                         "description": "on answers what changed, full the whole tree",
-                        "enum": ["on", "full"]
+                        "enum": [
+                            "on",
+                            "full"
+                        ]
                     },
                     "wait": {
                         "type": "integer",
@@ -683,7 +748,12 @@
                     "direction": {
                         "type": "string",
                         "description": "For scroll",
-                        "enum": ["up", "down", "left", "right"]
+                        "enum": [
+                            "up",
+                            "down",
+                            "left",
+                            "right"
+                        ]
                     },
                     "pages": {
                         "type": "number",
@@ -710,7 +780,10 @@
                         "type": "number"
                     }
                 },
-                "required": ["action", "app"]
+                "required": [
+                    "action",
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -749,7 +822,10 @@
                     "state": {
                         "type": "string",
                         "description": "on answers what changed, full the whole tree",
-                        "enum": ["on", "full"]
+                        "enum": [
+                            "on",
+                            "full"
+                        ]
                     },
                     "wait": {
                         "type": "integer",
@@ -772,7 +848,9 @@
                         "description": "Real pointer and keyboard; interrupts the person, so ask first"
                     }
                 },
-                "required": ["app"]
+                "required": [
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -792,7 +870,10 @@
                     "state": {
                         "type": "string",
                         "description": "on answers what changed, full the whole tree",
-                        "enum": ["on", "full"]
+                        "enum": [
+                            "on",
+                            "full"
+                        ]
                     },
                     "wait": {
                         "type": "integer",
@@ -815,7 +896,9 @@
                         "description": "Real pointer and keyboard; interrupts the person, so ask first"
                     }
                 },
-                "required": ["app"]
+                "required": [
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -845,7 +928,10 @@
                         "description": "Real pointer and keyboard; interrupts the person, so ask first"
                     }
                 },
-                "required": ["app", "element"]
+                "required": [
+                    "app",
+                    "element"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -890,7 +976,9 @@
                         "description": "Real pointer and keyboard; interrupts the person, so ask first"
                     }
                 },
-                "required": ["app"]
+                "required": [
+                    "app"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -928,7 +1016,10 @@
                     "state": {
                         "type": "string",
                         "description": "full answers the whole tree, not what changed",
-                        "enum": ["on", "full"]
+                        "enum": [
+                            "on",
+                            "full"
+                        ]
                     },
                     "wait": {
                         "type": "integer",
@@ -951,7 +1042,9 @@
                         "description": "Real pointer and keyboard; interrupts the person, so ask first"
                     }
                 },
-                "required": ["app"]
+                "required": [
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -997,10 +1090,15 @@
                     "form": {
                         "type": "string",
                         "description": "elements gives a drawing's JSON, image a png",
-                        "enum": ["elements", "image"]
+                        "enum": [
+                            "elements",
+                            "image"
+                        ]
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1023,7 +1121,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["connection", "table"]
+                "required": [
+                    "connection",
+                    "table"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1047,7 +1148,10 @@
                         "description": "Statements separated by semicolons"
                     }
                 },
-                "required": ["connection", "sql"]
+                "required": [
+                    "connection",
+                    "sql"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -1089,7 +1193,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["connection", "sql"]
+                "required": [
+                    "connection",
+                    "sql"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1109,7 +1216,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["connection"]
+                "required": [
+                    "connection"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1124,7 +1233,10 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["launch", "terminate"]
+                        "enum": [
+                            "launch",
+                            "terminate"
+                        ]
                     },
                     "device": {
                         "type": "string"
@@ -1134,7 +1246,11 @@
                         "description": "A bundle id or package name"
                     }
                 },
-                "required": ["action", "device", "app"]
+                "required": [
+                    "action",
+                    "device",
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1152,7 +1268,10 @@
                     },
                     "sensor": {
                         "type": "string",
-                        "enum": ["face", "finger"]
+                        "enum": [
+                            "face",
+                            "finger"
+                        ]
                     },
                     "match": {
                         "type": "boolean"
@@ -1167,7 +1286,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1188,7 +1309,9 @@
                         "description": "Text to put on it; without it, reads it"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1203,7 +1326,12 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["tap", "swipe", "button", "type"]
+                        "enum": [
+                            "tap",
+                            "swipe",
+                            "button",
+                            "type"
+                        ]
                     },
                     "device": {
                         "type": "string"
@@ -1237,7 +1365,10 @@
                         "description": "For type"
                     }
                 },
-                "required": ["action", "device"]
+                "required": [
+                    "action",
+                    "device"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1257,7 +1388,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["device", "path"]
+                "required": [
+                    "device",
+                    "path"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1292,7 +1426,10 @@
                         }
                     }
                 },
-                "required": ["device", "paths"]
+                "required": [
+                    "device",
+                    "paths"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1312,7 +1449,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["device", "url"]
+                "required": [
+                    "device",
+                    "url"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1334,7 +1474,18 @@
                     },
                     "name": {
                         "type": "string",
-                        "enum": ["camera", "microphone", "photos", "contacts", "calendar", "reminders", "location", "motion", "media-library", "faceid"]
+                        "enum": [
+                            "camera",
+                            "microphone",
+                            "photos",
+                            "contacts",
+                            "calendar",
+                            "reminders",
+                            "location",
+                            "motion",
+                            "media-library",
+                            "faceid"
+                        ]
                     },
                     "grant": {
                         "type": "boolean"
@@ -1349,7 +1500,10 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["device", "app"]
+                "required": [
+                    "device",
+                    "app"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1374,7 +1528,11 @@
                         "description": "The alert text"
                     }
                 },
-                "required": ["device", "app", "payload"]
+                "required": [
+                    "device",
+                    "app",
+                    "payload"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1394,7 +1552,10 @@
                         "type": "integer"
                     }
                 },
-                "required": ["device", "seconds"]
+                "required": [
+                    "device",
+                    "seconds"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1412,16 +1573,27 @@
                     },
                     "appearance": {
                         "type": "string",
-                        "enum": ["light", "dark"]
+                        "enum": [
+                            "light",
+                            "dark"
+                        ]
                     },
                     "text_size": {
                         "type": "string",
-                        "enum": ["small", "default", "large", "extra-large"]
+                        "enum": [
+                            "small",
+                            "default",
+                            "large",
+                            "extra-large"
+                        ]
                     },
                     "status_bar": {
                         "type": "string",
                         "description": "clean shows 9:41 and full bars",
-                        "enum": ["clean", "default"]
+                        "enum": [
+                            "clean",
+                            "default"
+                        ]
                     },
                     "battery": {
                         "type": "integer"
@@ -1437,7 +1609,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1454,7 +1628,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1471,7 +1647,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1491,7 +1669,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["device"]
+                "required": [
+                    "device"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1537,7 +1717,10 @@
                         "type": "integer"
                     }
                 },
-                "required": ["id", "color"]
+                "required": [
+                    "id",
+                    "color"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1552,10 +1735,22 @@
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "enum": ["nodes", "notes", "diagram", "drawing", "schedule", "roles", "models", "plan"]
+                        "enum": [
+                            "nodes",
+                            "notes",
+                            "layout",
+                            "diagram",
+                            "drawing",
+                            "schedule",
+                            "roles",
+                            "models",
+                            "plan"
+                        ]
                     }
                 },
-                "required": ["topic"]
+                "required": [
+                    "topic"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1570,7 +1765,11 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["diagnostics", "symbols", "sql"]
+                        "enum": [
+                            "diagnostics",
+                            "symbols",
+                            "sql"
+                        ]
                     },
                     "path": {
                         "type": "string"
@@ -1579,7 +1778,10 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["action", "path"]
+                "required": [
+                    "action",
+                    "path"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1594,7 +1796,13 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["hover", "definition", "references", "supertypes", "subtypes"]
+                        "enum": [
+                            "hover",
+                            "definition",
+                            "references",
+                            "supertypes",
+                            "subtypes"
+                        ]
                     },
                     "path": {
                         "type": "string"
@@ -1611,7 +1819,12 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["action", "path", "line", "column"]
+                "required": [
+                    "action",
+                    "path",
+                    "line",
+                    "column"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1646,13 +1859,20 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["start", "restart", "stop"]
+                        "enum": [
+                            "start",
+                            "restart",
+                            "stop"
+                        ]
                     },
                     "launch": {
                         "type": "string"
                     }
                 },
-                "required": ["action", "launch"]
+                "required": [
+                    "action",
+                    "launch"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1690,7 +1910,9 @@
                         "description": "For a group, launch ids or names in order"
                     }
                 },
-                "required": ["launch"]
+                "required": [
+                    "launch"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1720,7 +1942,11 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["service", "task", "group"]
+                        "enum": [
+                            "service",
+                            "task",
+                            "group"
+                        ]
                     },
                     "command": {
                         "type": "string"
@@ -1745,7 +1971,10 @@
                         "description": "In the shared project file a team commits"
                     }
                 },
-                "required": ["name", "kind"]
+                "required": [
+                    "name",
+                    "kind"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1765,7 +1994,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["launch"]
+                "required": [
+                    "launch"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -1791,7 +2022,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["edge_id"]
+                "required": [
+                    "edge_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -1844,7 +2077,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["to"]
+                "required": [
+                    "to"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1853,7 +2088,7 @@
         },
         {
             "name": "node_arrange",
-            "description": "Lays nodes out in a grid, a row or a column without overlap.",
+            "description": "Lays nodes and groups out in a grid, a row or a column, or spreads apart the ones that overlap.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -1862,10 +2097,40 @@
                     },
                     "layout": {
                         "type": "string",
-                        "enum": ["grid", "row", "column"]
+                        "enum": [
+                            "grid",
+                            "row",
+                            "column",
+                            "spread"
+                        ]
                     },
                     "cols": {
                         "type": "string"
+                    },
+                    "gap": {
+                        "type": "integer",
+                        "description": "Room between nodes and to beside, 40 without it"
+                    },
+                    "align": {
+                        "type": "string",
+                        "enum": [
+                            "start",
+                            "center",
+                            "end"
+                        ]
+                    },
+                    "beside": {
+                        "type": "string",
+                        "description": "The node the block goes beside"
+                    },
+                    "side": {
+                        "type": "string",
+                        "enum": [
+                            "left",
+                            "right",
+                            "above",
+                            "below"
+                        ]
                     },
                     "view": {
                         "type": "string"
@@ -1874,7 +2139,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["nodes"]
+                "required": [
+                    "nodes"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -1897,7 +2164,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["node_id"]
+                "required": [
+                    "node_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -1959,7 +2228,45 @@
                         "type": "integer"
                     }
                 },
-                "required": ["nodes"]
+                "required": [
+                    "nodes"
+                ]
+            },
+            "annotations": {
+                "destructiveHint": false
+            },
+            "audience": "everyone"
+        },
+        {
+            "name": "node_layout",
+            "description": "Moves and resizes nodes and groups. Gives several one size, or each its own place and size in json.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "string",
+                        "description": "The nodes that take w and h"
+                    },
+                    "w": {
+                        "type": "number"
+                    },
+                    "h": {
+                        "type": "number"
+                    },
+                    "json": {
+                        "type": "string",
+                        "description": "A place or size per node. Format: guide topic layout"
+                    },
+                    "view": {
+                        "type": "string"
+                    },
+                    "dry_run": {
+                        "type": "boolean"
+                    },
+                    "revision": {
+                        "type": "integer"
+                    }
+                }
             },
             "annotations": {
                 "destructiveHint": false
@@ -1993,7 +2300,18 @@
                 "properties": {
                     "kind": {
                         "type": "string",
-                        "enum": ["note", "browser", "drawing", "diagram", "file", "device", "terminal", "chat", "artifact", "routine"]
+                        "enum": [
+                            "note",
+                            "browser",
+                            "drawing",
+                            "diagram",
+                            "file",
+                            "device",
+                            "terminal",
+                            "chat",
+                            "artifact",
+                            "routine"
+                        ]
                     },
                     "title": {
                         "type": "string"
@@ -2039,7 +2357,30 @@
                     },
                     "beside": {
                         "type": "string",
-                        "description": "The node it goes right of"
+                        "description": "The node it goes beside"
+                    },
+                    "side": {
+                        "type": "string",
+                        "description": "The side of beside, or of you without it; right when left out",
+                        "enum": [
+                            "left",
+                            "right",
+                            "above",
+                            "below"
+                        ]
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Left edge, with y"
+                    },
+                    "y": {
+                        "type": "number"
+                    },
+                    "w": {
+                        "type": "number"
+                    },
+                    "h": {
+                        "type": "number"
                     },
                     "color": {
                         "type": "string"
@@ -2084,7 +2425,9 @@
                         "description": "A color name, or none"
                     }
                 },
-                "required": ["node_id"]
+                "required": [
+                    "node_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2108,7 +2451,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["id", "text"]
+                "required": [
+                    "id",
+                    "text"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2126,7 +2472,9 @@
                         "description": "As agent_start or agent_team answered it"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -2144,7 +2492,9 @@
                         "description": "As agent_start or agent_team answered it"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -2159,7 +2509,11 @@
                 "properties": {
                     "type": {
                         "type": "string",
-                        "enum": ["step", "text", "section"]
+                        "enum": [
+                            "step",
+                            "text",
+                            "section"
+                        ]
                     },
                     "title": {
                         "type": "string"
@@ -2177,7 +2531,11 @@
                     },
                     "checks": {
                         "type": "string",
-                        "enum": ["anyone", "agent", "person"]
+                        "enum": [
+                            "anyone",
+                            "agent",
+                            "person"
+                        ]
                     },
                     "id": {
                         "type": "string",
@@ -2187,7 +2545,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["type", "title"]
+                "required": [
+                    "type",
+                    "title"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2204,7 +2565,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["plan"]
+                "required": [
+                    "plan"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -2219,7 +2582,10 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["edit", "move"]
+                        "enum": [
+                            "edit",
+                            "move"
+                        ]
                     },
                     "item_id": {
                         "type": "string"
@@ -2232,7 +2598,11 @@
                     },
                     "checks": {
                         "type": "string",
-                        "enum": ["anyone", "agent", "person"]
+                        "enum": [
+                            "anyone",
+                            "agent",
+                            "person"
+                        ]
                     },
                     "plan": {
                         "type": "string"
@@ -2246,7 +2616,10 @@
                         "description": "The item it goes right after"
                     }
                 },
-                "required": ["action", "item_id"]
+                "required": [
+                    "action",
+                    "item_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2272,12 +2645,19 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["steps", "test"]
+                        "enum": [
+                            "steps",
+                            "test"
+                        ]
                     },
                     "checks": {
                         "type": "string",
                         "description": "Who sets the steps that name none",
-                        "enum": ["anyone", "agent", "person"]
+                        "enum": [
+                            "anyone",
+                            "agent",
+                            "person"
+                        ]
                     },
                     "dry_run": {
                         "type": "boolean"
@@ -2305,7 +2685,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["step_id", "text"]
+                "required": [
+                    "step_id",
+                    "text"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2344,7 +2727,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["item_id"]
+                "required": [
+                    "item_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -2366,7 +2751,16 @@
                     "state": {
                         "type": "string",
                         "description": "warning and info take a note that says what",
-                        "enum": ["open", "active", "done", "failed", "skipped", "blocked", "warning", "info"]
+                        "enum": [
+                            "open",
+                            "active",
+                            "done",
+                            "failed",
+                            "skipped",
+                            "blocked",
+                            "warning",
+                            "info"
+                        ]
                     },
                     "note": {
                         "type": "string"
@@ -2379,7 +2773,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["step_id", "state"]
+                "required": [
+                    "step_id",
+                    "state"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2400,7 +2797,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["text"]
+                "required": [
+                    "text"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2417,7 +2816,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["project_id"]
+                "required": [
+                    "project_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2434,7 +2835,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["project_id"]
+                "required": [
+                    "project_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2502,7 +2905,10 @@
                         "description": "An absolute folder for it"
                     }
                 },
-                "required": ["name", "reason"]
+                "required": [
+                    "name",
+                    "reason"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2517,7 +2923,11 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["catalog", "versions", "limits"]
+                        "enum": [
+                            "catalog",
+                            "versions",
+                            "limits"
+                        ]
                     },
                     "search": {
                         "type": "string"
@@ -2529,7 +2939,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["action"]
+                "required": [
+                    "action"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -2554,7 +2966,11 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["agent", "command", "launch"]
+                        "enum": [
+                            "agent",
+                            "command",
+                            "launch"
+                        ]
                     },
                     "prompt": {
                         "type": "string"
@@ -2568,12 +2984,20 @@
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
+                        "enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                        ]
                     },
                     "per_run": {
                         "type": "string",
                         "description": "A chat per run (new) or one chat (continue)",
-                        "enum": ["new", "continue"]
+                        "enum": [
+                            "new",
+                            "continue"
+                        ]
                     },
                     "command": {
                         "type": "string"
@@ -2590,7 +3014,9 @@
                         "description": "The Output artifact runs add to"
                     }
                 },
-                "required": ["routine"]
+                "required": [
+                    "routine"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2624,7 +3050,11 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["agent", "command", "launch"]
+                        "enum": [
+                            "agent",
+                            "command",
+                            "launch"
+                        ]
                     },
                     "prompt": {
                         "type": "string"
@@ -2638,12 +3068,20 @@
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["supervised", "auto-accept-edits", "auto", "full-access"]
+                        "enum": [
+                            "supervised",
+                            "auto-accept-edits",
+                            "auto",
+                            "full-access"
+                        ]
                     },
                     "per_run": {
                         "type": "string",
                         "description": "A chat per run (new) or one chat (continue)",
-                        "enum": ["new", "continue"]
+                        "enum": [
+                            "new",
+                            "continue"
+                        ]
                     },
                     "command": {
                         "type": "string"
@@ -2664,7 +3102,10 @@
                         "description": "In the shared project file a team commits"
                     }
                 },
-                "required": ["title", "at"]
+                "required": [
+                    "title",
+                    "at"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2681,7 +3122,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["routine"]
+                "required": [
+                    "routine"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2696,13 +3139,19 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["pause", "resume"]
+                        "enum": [
+                            "pause",
+                            "resume"
+                        ]
                     },
                     "routine": {
                         "type": "string"
                     }
                 },
-                "required": ["action", "routine"]
+                "required": [
+                    "action",
+                    "routine"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2756,7 +3205,10 @@
                                     "description": "false for no secret, as a user name"
                                 }
                             },
-                            "required": ["name", "label"]
+                            "required": [
+                                "name",
+                                "label"
+                            ]
                         }
                     },
                     "wait": {
@@ -2764,7 +3216,10 @@
                         "description": "Seconds the call holds for the answer"
                     }
                 },
-                "required": ["label", "reason"]
+                "required": [
+                    "label",
+                    "reason"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2823,7 +3278,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["id"]
+                "required": [
+                    "id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2838,7 +3295,15 @@
                 "properties": {
                     "language": {
                         "type": "string",
-                        "enum": ["javascript", "typescript", "php", "css", "html", "xml", "other"]
+                        "enum": [
+                            "javascript",
+                            "typescript",
+                            "php",
+                            "css",
+                            "html",
+                            "xml",
+                            "other"
+                        ]
                     },
                     "json": {
                         "type": "boolean"
@@ -2877,7 +3342,10 @@
                     },
                     "expression": {
                         "type": "string",
-                        "enum": ["any", "statement"]
+                        "enum": [
+                            "any",
+                            "statement"
+                        ]
                     },
                     "postfix": {
                         "type": "boolean"
@@ -2886,7 +3354,11 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["key", "body", "language"]
+                "required": [
+                    "key",
+                    "body",
+                    "language"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2946,7 +3418,13 @@
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["add", "on", "off", "edit", "remove"]
+                        "enum": [
+                            "add",
+                            "on",
+                            "off",
+                            "edit",
+                            "remove"
+                        ]
                     },
                     "hostname": {
                         "type": "string"
@@ -2957,7 +3435,10 @@
                     },
                     "protocol": {
                         "type": "string",
-                        "enum": ["http", "https"]
+                        "enum": [
+                            "http",
+                            "https"
+                        ]
                     },
                     "host_header": {
                         "type": "string",
@@ -2967,7 +3448,10 @@
                         "type": "string"
                     }
                 },
-                "required": ["action", "hostname"]
+                "required": [
+                    "action",
+                    "hostname"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -2982,10 +3466,21 @@
                 "properties": {
                     "group": {
                         "type": "string",
-                        "enum": ["status", "data", "structure", "content", "places", "links", "inputs", "choices"]
+                        "enum": [
+                            "status",
+                            "data",
+                            "structure",
+                            "content",
+                            "places",
+                            "links",
+                            "inputs",
+                            "choices"
+                        ]
                     }
                 },
-                "required": ["group"]
+                "required": [
+                    "group"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -3005,7 +3500,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["view_id"]
+                "required": [
+                    "view_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -3026,7 +3523,9 @@
                         "description": "Format: guide topic diagram"
                     }
                 },
-                "required": ["view_id"]
+                "required": [
+                    "view_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3055,7 +3554,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["view_id"]
+                "required": [
+                    "view_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3089,7 +3590,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["view_id"]
+                "required": [
+                    "view_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3123,7 +3626,18 @@
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["canvas", "chat", "terminal", "browser", "drawing", "diagram", "file", "database", "separator", "subheader"]
+                        "enum": [
+                            "canvas",
+                            "chat",
+                            "terminal",
+                            "browser",
+                            "drawing",
+                            "diagram",
+                            "file",
+                            "database",
+                            "separator",
+                            "subheader"
+                        ]
                     },
                     "path": {
                         "type": "string",
@@ -3146,7 +3660,10 @@
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["data", "structure"]
+                        "enum": [
+                            "data",
+                            "structure"
+                        ]
                     },
                     "where": {
                         "type": "string",
@@ -3160,7 +3677,9 @@
                         "type": "integer"
                     }
                 },
-                "required": ["name"]
+                "required": [
+                    "name"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3177,7 +3696,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["view_id"]
+                "required": [
+                    "view_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3208,7 +3729,10 @@
                     },
                     "appearance": {
                         "type": "string",
-                        "enum": ["dark", "light"]
+                        "enum": [
+                            "dark",
+                            "light"
+                        ]
                     },
                     "html": {
                         "type": "string"
@@ -3233,7 +3757,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["visual_id"]
+                "required": [
+                    "visual_id"
+                ]
             },
             "annotations": {
                 "destructiveHint": true
@@ -3252,7 +3778,10 @@
                     "layout": {
                         "type": "string",
                         "description": "wide for mockups and dashboards",
-                        "enum": ["inline", "wide"]
+                        "enum": [
+                            "inline",
+                            "wide"
+                        ]
                     },
                     "height": {
                         "type": "integer",
@@ -3262,7 +3791,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["title"]
+                "required": [
+                    "title"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3283,7 +3814,9 @@
                         "type": "string"
                     }
                 },
-                "required": ["name"]
+                "required": [
+                    "name"
+                ]
             },
             "annotations": {
                 "destructiveHint": false
@@ -3307,7 +3840,9 @@
                         "description": "One line per file"
                     }
                 },
-                "required": ["branch"]
+                "required": [
+                    "branch"
+                ]
             },
             "annotations": {
                 "readOnlyHint": true
@@ -3346,7 +3881,9 @@
                         "type": "boolean"
                     }
                 },
-                "required": ["branch"]
+                "required": [
+                    "branch"
+                ]
             },
             "annotations": {
                 "destructiveHint": true

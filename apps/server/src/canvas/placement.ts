@@ -1,5 +1,15 @@
 import { ARRANGE_LAYOUTS } from '@ruimte/actions';
-import { arrangeRects, GROUP_HEADER, GROUP_PADDING, gridColumns, groupMemberIds, groupRect, PLACEMENT_GAP, type ProjectNode } from '@ruimte/contracts';
+import {
+    arrangeRects,
+    GROUP_HEADER,
+    GROUP_PADDING,
+    gridColumns,
+    groupMemberIds,
+    groupRect,
+    PLACEMENT_GAP,
+    spreadRects,
+    type ProjectNode
+} from '@ruimte/contracts';
 
 export interface Rect {
     x: number;
@@ -48,7 +58,7 @@ export function placeFree(existing: readonly Rect[], size: { w: number; h: numbe
 }
 
 // The layouts are the catalog's, since `node.arrange` takes one as input; the arithmetic lives in contracts for the client's group arrange.
-export { ARRANGE_LAYOUTS, arrangeRects, gridColumns, PLACEMENT_GAP };
+export { ARRANGE_LAYOUTS, arrangeRects, gridColumns, PLACEMENT_GAP, spreadRects };
 export type ArrangeLayout = (typeof ARRANGE_LAYOUTS)[number];
 
 /* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */

@@ -12,6 +12,12 @@ import {
     knownNodeSizes,
     nodeSizeOf,
     withMemberIds,
+    PLACEMENT_GAP,
+    arrangeRects,
+    gridPoint,
+    gridSide,
+    rectBeside,
+    spreadRects,
     type GroupItem
 } from './node-defaults.ts';
 
@@ -130,5 +136,75 @@ describe('groupMemberIds', () => {
 
         expect(groupMemberIds(frame, items)).toEqual(['a', 'a', 'inherited']);
         expect(groupMemberIds(folded, items)).toEqual(['a', 'a', frame.id, 'inherited']);
+    });
+});
+
+describe('placing beside a frame', () => {
+    const anchor = { x: 100, y: 200, w: 300, h: 150 };
+    const size = { w: 80, h: 40 };
+
+    test('a side is the anchor edge plus the gap, top edges level beside it and left edges level above and below it', () => {
+        expect(rectBeside(anchor, size, 'right')).toEqual({ x: 400 + PLACEMENT_GAP, y: 200, ...size });
+        expect(rectBeside(anchor, size, 'left')).toEqual({ x: 100 - PLACEMENT_GAP - 80, y: 200, ...size });
+        expect(rectBeside(anchor, size, 'above', 16)).toEqual({ x: 100, y: 200 - 16 - 40, ...size });
+        expect(rectBeside(anchor, size, 'below', 0)).toEqual({ x: 100, y: 350, ...size });
+    });
+
+    test('a side an agent gave goes up to the grid and is nothing outside what a frame drags to', () => {
+        expect(gridSide(500, NODE_SIZE_MIN.w)).toBe(504);
+        expect(gridSide(NODE_SIZE_MIN.w, NODE_SIZE_MIN.w)).toBe(NODE_SIZE_MIN.w);
+        expect(gridSide(NODE_SIZE_MIN.w - CANVAS_GRID, NODE_SIZE_MIN.w)).toBeNull();
+        expect(gridSide(NODE_SIZE_MAX + 1, NODE_SIZE_MIN.w)).toBeNull();
+        expect([gridPoint(1003), gridPoint(-3), gridPoint(-2000)]).toEqual([1000, 0, -2000]);
+    });
+});
+
+describe('arranging with a gap and an alignment', () => {
+    const rects = [
+        { x: 0, y: 0, w: 200, h: 100 },
+        { x: 900, y: 900, w: 100, h: 300 }
+    ];
+
+    test('the gap is the room between two nodes, in a row and in a column', () => {
+        expect(arrangeRects(rects, 'row', undefined, { gap: 80 }).map((rect) => rect.x)).toEqual([0, 280]);
+        expect(arrangeRects(rects, 'column', undefined, { gap: 0 }).map((rect) => rect.y)).toEqual([0, 100]);
+    });
+
+    test('a node stands at the start, the middle or the end of the cell its row and column give it', () => {
+        expect(arrangeRects(rects, 'row', undefined, { align: 'center' }).map((rect) => rect.y)).toEqual([100, 0]);
+        expect(arrangeRects(rects, 'row', undefined, { align: 'end' }).map((rect) => rect.y)).toEqual([200, 0]);
+        expect(arrangeRects(rects, 'column', undefined, { align: 'end' }).map((rect) => rect.x)).toEqual([0, 100]);
+    });
+});
+
+describe('spreading frames apart', () => {
+    test('frames that stand too close move right or down by the smaller move, and the leftmost stays put', () => {
+        const spread = spreadRects([
+            { x: 0, y: 0, w: 200, h: 100 },
+            { x: 150, y: 10, w: 200, h: 100 },
+            { x: 20, y: 90, w: 200, h: 100 }
+        ]);
+
+        // From the left: the third goes down under the first, then the second goes right of both.
+        expect(spread).toEqual([
+            { x: 0, y: 0, w: 200, h: 100 },
+            { x: 20 + 200 + PLACEMENT_GAP, y: 10, w: 200, h: 100 },
+            { x: 20, y: 100 + PLACEMENT_GAP, w: 200, h: 100 }
+        ]);
+    });
+
+    test('frames with room between them stay where they are, and no gap only undoes an overlap', () => {
+        const apart = [
+            { x: 0, y: 0, w: 200, h: 100 },
+            { x: 240, y: 0, w: 200, h: 100 }
+        ];
+        const touching = [
+            { x: 0, y: 0, w: 200, h: 100 },
+            { x: 210, y: 0, w: 200, h: 100 }
+        ];
+
+        expect(spreadRects(apart)).toEqual(apart);
+        expect(spreadRects(touching, 0)).toEqual(touching);
+        expect(spreadRects(touching)[1]).toEqual({ x: 240, y: 0, w: 200, h: 100 });
     });
 });

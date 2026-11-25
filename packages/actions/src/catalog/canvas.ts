@@ -1,6 +1,14 @@
-import { AgentKindSchema, ArtifactIdSchema, ArtifactVersionIdSchema, NODE_ACCENT_NAMES, ProviderAccountIdSchema } from '@ruimte/contracts';
+import {
+    AgentKindSchema,
+    ARRANGE_ALIGNS,
+    ArtifactIdSchema,
+    ArtifactVersionIdSchema,
+    NODE_ACCENT_NAMES,
+    PLACEMENT_SIDES,
+    ProviderAccountIdSchema
+} from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_PER_CALL } from '../limits.ts';
+import { LAYOUT_GAP_MAX, MAX_PER_CALL } from '../limits.ts';
 import {
     PERSON_AND_VOICE,
     AGENT,
@@ -140,6 +148,13 @@ export const CANVAS_ACTIONS = {
             ),
             cwd: forActors(PERSON_AND_AGENT, z.string().min(1)).describe('The directory the shell starts in'),
             beside: agentField(nodeId).describe('Puts the node directly right of this node, top edges level, whatever is there already'),
+            side: agentField(z.enum(PLACEMENT_SIDES)).describe(
+                'The side of beside the node goes on, in the group beside stands in. Without beside it is a side of the caller, past whatever is in the way'
+            ),
+            x: agentField(z.number()).describe('The left edge in world units, with y; it goes to the grid'),
+            y: agentField(z.number()).describe('The top edge in world units, with x'),
+            w: agentField(z.number()).describe('The width, up to the next step of the grid; without it the size of the kind'),
+            h: agentField(z.number()).describe('The height, up to the next step of the grid'),
             device: agentField(z.string().min(1)).describe('The device a device node shows, by the id device.list gives it'),
             resume: resumedSession,
             color: agentField(z.enum(NODE_ACCENT_NAMES)).describe('The color of the node; a note takes its paper from it'),
@@ -180,6 +195,11 @@ export const CANVAS_ACTIONS = {
                         source: viewId.nullable().describe('The id of a view of this project of the same kind as the node'),
                         cwd: z.string().min(1).nullable().describe('The directory the shell starts in'),
                         beside: nodeId.nullable().describe('Puts the node directly right of this node, top edges level'),
+                        side: z.enum(PLACEMENT_SIDES).nullish().describe('The side of beside, or of the caller without it, the node goes on'),
+                        x: z.number().nullish().describe('The left edge in world units, with y'),
+                        y: z.number().nullish().describe('The top edge in world units, with x'),
+                        w: z.number().nullish().describe('The width; without it the size of the kind'),
+                        h: z.number().nullish().describe('The height'),
                         device: z.string().min(1).nullable().describe('The device a device node shows'),
                         color: z.enum(NODE_ACCENT_NAMES).nullable().describe('The color of the node; a note takes its paper from it')
                     })
@@ -389,6 +409,8 @@ export const CANVAS_ACTIONS = {
                     w: z.number(),
                     h: z.number(),
                     groupId: z.string().nullable(),
+                    // Folded to its header, so h is the header and not the height it opens to.
+                    collapsed: z.boolean().optional(),
                     flag: flagColor.nullable(),
                     snoozedUntil: z.iso.datetime().nullable().describe('When the snooze a person put on the node ends; null for none')
                 })
@@ -401,7 +423,8 @@ export const CANVAS_ACTIONS = {
     },
     'node.arrange': {
         title: 'Arrange canvas nodes',
-        description: 'Lays nodes out in a grid, a row or a column without overlap.',
+        description:
+            'Lays nodes and groups out in a grid, a row or a column without overlap, or only spreads apart the ones that stand too close. A group moves with what it holds.',
         effect: 'shared',
         domain: 'canvas',
         actors: PERSON_AND_AGENT,
@@ -414,9 +437,49 @@ export const CANVAS_ACTIONS = {
                 .int()
                 .min(1)
                 .nullable()
-                .describe('How many columns the grid gets; without it as square as the count allows, so 5 nodes are 3 and 2')
+                .describe('How many columns the grid gets; without it as square as the count allows, so 5 nodes are 3 and 2'),
+            gap: z.number().int().min(0).max(LAYOUT_GAP_MAX).nullish().describe('The room between two nodes in world units; without it 40'),
+            align: z.enum(ARRANGE_ALIGNS).nullish().describe('Where a node stands in the cell of its row and column; without it start'),
+            beside: nodeId.nullish().describe('The node the block is put beside; without it the block starts where the nodes already stand'),
+            side: z.enum(PLACEMENT_SIDES).nullish().describe('The side of beside, or of the caller without it, the block goes on')
         }),
         output: z.object({ viewId, nodes: z.array(z.object({ nodeId, x: z.number(), y: z.number() })), changed: z.boolean() })
+    },
+    'node.layout': {
+        title: 'Place canvas nodes',
+        description:
+            'Moves and resizes nodes and groups of one canvas in one write: each to a position, to a side of another node, to a size, or any of these together. Every node is checked before any changes, so a refusal changes none.',
+        effect: 'shared',
+        domain: 'canvas',
+        actors: PERSON_AND_AGENT,
+        input: z.object({
+            viewId,
+            nodes: z
+                .array(
+                    z.object({
+                        nodeId,
+                        x: z.number().nullish().describe('The left edge in world units, with y; it goes to the grid, and a group takes what it holds along'),
+                        y: z.number().nullish().describe('The top edge in world units, with x'),
+                        w: z.number().nullish().describe('The width, up to the next step of the grid'),
+                        h: z.number().nullish().describe('The height, up to the next step of the grid'),
+                        side: z
+                            .enum(PLACEMENT_SIDES)
+                            .nullish()
+                            .describe('The side of beside, or of the caller without it, the node goes on instead of x and y'),
+                        beside: nodeId.nullish().describe('The node it goes beside, as the nodes before it in this call left it'),
+                        gap: z.number().int().min(0).max(LAYOUT_GAP_MAX).nullish().describe('The room between it and beside; without it 40')
+                    })
+                )
+                .min(1)
+                .max(MAX_PER_CALL)
+        }),
+        output: z.object({
+            viewId,
+            nodes: z.array(z.object({ nodeId, x: z.number(), y: z.number(), w: z.number(), h: z.number() })),
+            // Pairs that overlap after the write, each with one of the nodes this call named.
+            overlaps: z.array(z.object({ nodeId, other: nodeId })),
+            changed: z.boolean()
+        })
     },
     'link.list': {
         title: 'List canvas lines',

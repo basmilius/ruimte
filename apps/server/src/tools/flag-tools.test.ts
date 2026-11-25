@@ -18,7 +18,7 @@ describe('flag', () => {
         expect((await fx.invoke('flag', { id: ['board'], color: 'red' })).lines).toEqual(['flagged\tboard\tview\tred']);
         expect((await fx.invoke('flag', { id: ['note-1'], color: 'blue' })).lines).toEqual(['flagged\tnote-1\tnode\tblue']);
         expect((await fx.invoke('view_list', {})).lines.find((line) => line.startsWith('board\t'))).toBe('board\tcanvas\tBoard\tno\ta person made it\t-\tred');
-        expect((await fx.invoke('node_list', {})).lines).toContain('note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\tblue\t-');
+        expect((await fx.invoke('node_list', {})).lines).toContain('note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\tblue\t-\t-');
         expect((await fx.invoke('flag', { id: ['board'], color: 'null' })).lines).toEqual(['flagged\tboard\tview\tnull']);
         expect((await fx.onDisk()).flags).toEqual({ 'note-1': 'blue' });
     });

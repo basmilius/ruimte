@@ -36,6 +36,7 @@ const WORK: readonly string[] = [
     'node_delete',
     'node_group',
     'node_arrange',
+    'node_layout',
     'link_new',
     'link_delete',
     'flag',

@@ -34,7 +34,7 @@ export function nodeLines(canvas: ProjectCanvasView, options: { takes?: (node: P
     );
 }
 
-/* A group is never one of nodes: `node_group` and `node_arrange` both refuse one, so neither offers one. */
+/* A group is never one of the nodes a frame is drawn around: `node_group` refuses one, so it offers none. */
 export const NOT_A_GROUP = {
     takes: (node: ProjectNode): boolean => node.kind !== 'group',
     empty: 'This canvas holds nothing but frames, and a frame is never one of nodes'

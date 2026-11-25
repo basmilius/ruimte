@@ -90,7 +90,8 @@ export function fieldActors(schema: z.ZodType): readonly ActionActorKind[] | nul
     return Array.isArray(actors) ? (actors as ActionActorKind[]) : null;
 }
 
-export const ARRANGE_LAYOUTS = ['grid', 'row', 'column'] as const;
+/* `spread` lays nothing out: it only moves nodes apart that stand too close. */
+export const ARRANGE_LAYOUTS = ['grid', 'row', 'column', 'spread'] as const;
 
 /*
  * Kinds a node can only be made as by an agent: a drawing and a diagram mirror a view the daemon names

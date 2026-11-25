@@ -1,5 +1,19 @@
 import { ToolRefusal } from '@adecore/agents/context';
-import { NODE_ACCENT_NAMES, isCanvasView, isNodeAccent, type NodeAccent } from '@ruimte/contracts';
+import { LAYOUT_GAP_MAX, type ActionInput } from '@ruimte/actions';
+import {
+    ARRANGE_ALIGNS,
+    CANVAS_GRID,
+    GROUP_HEADER,
+    GROUP_PADDING,
+    NODE_ACCENT_NAMES,
+    NODE_SIZE_MAX,
+    NODE_SIZE_MIN,
+    PLACEMENT_GAP,
+    PLACEMENT_SIDES,
+    isCanvasView,
+    isNodeAccent,
+    type NodeAccent
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import { COLOR_LINES } from '../actions/node-actions.ts';
 import { field, placeOf, requiredField, titleField } from '../canvas/host.ts';
@@ -19,6 +33,36 @@ const KIND_MESSAGE = `node_new needs a kind: ${NODE_NEW_KINDS.join(', ')}`;
 
 const NO_COLOR = 'none';
 
+const SIDE_INPUT = z.enum(PLACEMENT_SIDES, { error: `side takes one of ${PLACEMENT_SIDES.join(', ')}` }).optional();
+
+/* Where a node goes and how big it is, as `node_new` and a row of `node_layout` both take them. */
+const PLACE_FIELDS = {
+    side: SIDE_INPUT.describe('The side of beside, or of you without it; right when left out'),
+    x: z.number({ error: 'x is a number, the left edge' }).optional().describe('Left edge, with y'),
+    y: z.number({ error: 'y is a number, the top edge' }).optional(),
+    w: z.number({ error: 'w is a number, the width' }).optional(),
+    h: z.number({ error: 'h is a number, the height' }).optional()
+};
+
+const GAP_INPUT = z
+    .number({ error: 'gap is a whole number, the room between two nodes' })
+    .int('gap is a whole number')
+    .min(0, 'gap is 0 or more')
+    .max(LAYOUT_GAP_MAX, `gap is at most ${LAYOUT_GAP_MAX}`)
+    .optional();
+
+const JsonPlaceSchema = z.strictObject({
+    id: z.string({ error: 'id needs the id of a node or group' }).min(1, 'id needs the id of a node or group'),
+    ...PLACE_FIELDS,
+    beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional(),
+    gap: GAP_INPUT
+});
+
+const LAYOUT_EXAMPLE = '[{"id":"note-1","x":0,"y":0,"w":480,"h":320},{"id":"note-2","side":"below","beside":"note-1","gap":80}]';
+
+// An answer names at most this many overlapping pairs, since a canvas stacked in one spot would bury the rest of it.
+const OVERLAP_LINES_MAX = 20;
+
 const JsonNodeSchema = z.strictObject({
     // An artifact or a routine node is left out: it names what it shows with fields of its own.
     kind: z.enum(JSON_NODE_KINDS, { error: `node_new needs a kind: ${JSON_NODE_KINDS.join(', ')}` }),
@@ -30,6 +74,7 @@ const JsonNodeSchema = z.strictObject({
     device: z.string().min(1, 'device needs the id of a device of this machine').optional(),
     cwd: z.string().min(1, 'cwd needs the path of a directory').optional(),
     beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional(),
+    ...PLACE_FIELDS,
     color: z.enum(NODE_ACCENT_NAMES, { error: `color takes one of the ${NODE_ACCENT_NAMES.length} colors` }).optional()
 });
 
@@ -43,7 +88,26 @@ const JsonEditSchema = z.strictObject({
 
 const NOTES_EXAMPLE = '[{"id":"note-1","text":"Done"},{"id":"note-2","text":"One more line","append":true}]';
 
-const SINGLE_NODE_FIELDS = ['kind', 'title', 'text', 'url', 'path', 'source', 'device', 'cwd', 'beside', 'color', 'artifact', 'version', 'routine'] as const;
+const SINGLE_NODE_FIELDS = [
+    'kind',
+    'title',
+    'text',
+    'url',
+    'path',
+    'source',
+    'device',
+    'cwd',
+    'beside',
+    'side',
+    'x',
+    'y',
+    'w',
+    'h',
+    'color',
+    'artifact',
+    'version',
+    'routine'
+] as const;
 
 /* The color a field names, null for `none` where taking a color off is allowed. */
 function colorOf(color: string, none: boolean): NodeAccent | null {
@@ -78,7 +142,8 @@ const nodeList = defineActionTool('node', {
                     ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value))),
                     node.groupId ?? '',
                     node.flag ?? '-',
-                    node.snoozedUntil ?? '-'
+                    node.snoozedUntil ?? '-',
+                    node.collapsed === true ? 'folded' : '-'
                 ].join('\t')
             ),
             // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.
@@ -105,7 +170,8 @@ const nodeNew = defineActionTool('node', {
         version: z.string().min(1, 'version needs the id of a version').optional().describe('For an artifact, a version to stay on'),
         routine: z.string().min(1, 'routine needs the id of a routine').optional().describe('For a routine'),
         view: VIEW_INPUT,
-        beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional().describe('The node it goes right of'),
+        beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional().describe('The node it goes beside'),
+        ...PLACE_FIELDS,
         color: z.string().min(1, 'color needs one of the colors').optional(),
         json: z.string().min(1, 'json needs an array of nodes').optional().describe('Several nodes at once. Format: guide topic nodes'),
         dry_run: z.boolean().optional()
@@ -135,6 +201,11 @@ const nodeNew = defineActionTool('node', {
                         source: node.source ?? null,
                         cwd: node.cwd ?? null,
                         beside: node.beside ?? null,
+                        side: node.side ?? null,
+                        x: node.x ?? null,
+                        y: node.y ?? null,
+                        w: node.w ?? null,
+                        h: node.h ?? null,
                         device: node.device ?? null,
                         color: node.color ?? null
                     }))
@@ -172,6 +243,11 @@ const nodeNew = defineActionTool('node', {
                 device: input.device ?? null,
                 cwd: input.cwd ?? null,
                 beside: input.beside ?? null,
+                side: input.side ?? null,
+                x: input.x ?? null,
+                y: input.y ?? null,
+                w: input.w ?? null,
+                h: input.h ?? null,
                 color,
                 artifact: input.artifact ?? null,
                 artifactVersion: input.version ?? null,
@@ -348,7 +424,7 @@ const DEFAULT_LAYOUT: ArrangeLayout = 'grid';
 const nodeArrange = defineActionTool('node', {
     name: 'node_arrange',
     action: 'node.arrange',
-    description: 'Lays nodes out in a grid, a row or a column without overlap.',
+    description: 'Lays nodes and groups out in a grid, a row or a column, or spreads apart the ones that overlap.',
     input: z.object({
         nodes: requiredField(NODES_NEEDED),
         layout: z.enum(ARRANGE_LAYOUTS, { error: `layout takes one of ${ARRANGE_LAYOUTS.join(', ')}` }).optional(),
@@ -358,23 +434,84 @@ const nodeArrange = defineActionTool('node', {
             .regex(/^[1-9][0-9]*$/, 'cols needs a whole number of columns, 1 or more')
             .transform(Number)
             .optional(),
+        gap: GAP_INPUT.describe(`Room between nodes and to beside, ${PLACEMENT_GAP} without it`),
+        align: z.enum(ARRANGE_ALIGNS, { error: `align takes one of ${ARRANGE_ALIGNS.join(', ')}` }).optional(),
+        beside: z.string().min(1, 'beside needs the id of a node on that canvas').optional().describe('The node the block goes beside'),
+        side: SIDE_INPUT,
         view: VIEW_INPUT
     }),
     async run(input, call) {
         const nodeIds = idList(input.nodes, 'nodes');
         const viewId = await canvasIdFor(call, placeOf(call), input.view, OFF_CANVAS);
-        const arranged = await runAction(call, 'node.arrange', { viewId, nodeIds, layout: input.layout ?? DEFAULT_LAYOUT, columns: input.cols ?? null });
+        const arranged = await runAction(call, 'node.arrange', {
+            viewId,
+            nodeIds,
+            layout: input.layout ?? DEFAULT_LAYOUT,
+            columns: input.cols ?? null,
+            gap: input.gap ?? null,
+            align: input.align ?? null,
+            beside: input.beside ?? null,
+            side: input.side ?? null
+        });
 
         return arranged.nodes.map((node) => [node.nodeId, String(node.x), String(node.y)].join('\t'));
     }
 });
+
+const nodeLayout = defineActionTool('node', {
+    name: 'node_layout',
+    action: 'node.layout',
+    description: 'Moves and resizes nodes and groups. Gives several one size, or each its own place and size in json.',
+    input: z.object({
+        nodes: z.string().min(1, NODES_NEEDED).optional().describe('The nodes that take w and h'),
+        w: PLACE_FIELDS.w,
+        h: PLACE_FIELDS.h,
+        json: z.string().min(1, 'json needs an array of nodes').optional().describe('A place or size per node. Format: guide topic layout'),
+        view: VIEW_INPUT,
+        dry_run: z.boolean().optional()
+    }),
+    async run(input, call) {
+        const dryRun = input.dry_run === true;
+        const rows = layoutRows(input);
+        const viewId = await canvasIdFor(call, placeOf(call), input.view, OFF_CANVAS);
+        const laid = await runAction(call, 'node.layout', { viewId, nodes: rows }, dryRun);
+        const overlaps = laid.overlaps.slice(0, OVERLAP_LINES_MAX);
+
+        return [
+            ...laid.nodes.map((node) => [node.nodeId, ...[node.x, node.y, node.w, node.h].map(String)].join('\t')),
+            ...overlaps.map((pair) => `overlap\t${pair.nodeId}\t${pair.other}`),
+            ...(laid.overlaps.length > overlaps.length ? [`overlap\t+${laid.overlaps.length - overlaps.length} more`] : []),
+            ...(overlaps.length > 0 ? ['see\tnode_arrange layout spread\tmoves apart the nodes that overlap'] : []),
+            ...(dryRun ? ['dry-run\tnothing was written'] : [])
+        ];
+    }
+});
+
+/* The rows of a call: every node of `nodes` at the one size, or the rows `json` spells out. */
+function layoutRows(input: { nodes?: string; w?: number; h?: number; json?: string }): ActionInput<'node.layout'>['nodes'] {
+    if (input.json !== undefined) {
+        const single = (['nodes', 'w', 'h'] as const).filter((key) => input[key] !== undefined);
+
+        if (single.length > 0) {
+            throw new ToolRefusal('bad-arguments', `json carries every node with its own fields; leave out ${single.join(', ')}`);
+        }
+
+        return jsonBatch(input.json, JsonPlaceSchema, LAYOUT_EXAMPLE, 'node').map(({ id, ...place }) => ({ nodeId: id, ...place }));
+    }
+
+    if (input.nodes === undefined || (input.w === undefined && input.h === undefined)) {
+        throw new ToolRefusal('bad-arguments', 'node_layout needs nodes with w or h, or json for a place or size per node', [`example\t${LAYOUT_EXAMPLE}`]);
+    }
+
+    return idList(input.nodes, 'nodes').map((nodeId) => ({ nodeId, w: input.w, h: input.h }));
+}
 
 const NODES_GUIDE = [
     `many\tTo add several nodes, give them all to one call in json instead of calling once per node: ${ONE_WRITE}`,
     'many\tEach node is checked the way a single call checks it, placed after the ones before it, and gets its own line from you; a refusal names the node by its place in the array, counted from 1',
     `example\t${NODES_EXAMPLE}`,
     ...NODE_NEW_KINDS.map(kindLine),
-    'kind\tevery kind\ttitle, view, beside, color'
+    'kind\tevery kind\ttitle, view, beside, side, x, y, w, h, color'
 ];
 
 const NOTES_GUIDE = [
@@ -383,11 +520,26 @@ const NOTES_GUIDE = [
     `example\t${NOTES_EXAMPLE}`
 ];
 
+const LAYOUT_GUIDE = [
+    `many\tTo place or size several nodes, give them all to one call in json instead of calling once per node: ${ONE_WRITE}`,
+    'field\tid\tA node or a group. A group takes what it holds along',
+    `field\tx, y\tThe top left corner, x to the right and y down, rounded to the grid of ${CANVAS_GRID}. The node joins the group it lands in`,
+    `field\tw, h\tThe size, from ${NODE_SIZE_MIN.w} by ${NODE_SIZE_MIN.h} to ${NODE_SIZE_MAX} a side, rounded up to the grid. A folded node takes h as the height it opens to`,
+    `field\tside, beside\tInstead of x and y: ${PLACEMENT_SIDES.join(', ')} of the node beside names, in the group that node is in. Top edges are level left and right of it, left edges above and below it. Without beside it is a side of you, past whatever is in the way`,
+    `field\tgap\tThe room to beside, ${PLACEMENT_GAP} without it`,
+    'order\tRows apply in the order given, so beside may name a node an earlier row placed',
+    `groups\tA group grows around a node in it that grew or moved. It keeps ${GROUP_PADDING} around its nodes and ${GROUP_HEADER} more above them for its title`,
+    'after\tNothing else moves. An overlap line names a node this call moved or resized and a node it overlaps, also when it already did',
+    'arrange\tnode_arrange lays nodes out in the order given, from the top left of where they stand or beside a node, with gap also the room to that node. Its layout spread keeps the leftmost node and moves the others right or down',
+    `example\t${LAYOUT_EXAMPLE}`
+];
+
 export const nodeToolkit = defineToolkit(
     'node',
-    [nodeList, nodeNew, nodeEdit, nodeUpdate, nodeDelete, nodeGroup, nodeArrange],
+    [nodeList, nodeNew, nodeEdit, nodeUpdate, nodeDelete, nodeGroup, nodeArrange, nodeLayout],
     [
         { name: 'nodes', lines: NODES_GUIDE },
-        { name: 'notes', lines: NOTES_GUIDE }
+        { name: 'notes', lines: NOTES_GUIDE },
+        { name: 'layout', lines: LAYOUT_GUIDE }
     ]
 );
