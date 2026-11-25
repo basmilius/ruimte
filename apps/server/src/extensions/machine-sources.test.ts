@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { MachineCandidate, MachineSourceChangedEvent } from '@ruimte/contracts';
 import { FakeMachineSteps } from '../testing/fake-machine-steps.ts';
 import type { MachineStartDescription } from './descriptions.ts';
-import { MachineSources, type MachineSourceHost } from './machine-sources.ts';
+import { MachineSources, reachEnv, type MachineSourceHost } from './machine-sources.ts';
 
 const PROJECT = { id: 'project-1', name: 'Shop', folder: '/work/shop' };
 const TARGET = { projectId: PROJECT.id, extension: 'dev.harbor', source: 'compose-machine', candidate: 'workbench' };
@@ -37,6 +37,8 @@ interface World {
     describes(start: MachineStartDescription | Error): void;
     /* The account this machine is on from here on; null takes it off. */
     onAccount(accountId: string | null): void;
+    /* The broker this machine dials from here on, and what it tells clients to dial for it; null is no broker. */
+    onBroker(dialUrl: string | null, advertisedUrl?: string): void;
     /* Whether the source says a machine runs there, and whether it lists the place at all. */
     lists(candidates: { running: boolean }[]): void;
     /* The signal the source was handed for the start it describes now, and an answer it holds back when a test sets one. */
@@ -50,6 +52,7 @@ async function world(): Promise<World> {
     let start: MachineStartDescription | Error = START;
     let candidates = [{ running: false }];
     let account: string | null = ACCOUNT;
+    let reach: Record<string, string | undefined> = {};
     const describing: World['describing'] = { signal: null, answer: null };
     const host: MachineSourceHost = {
         list: async () => [
@@ -91,7 +94,8 @@ async function world(): Promise<World> {
 
             return cwd === undefined ? folder : `${folder}/${cwd}`;
         },
-        account: async () => account
+        account: async () => account,
+        reach: () => reach
     });
 
     steps.script(JOIN, { lines: [JSON.stringify(REGISTRATION)] });
@@ -109,6 +113,9 @@ async function world(): Promise<World> {
         },
         onAccount: (next) => {
             account = next;
+        },
+        onBroker: (dialUrl, advertisedUrl) => {
+            reach = reachEnv(dialUrl, advertisedUrl ?? null);
         },
         lists: (next) => {
             candidates = next;
@@ -177,6 +184,36 @@ describe('MachineSources', () => {
             lines: ['Reading harbor.yaml', 'Prepare workbench', 'Pulled the image', 'Start workbench']
         });
         expect(JSON.stringify(heard)).not.toContain(REGISTRATION.signature);
+    });
+
+    test('gives every program the broker this machine dials, as it is at that start, under what the source set itself', async () => {
+        const { sources, steps, describes, onBroker } = await world();
+        const envOf = (command: string): Record<string, string | undefined> => ({ ...steps.ran.findLast((ran) => ran.command === command)?.env });
+        const approve = async (): Promise<void> => {
+            await sources.start(TARGET, (await sources.start(TARGET)).held?.digest);
+            await settled();
+        };
+
+        onBroker('ws://127.0.0.1:4420', 'wss://broker.example.test');
+        await approve();
+
+        const broker = { RUIMTE_BROKER_URL: 'ws://127.0.0.1:4420', RUIMTE_BROKER_ADVERTISE_URL: 'wss://broker.example.test' };
+
+        expect(steps.ran.map((ran) => ran.env)).toEqual([
+            { PATH: '/bin', ...broker, HARBOR_MACHINE: 'workbench' },
+            { PATH: '/bin', ...broker },
+            { PATH: '/bin', ...broker, BOX: 'workbench' }
+        ]);
+
+        // A machine on no broker says so, or the new one would announce itself to the public broker.
+        onBroker(null);
+        sources.stop(TARGET);
+        describes({ ...START, steps: [{ title: 'Start', spawn: { command: 'up', env: { RUIMTE_BROKER_URL: 'wss://own.example.test' } } }] });
+        await approve();
+
+        expect(envOf('up')).toEqual({ PATH: '/bin', RUIMTE_BROKER_URL: 'wss://own.example.test' });
+        expect(envOf('box')).toEqual({ PATH: '/bin', RUIMTE_BROKER_URL: 'off', BOX: 'workbench' });
+        expect(reachEnv('wss://broker.ruimte.app', 'wss://broker.ruimte.app')).toEqual({ RUIMTE_BROKER_URL: 'wss://broker.ruimte.app' });
     });
 
     test('hands the registration to a client on the same account, has the machine sign again for the next, and ends once one posted it', async () => {

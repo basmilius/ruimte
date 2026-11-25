@@ -60,6 +60,8 @@ interface MachineSourcesOptions {
     cwdOf(folder: string, cwd: string | undefined): Promise<string>;
     /* The account this machine is on, which is the one a machine it starts joins; null on none. */
     account(): Promise<string | null>;
+    /* How this machine is reached now, as variables for every program of a start ({@link reachEnv}). */
+    reach(): Record<string, string | undefined>;
 }
 
 export interface MachineCandidateTarget {
@@ -408,7 +410,7 @@ export class MachineSources {
             for (const { command, args, shown } of programs) {
                 say(shown.title ?? shown.command);
 
-                const code = await this.options.run({ command, args, cwd: shown.cwd, env: { ...this.options.env, ...shown.env } }, { line: say, signal });
+                const code = await this.options.run({ command, args, cwd: shown.cwd, env: this.envOf(shown) }, { line: say, signal });
 
                 if (signal.aborted) {
                     settle('stopped');
@@ -453,7 +455,7 @@ export class MachineSources {
         }
 
         const code = await this.options.run(
-            { command, args, cwd: shown.cwd, env: { ...this.options.env, ...shown.env } },
+            { command, args, cwd: shown.cwd, env: this.envOf(shown) },
             {
                 line: (text, stream) => {
                     if (stream === 'out') {
@@ -483,6 +485,11 @@ export class MachineSources {
         return signed;
     }
 
+    /* What a program runs with: the machine's own variables, how this machine is reached, and what the source set on top. */
+    private envOf(shown: MachineStartProgram): Record<string, string | undefined> {
+        return { ...this.options.env, ...this.options.reach(), ...shown.env };
+    }
+
     private settle(start: Start, state: MachineStartState, failure: string | null = null): void {
         start.state = state;
         start.failure = failure;
@@ -500,6 +507,19 @@ export class MachineSources {
             this.sinks.to(clientId, { event: 'extension.machineChanged', payload: { projectId: start.projectId, candidate: viewOf(start.listed, start) } });
         }
     }
+}
+
+/*
+ * The broker this machine dials, under the names a daemon reads its own from, so a source hands them to the machine it
+ * starts and the app that reaches this one reaches that one. A source cannot ask for them: which broker a person's
+ * machines are on is this machine's to say. `off` for a machine on none, since a daemon that is told nothing announces
+ * itself to the public broker.
+ */
+export function reachEnv(dialUrl: string | null, advertisedUrl: string | null): Record<string, string | undefined> {
+    return {
+        RUIMTE_BROKER_URL: dialUrl ?? 'off',
+        RUIMTE_BROKER_ADVERTISE_URL: dialUrl !== null && advertisedUrl !== null && advertisedUrl !== dialUrl ? advertisedUrl : undefined
+    };
 }
 
 function parsedOrNull(text: string): unknown {

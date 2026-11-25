@@ -213,7 +213,13 @@ export interface MachineStep {
 
 /** How a machine gets into a place and starts there. The extension describes it; Ruimte runs it, after a person approved it. */
 export interface MachineStart {
-    /** In order, at most 16. A step that ends with another code than 0 ends the start. */
+    /**
+     * In order, at most 16. A step that ends with another code than 0 ends the start. Every program, and `inside`, runs
+     * with `RUIMTE_BROKER_URL` in its environment: the broker the machine that starts it dials, or `off` for none, and
+     * `RUIMTE_BROKER_ADVERTISE_URL` when clients reach that broker under another address. A daemon reads the same
+     * names, so hand them to the new machine as they are (an engine's `--env RUIMTE_BROKER_URL` without a value) and
+     * the app that reaches this machine reaches that one.
+     */
     steps: MachineStep[];
     /**
      * How Ruimte runs a command where the new machine lives, such as the `exec` of a container engine with the name of

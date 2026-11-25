@@ -6,7 +6,7 @@ import { ExtensionAgentProviders } from '../extensions/agent-providers.ts';
 import { extensionChatStarter } from '../extensions/extension-chat.ts';
 import { ExtensionHost, type ExtensionAsks, type ExtensionFilesPort, type ExtensionProject, type ExtensionTerminalPort } from '../extensions/extension-host.ts';
 import { runMachineAction, outputOf } from '../extensions/machine-actions.ts';
-import { MachineSources } from '../extensions/machine-sources.ts';
+import { MachineSources, reachEnv } from '../extensions/machine-sources.ts';
 import { NotificationChannels } from '../extensions/notification-channels.ts';
 import { terminalWriteRefusal } from '../extensions/policy.ts';
 import { ExtensionProblems } from '../extensions/problems.ts';
@@ -61,7 +61,19 @@ export interface ExtensionsBundle {
 type ExtensionsLater = Later<
     Pick<
         DaemonBundles,
-        'agents' | 'providers' | 'projects' | 'databases' | 'artifacts' | 'language' | 'canvasHost' | 'actions' | 'git' | 'machine' | 'launches' | 'stores'
+        | 'agents'
+        | 'providers'
+        | 'projects'
+        | 'databases'
+        | 'artifacts'
+        | 'language'
+        | 'canvasHost'
+        | 'actions'
+        | 'git'
+        | 'machine'
+        | 'launches'
+        | 'stores'
+        | 'network'
     >
 >;
 
@@ -228,7 +240,12 @@ export function wireExtensions(home: string, seams: ExtensionSeams, later: Exten
         run: seams.machineSteps,
         env: seams.env,
         cwdOf: async (folder, cwd) => (cwd === undefined ? folder : insideProject(folder, cwd, worktreePaths)),
-        account: async () => (await later.machine().auth.accountBinding())?.id ?? null
+        account: async () => (await later.machine().auth.accountBinding())?.id ?? null,
+        reach: () => {
+            const { brokerSwitch } = later.network();
+
+            return reachEnv(brokerSwitch.dialUrl, brokerSwitch.describe().brokerUrl);
+        }
     });
     const notificationChannels = new NotificationChannels(
         {
