@@ -159,7 +159,7 @@ export function parseServerArgs(argv: string[], env: Record<string, string | und
     // The flags after `service install` are the ones the service runs the daemon with, so they are kept as written.
     const service = command === 'service';
     if (service && (argv[0] !== 'service' || positionals.length !== 2)) {
-        throw new Error('Usage: ruimte service install|uninstall|status [daemon flags]');
+        throw new Error('Usage: ruimte service install|uninstall|status [machine flags]');
     }
 
     if (values.node !== undefined && command !== 'notify') {

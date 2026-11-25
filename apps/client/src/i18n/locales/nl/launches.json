@@ -43,8 +43,8 @@
     "panel": {
         "reading": "Launches lezen…",
         "emptyTitle": "Nog geen launches",
-        "empty": "Een launch start met één klik een commando dat je vaak gebruikt, zoals een dev server. De uitvoer blijft hier staan.",
-        "notRun": "{{name}} liep nog niet sinds de machine startte.",
+        "empty": "Een launch start met één klik een commando dat je vaak gebruikt, zoals een dev server. De output blijft hier staan.",
+        "notRun": "{{name}} heeft nog niet gedraaid sinds de machine startte.",
         "stopped": "gestopt",
         "attachFailed": "Kon de output niet tonen."
     },
@@ -99,7 +99,7 @@
         "autostart": "Starten als het project opent",
         "autostartHint": "Na goedkeuring op deze machine.",
         "share": "Delen met team",
-        "shareHint": "Gedeelde launches worden met het project gecommit. Houd geheimen uit de omgeving hierboven.",
+        "shareHint": "Gedeelde launches worden met het project gecommit. Houd secrets uit de omgeving hierboven.",
         "shared": "Gedeeld met team",
         "private": "Alleen op deze machine",
         "overlay": "Deze machine gebruikt een eigen map of eigen variabelen voor deze launch. Die blijven zoals ze zijn.",
@@ -141,7 +141,7 @@
     "afterSettle": {
         "title": "Als een worktree-chat klaar is",
         "none": "Niets uitvoeren",
-        "description": "Draait in de worktree van die chat, telkens als een turn eindigt en er niets meer loopt. Een taak kiezen keurt de opdracht en omgeving goed voor de worktrees van dit project.",
+        "description": "Draait in de worktree van die chat, telkens als een turn eindigt en er niets meer loopt. Een task kiezen keurt het commando en de omgeving goed voor de worktrees van dit project.",
         "approve": "{{name}} opnieuw goedkeuren voor worktrees",
         "inWorktree": "in {{name}}",
         "failed": "Kon niet kiezen wat er draait als een worktree-chat klaar is"

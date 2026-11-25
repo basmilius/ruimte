@@ -33,7 +33,7 @@ async function fetchVerified(url: string, expected: string): Promise<Uint8Array>
     }
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (sha256(bytes) !== expected) {
-        throw new Error(`${url} does not match its pinned checksum`);
+        throw new Error(`${url} is not the build this Ruimte release expects`);
     }
     return bytes;
 }
@@ -94,7 +94,7 @@ export class ScrcpyServerFile {
             }
         }
         if (sha256(await readFile(path)) !== SCRCPY_SERVER.sha256) {
-            throw new DeviceError('scrcpy-unavailable', 'The Android screen server beside Ruimte does not match its pinned checksum');
+            throw new DeviceError('scrcpy-unavailable', 'The Android screen server beside Ruimte is not the build this Ruimte release expects');
         }
         return path;
     }

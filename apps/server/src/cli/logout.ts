@@ -11,12 +11,12 @@ export async function runLogout(options: LogoutOptions): Promise<number> {
     const { out, err } = commandIo(options);
     const secret = await homeSecret(options);
     if (secret === null) {
-        err(`No daemon has started with ${options.home} as its home; start one first.`);
+        err(`No Ruimte machine has started with ${options.home} as its home. Start one first.`);
         return 1;
     }
     const response = await askLocalDaemon(options, secret, MACHINE_LEAVE_ACCOUNT_PATH, { method: 'POST' });
     if (!response) {
-        err(`No daemon answers on port ${options.port}; start one first.`);
+        err(`No Ruimte machine answers on port ${options.port}. Start one first.`);
         return 1;
     }
     if (response.status === 404) {
@@ -29,7 +29,7 @@ export async function runLogout(options: LogoutOptions): Promise<number> {
     }
     const parsed = EndpointLeaveAccountResultSchema.safeParse(await response.json().catch(() => null));
     if (!parsed.success) {
-        err(`The daemon on port ${options.port} answered with something this command cannot read.`);
+        err(`The machine on port ${options.port} answered with something this command cannot read.`);
         return 1;
     }
     const { revoked } = parsed.data;

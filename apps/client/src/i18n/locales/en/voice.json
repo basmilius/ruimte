@@ -43,7 +43,7 @@
     },
     "error": {
         "start": "GPT-Live could not start",
-        "session": "GPT-Live reported a session error",
+        "session": "GPT-Live stopped with an error",
         "noSession": "Could not start the microphone",
         "connectionLost": "Lost connection to GPT-Live"
     },
@@ -75,7 +75,7 @@
             "noBridge": "Speech to text needs the desktop app.",
             "overrun": "Speech recognition could not keep up with the microphone. Try again.",
             "recognition": "Speech recognition stopped with an error. Try again.",
-            "unknown": "Dictation stopped unexpectedly. Try again.",
+            "unknown": "Dictation stopped. Try again.",
             "targetChanged": "The text field changed. Dictate again."
         }
     },

@@ -101,10 +101,7 @@ describe('settings in groups', () => {
             await clickOn(page.host.querySelector('[role="switch"]'));
 
             expect(page.host.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
-            expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
-                'POC chat could not keep what it stores',
-                'Loud'
-            ]);
+            expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual(['POC chat could not save its data', 'Loud']);
         } finally {
             await page.unmount();
 

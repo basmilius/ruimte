@@ -23,7 +23,7 @@
         "startFailed": "Kon {{name}} niet starten",
         "starting": "Apparaat starten…",
         "state": {
-            "changing": "Bezig met wisselen",
+            "changing": "Verandert van status",
             "connected": "Verbonden",
             "connecting": "Verbinden",
             "offline": "Offline",
@@ -77,7 +77,7 @@
         "generic": "Dat werkte niet."
     },
     "file": {
-        "locationUnavailable": "De bronmachine van dit bestand is onbekend.",
+        "locationUnavailable": "Ruimte weet niet op welke machine dit bestand staat.",
         "wrongMachine": "Open dit bestand in de werkruimte van de machine waarop het staat.",
         "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
         "empty": {
@@ -87,7 +87,7 @@
             "failed": "{{name}} is niet geladen ({{error}})",
             "findDesktopOnly": "Zoeken in HTML-preview kan alleen in de desktop-app",
             "findLocalOnly": "Zoeken in HTML-preview werkt alleen voor lokale bestanden",
-            "findTextOnly": "Een HTML-preview vindt alleen gewone tekst",
+            "findTextOnly": "Zoeken in HTML-preview vindt alleen gewone tekst",
             "loading": "Pagina laden",
             "previewTitle": "Voorbeeld van {{name}}"
         },
@@ -182,7 +182,7 @@
         "edit": {
             "label": "Codebestand {{path}}",
             "readOnly": "Alleen lezen",
-            "outsideProject": "Alleen bestanden in dit project en zijn worktrees kun je bewerken",
+            "outsideProject": "Je kunt alleen bestanden in dit project en zijn worktrees bewerken",
             "ruimteState": "Ruimte beheert dit bestand, dus je kunt het hier niet bewerken",
             "large": "Groter dan {{size}}, getoond als platte tekst en alleen-lezen",
             "plain": "Meer dan {{lines}} regels, getoond als platte tekst en alleen-lezen",
@@ -220,9 +220,9 @@
             "editing": "{{name}} is aan het bewerken",
             "focusChat": "Chat tonen",
             "inChat": "in {{chat}}",
-            "openChat": "Open chat",
-            "openChatAtTurn": "Open chat bij turn {{turn}}",
-            "showTurnChanges": "Toon wijzigingen van de turn",
+            "openChat": "Chat openen",
+            "openChatAtTurn": "Chat openen bij turn {{turn}}",
+            "showTurnChanges": "Wijzigingen van de turn tonen",
             "turn": "Turn {{turn}}",
             "wrotePossibly_one": "schreef mogelijk regel {{lines}}",
             "wrotePossibly_other": "schreef mogelijk regels {{lines}}",
@@ -532,16 +532,16 @@
             "repository": "Repository",
             "chooseRepository": "Kies een repository",
             "noRepository": "Geen repository gevonden",
-            "from": "Basis-branch",
+            "from": "Base branch",
             "to": "Branch om te vergelijken",
             "mode": "Vergelijking",
-            "mergeBase": "Wijzigingen sinds de branches uiteen liepen",
+            "mergeBase": "Wijzigingen sinds de branches uiteenliepen",
             "tips": "Verschil tussen de twee tips",
             "open": "Vergelijken",
             "loadingRefs": "Branches lezen…",
-            "session": "De vergelijking blijft open in dit venster tot je hem sluit. Remote branches tonen wat het laatst is opgehaald.",
-            "offline": "Deze machine is niet verbonden, dus branches kunnen niet worden vergeleken.",
-            "update": "Deze machine is te oud om branches te vergelijken. Werk hem bij om dit te gebruiken.",
+            "session": "De vergelijking blijft open in dit venster tot je hem sluit. Remote branches tonen wat het laatst is gefetcht.",
+            "offline": "Deze machine is niet verbonden, dus je kunt geen branches vergelijken.",
+            "update": "Werk deze machine bij om branches te vergelijken.",
             "failed": "Kon de vergelijking niet tonen",
             "tab": "{{from}} → {{to}}",
             "choose": "Andere branches kiezen…",
@@ -581,7 +581,7 @@
         "dialog": {
             "createBranch": {
                 "confirm": "Branch aanmaken",
-                "description": "Begint bij de huidige commit en gaat er meteen naartoe.",
+                "description": "Begint bij de huidige commit en wisselt naar de nieuwe branch.",
                 "title": "Branch aanmaken"
             },
             "deleteBranch": {
@@ -602,8 +602,8 @@
             },
             "discard": {
                 "confirm": "Weggooien",
-                "description": "Zet het bestand terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" zet ze terug.",
-                "descriptionMany": "Zet de bestanden terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" haalt ze terug.",
+                "description": "Zet het bestand terug naar HEAD. Ruimte stasht de wijzigingen eerst, dus \"git stash pop\" zet ze terug.",
+                "descriptionMany": "Zet de bestanden terug naar HEAD. Ruimte stasht de wijzigingen eerst, dus \"git stash pop\" zet ze terug.",
                 "fallback": "Bestand weggooien?",
                 "title": "{{name}} weggooien?",
                 "titleMany": "{{count}} bestanden weggooien?"
@@ -816,13 +816,13 @@
         "inUse": "In gebruik",
         "use": "Gebruiken",
         "useInstead": "Gebruik liever {{name}}",
-        "restart": "Herstart",
+        "restart": "Herstarten",
         "restartAll": "Alles herstarten",
         "buildHeld": "Buildscripts en macro's staan uit in deze worktree.",
         "buildAllow": "Aanzetten voor deze repository",
         "buildAllowed": "Buildscripts en macro's draaien in de worktrees van agents.",
         "buildHold": "Uitzetten voor deze repository",
-        "showLog": "Toon log",
+        "showLog": "Log tonen",
         "logTitle": "Log van {{name}}",
         "logEmpty": "Nog niets gelogd",
         "logRefresh": "Vernieuwen",
@@ -864,7 +864,7 @@
             "notSaved": "Kon {{name}} niet opslaan"
         },
         "actions": {
-            "show": "Toon code actions",
+            "show": "Code actions tonen",
             "none": "Geen code actions hier",
             "unavailable": "Geen language server biedt hier code actions",
             "organized": "Imports al georganiseerd",
@@ -906,7 +906,7 @@
             "useSuggestion": "Suggestie gebruiken"
         },
         "navigation": {
-            "unavailable": "Geen language server die dat hier beantwoordt",
+            "unavailable": "Geen language server kan dat hier opzoeken",
             "none": "Niets gevonden",
             "failed": "Kon het niet opzoeken: {{message}}",
             "titles": {
@@ -985,7 +985,7 @@
         "ghost": {
             "accept": "Accepteren",
             "next": "Volgende",
-            "thinking": "Bezig met nadenken",
+            "thinking": "Denkt na",
             "off": "Suggesties staan uit. Zet ze aan bij Instellingen, Editor, AI.",
             "none": "Geen suggestie hier",
             "unavailable": "Het editormodel is niet beschikbaar.",
@@ -995,7 +995,7 @@
             "explain": "Uitleg",
             "explanation": "Uitleg · Editormodel",
             "note": "Geschreven door het model uit Instellingen, Editor, AI.",
-            "thinking": "Uitleg wordt geschreven…",
+            "thinking": "Uitleg schrijven…",
             "off": "Uitleg staat uit. Zet hem aan bij Instellingen, Editor, AI.",
             "nothing": "Selecteer code, of zet de cursor in een symbool, om dat uit te leggen.",
             "tooOld": "Werk deze machine bij om het editormodel te gebruiken."
@@ -1136,18 +1136,18 @@
             "clean": "schoon",
             "folderMissing": "map ontbreekt",
             "merge": "Worktree mergen…",
-            "inspect": "Bekijken",
+            "inspect": "Controleren",
             "remove": "Worktree verwijderen…",
             "view": "Alle wijzigingen bekijken"
         },
         "verdict": {
-            "inspecting": "Bezig met inspecteren…",
+            "inspecting": "Controleren…",
             "clean": "Er gaat niets verloren. Hij kan weg.",
             "hasWork": "Hij bevat {{work}}. Bij verwijderen gaat dat verloren.",
             "locked": "Hij is vergrendeld. Kies Toch verwijderen om hem te verwijderen.",
             "agentWorking": "Er werkt een agent in. Stop die eerst.",
             "missing": "De map is weg. Alleen de registratie blijft over.",
-            "failed": "Kon de worktree niet bekijken"
+            "failed": "Kon de worktree niet controleren"
         },
         "work": {
             "ahead_one": "{{count}} commit die {{target}} mist",

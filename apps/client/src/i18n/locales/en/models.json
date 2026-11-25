@@ -128,7 +128,7 @@
         "change": "Change",
         "unavailable": "n/a",
         "pinHint": "Select to pin as reference A.",
-        "changeHint": "Indices: difference in points. Costs, times and speed: B / A.",
+        "changeHint": "Indices show the difference in points. Costs, times and speed show B / A.",
         "notices": {
             "referenceHidden": "A filter hid the reference, so the comparison was cleared.",
             "candidateHidden": "A filter hid measurement B. Reference A stays pinned.",
@@ -165,7 +165,7 @@
         "timeToFirstToken": "Time to first token",
         "timeToFirstAnswer": "Time to first answer",
         "responseTime": "Total response time",
-        "context": "Means over the measured workloads of the last 5 days. Total response time is the first answer plus 500 answer tokens."
+        "context": "Averages over the workloads measured in the last 5 days. Total response time is the first answer plus 500 answer tokens."
     },
     "evaluation": {
         "context": "Cost of the full Artificial Analysis Intelligence Index evaluation."

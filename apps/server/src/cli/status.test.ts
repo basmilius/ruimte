@@ -145,14 +145,18 @@ describe('ruimte status', () => {
             err: (line) => err.push(line)
         });
         expect(noHome).toBe(1);
-        expect(err[0]).toBe('No daemon has started with /nowhere as its home. Start it with `ruimte service install`, or with `ruimte` in another terminal.');
+        expect(err[0]).toBe(
+            'No Ruimte machine has started with /nowhere as its home. Start it with `ruimte service install`, or with `ruimte` in another terminal.'
+        );
 
         const down = await run(async () => Promise.reject(new Error('connection refused')), 4290);
         expect(down).toMatchObject({
             code: 1,
-            err: ['No daemon answers on port 4290. Start it with `ruimte service install --port 4290`, or with `ruimte --port 4290` in another terminal.']
+            err: [
+                'No Ruimte machine answers on port 4290. Start it with `ruimte service install --port 4290`, or with `ruimte --port 4290` in another terminal.'
+            ]
         });
-        expect((await run(async () => new Response('Forbidden', { status: 403 }))).err[0]).toContain('set RUIMTE_HOME');
+        expect((await run(async () => new Response('Forbidden', { status: 403 }))).err[0]).toContain('Set RUIMTE_HOME');
         expect((await run(async () => new Response('Not found', { status: 404 }))).err[0]).toContain('older than `ruimte status`');
     });
 });

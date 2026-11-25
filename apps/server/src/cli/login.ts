@@ -73,14 +73,14 @@ export async function runLogin(options: LoginOptions): Promise<number> {
 
     const secret = await homeSecret(options);
     if (secret === null) {
-        err(`No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`);
+        err(`No Ruimte machine has started with ${options.home} as its home. ${startFirst(options.port)}`);
         return 1;
     }
 
     const askDaemon = async <T>(path: string, schema: z.ZodType<T>, body?: unknown): Promise<T> => {
         const response = await askLocalDaemon({ port: options.port, fetch: fetcher }, secret, path, { method: 'POST', body });
         if (!response) {
-            throw new LoginFailure(`No daemon answers on port ${options.port}. ${startFirst(options.port)}`);
+            throw new LoginFailure(`No Ruimte machine answers on port ${options.port}. ${startFirst(options.port)}`);
         }
         if (response.status === 404) {
             throw new LoginFailure(tooOld(options.port, 'login'));
@@ -93,7 +93,7 @@ export async function runLogin(options: LoginOptions): Promise<number> {
         }
         const parsed = schema.safeParse(await response.json().catch(() => null));
         if (!parsed.success) {
-            throw new LoginFailure(`The daemon on port ${options.port} answered with something this command cannot read.`);
+            throw new LoginFailure(`The machine on port ${options.port} answered with something this command cannot read.`);
         }
         return parsed.data;
     };

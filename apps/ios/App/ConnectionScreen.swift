@@ -40,7 +40,7 @@ struct ConnectionScreen: View {
                             .disabled(runtime.signingIn || runtime.signingOut || window == nil)
                         }
                         if runtime.providers.isEmpty {
-                            Text("No sign-in providers are available.").foregroundStyle(MobileStyle.muted)
+                            Text("No sign-in options are available.").foregroundStyle(MobileStyle.muted)
                             Button("Retry") { Task { await runtime.start() } }
                         }
                         if runtime.signingIn {

@@ -16,7 +16,7 @@ describe('what a failed dictation says', () => {
     });
 
     test('anything else never shows its own message', () => {
-        expect(dictationFailureText(new Error('AudioWorklet crashed'))).toBe('Dictation stopped unexpectedly. Try again.');
-        expect(dictationFailureText('no-bridge')).toBe('Dictation stopped unexpectedly. Try again.');
+        expect(dictationFailureText(new Error('AudioWorklet crashed'))).toBe('Dictation stopped. Try again.');
+        expect(dictationFailureText('no-bridge')).toBe('Dictation stopped. Try again.');
     });
 });

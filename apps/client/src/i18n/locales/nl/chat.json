@@ -21,7 +21,7 @@
             "summarize": "Samenvatten voor het origineel",
             "summarizeFor": "Samenvatten voor {{title}}",
             "showOriginal": "Origineel tonen",
-            "summaryFailed": "Kon de samenvatting niet vragen"
+            "summaryFailed": "Kon niet om de samenvatting vragen"
         },
         "refusal": {
             "originalGone": "Het origineel zit niet meer in dit project"
@@ -36,7 +36,7 @@
     },
     "generatedImage": {
         "saveTitle": "Afbeelding opslaan in project",
-        "saveIn": "Wordt opgeslagen in {{project}}.",
+        "saveIn": "Slaat op in {{project}}.",
         "folder": "Map",
         "name": "Naam",
         "exists": "{{name}} bestaat al",

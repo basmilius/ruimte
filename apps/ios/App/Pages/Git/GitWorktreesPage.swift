@@ -290,7 +290,7 @@ struct GitWorktreeMergeSheet: View {
                     Text("It holds \(GitWorktreeText.mergeContents(worktree)).")
                 } footer: {
                     Text(
-                        "It is merged in the checkout that has \(worktree.fromBranch ?? String(localized: "its target branch")) out."
+                        "The merge runs in the checkout that has \(worktree.fromBranch ?? String(localized: "its target branch")) out."
                     )
                 }
                 if worktree.hasLooseWork {

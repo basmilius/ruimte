@@ -73,7 +73,7 @@ actor ChatDraftFiles {
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
         let record = try JSONDecoder().decode(ChatDraftRecord.self, from: Data(contentsOf: file))
         guard record.version == 1 else {
-            throw DraftFailure(String(localized: "This draft was saved by a newer version of Ruimte."))
+            throw DraftFailure(String(localized: "A newer version of Ruimte saved this draft."))
         }
         return record
     }

@@ -40,7 +40,7 @@ struct ProviderAccountEditor: View {
                 }
                 if target.accountID == nil {
                     Section {
-                        Text("The machine creates the account folder. Sign in from its account row after adding it.")
+                        Text("Add the account, then sign in from its row.")
                         if model.chatLogins.contains(target.kind) {
                             Text("This CLI signs in from a chat. Start a chat under the new account to sign in.")
                         }

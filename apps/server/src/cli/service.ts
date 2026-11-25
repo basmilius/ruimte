@@ -159,7 +159,7 @@ async function install(facts: ServiceFacts, plan: ServicePlan, deps: ServiceDeps
     const running = await deps.health(facts.port);
     const onDisk = deps.readBuild(plan.binDir);
     if (running && running.build !== null && onDisk !== null && running.build !== onDisk) {
-        deps.out('A daemon from an earlier install is still running; it switches to this one as soon as nothing is running on it.');
+        deps.out('The Ruimte of an earlier install is still running. It switches to this one as soon as nothing is running on it.');
     }
     lingerNote(deps);
     deps.out('');
@@ -227,7 +227,7 @@ export async function runServiceAction(action: string, facts: ServiceFacts, deps
             case 'status':
                 return await status(facts, plan, deps);
             default:
-                deps.err('Usage: ruimte service install|uninstall|status [daemon flags]');
+                deps.err('Usage: ruimte service install|uninstall|status [machine flags]');
                 return 1;
         }
     } catch (e) {

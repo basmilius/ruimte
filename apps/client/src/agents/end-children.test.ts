@@ -63,9 +63,9 @@ test('stopping a task always asks, and counts the agents its node opened', async
     expect(useEndingAgents.getState().pending).toMatchObject({ agents: 1, action: 'stop' });
     useEndingAgents.getState().pending?.run();
     expect(runs).toEqual(['child']);
-    expect(stopsTaskWarning(0)).toBe('Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas.');
+    expect(stopsTaskWarning(0)).toBe('Ends the agent and cancels the task. The chat that gave it hears nothing. Its node stays on the canvas.');
     expect(stopsTaskWarning(2)).toBe(
-        'Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes and work so far stay on the canvas.'
+        'Ends the agent and cancels the task. The chat that gave it hears nothing. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes and work so far stay on the canvas.'
     );
 });
 

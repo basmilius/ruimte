@@ -99,7 +99,7 @@
             "title": "Projecten en vensters",
             "label": "Projecten",
             "description": "Wissel van project via een menu, of toon de projecten van een venster als tabs in de werkbalk.",
-            "switcher": "Menu",
+            "switcher": "Wisselaar",
             "tabs": "Tabs"
         },
         "sidebar": {
@@ -247,7 +247,7 @@
                 "unavailable": "Niet beschikbaar: {{reason}}",
                 "model": {
                     "label": "Model",
-                    "description": "Automatisch gebruikt het goedkoopste model van de eerste beschikbare provider: Claude, Codex, Grok, dan Antigravity. Code wordt naar de gekozen provider gestuurd."
+                    "description": "Automatisch gebruikt het goedkoopste model van de eerste beschikbare provider: Claude, Codex, Grok, dan Antigravity. De gekozen provider ontvangt je code."
                 },
                 "automatic": "Automatisch",
                 "choose": "Model kiezen",
@@ -395,7 +395,7 @@
         },
         "templates": {
             "title": "Sjablonen",
-            "failed": "De sjablonen konden niet worden getoond",
+            "failed": "Kon de sjablonen niet tonen",
             "needsProject": "Open een project om de sjablonen te beheren.",
             "loading": "Sjablonen laden",
             "tooOld": "Deze machine heeft een nieuwere Ruimte nodig voor sjablonen.",
@@ -413,7 +413,7 @@
             "removeTitle": "{{key}} verwijderen?",
             "removeDescription": "Het sjabloon wordt definitief verwijderd.",
             "enable": "{{key}} gebruiken",
-            "saveFailed": "De sjablonen konden niet worden aangepast",
+            "saveFailed": "Kon de sjablonen niet aanpassen",
             "conflict": {
                 "title": "Sjablonen elders gewijzigd",
                 "description": "De lijst is weer bijgewerkt."
@@ -498,10 +498,10 @@
                 "where": "Waar",
                 "wherePersonal": "Van jou",
                 "whereProject": "Dit project",
-                "whereNoProject": "Sjablonen kunnen niet in dit project worden opgeslagen.",
+                "whereNoProject": "In dit project kun je geen sjablonen opslaan.",
                 "cancel": "Annuleren",
                 "save": "Opslaan",
-                "failed": "Het sjabloon kon niet worden opgeslagen"
+                "failed": "Kon het sjabloon niet opslaan"
             }
         },
         "servers": {
@@ -939,7 +939,7 @@
     "keyboard": {
         "search": "Sneltoetsen zoeken",
         "clearSearch": "Zoekopdracht wissen",
-        "noMatch": "Niets komt overeen met \"{{query}}\".",
+        "noMatch": "Niets gevonden voor \"{{query}}\".",
         "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser.",
         "categories": "Categorieën van sneltoetsen",
         "result": "{{category}} · {{keys}}",
@@ -978,7 +978,7 @@
             "label": "Herstarten om de update af te ronden",
             "action": "Herstarten"
         },
-        "failure": "De achtergrondservice heeft deze machine niet gedraaid: {{reason}}",
+        "failure": "De achtergronddienst draaide deze machine niet: {{reason}}",
         "linger": {
             "label": "Blijven draaien nadat je uitlogt",
             "on": "Deze machine blijft draaien nadat je uitlogt.",
@@ -1002,7 +1002,7 @@
         },
         "confirmLinger": {
             "title": "Blijven draaien nadat je uitlogt?",
-            "description": "Ruimte laat je services doordraaien nadat je uitlogt. Ongedaan maken doe je met loginctl disable-linger.",
+            "description": "Ruimte laat je diensten doordraaien nadat je uitlogt. Ongedaan maken doe je met loginctl disable-linger.",
             "action": "Toestaan"
         },
         "stopRunning": {
@@ -1043,15 +1043,15 @@
         "update": "Deze machine heeft een nieuwere Ruimte nodig.",
         "loading": "Laden",
         "elsewhere": "Stel tunnels in met de app op die machine.",
-        "loadFailed": "De tunnels konden niet worden geladen.",
+        "loadFailed": "Kon de tunnels niet laden.",
         "changeFailed": "Dat is niet gelukt.",
-        "failed": "Tunnels konden niet worden getoond",
+        "failed": "Kon de tunnels niet tonen",
         "retry": "Opnieuw proberen",
         "clients_one": "{{count}} client onlangs actief",
         "clients_other": "{{count}} clients onlangs actief",
         "stage": {
             "not-installed": "cloudflared niet geïnstalleerd",
-            "installing": "cloudflared wordt geïnstalleerd",
+            "installing": "cloudflared installeren",
             "cannot-install": "Kan cloudflared hier niet installeren",
             "no-token": "Geen API-token",
             "checking": "Controleren bij Cloudflare",
@@ -1085,7 +1085,7 @@
             "idle": "Draait niet",
             "use": "Gebruiken",
             "loadFailed": "Kon je tunnels niet ophalen.",
-            "listing": "Je tunnels worden opgehaald",
+            "listing": "Je tunnels ophalen",
             "runner": {
                 "ruimte": "Draait op deze computer",
                 "other": "Draait buiten Ruimte",
@@ -1185,14 +1185,14 @@
             "where": "Gebruik hem op {{address}}.",
             "onHostname": "Toestaan via de tunnel",
             "onHostnameWarning": "Wie de sleutel heeft, kan hem dan overal gebruiken.",
-            "failed": "De bearer kon niet worden gemaakt."
+            "failed": "Kon de bearer niet maken."
         },
         "grant": {
             "tier": "Bereik",
             "tierHint": {
                 "read": "Leest projecten, canvassen, taken en bestanden.",
                 "work": "Past ook canvassen aan en start agents.",
-                "machine": "Draait ook launches, routines, browsers, apparaten, databases en computergebruik."
+                "machine": "Draait ook launches, routines, browsers, apparaten, databases en computer use."
             },
             "projects": "Projecten",
             "allProjects": "Alle",
@@ -1209,7 +1209,7 @@
                 "365": "Over een jaar"
             },
             "approvals": "Goedkeuren namens jou",
-            "approvalsWarning": "De client kan dan namens jou shell commands op deze machine uitvoeren."
+            "approvalsWarning": "De client kan dan namens jou shellcommando's op deze machine uitvoeren."
         },
         "consent": {
             "title": "{{host}} vraagt toegang",
@@ -1221,7 +1221,7 @@
             "code": "Code",
             "deny": "Weigeren",
             "approve": "Goedkeuren",
-            "failed": "Het antwoord kon niet worden verstuurd."
+            "failed": "Kon het antwoord niet versturen."
         }
     },
     "agents": {
@@ -1261,7 +1261,7 @@
             "description": "Schrijft nieuwe chattitels, commitberichten en conflictvoorstellen op deze machine. Bij Automatisch beslist Ruimte. Editor-AI heeft een eigen model.",
             "automatic": "Automatisch",
             "choose": "Kiezen",
-            "footer": "Schrijft korte teksten op deze machine. Zonder model wordt het goedkoopste gebruikt, met de standaardreasoning van de CLI.",
+            "footer": "Schrijft korte teksten op deze machine. Zonder model gebruikt Ruimte het goedkoopste, met de standaard reasoning daarvan.",
             "loading": "De CLI's op deze machine laden…",
             "update": "Werk deze machine bij om een tekstmodel te kiezen.",
             "unavailable": "Deze CLI, dit model of dit account is niet beschikbaar op deze machine. Kies een ander of Automatisch.",
@@ -1409,7 +1409,7 @@
         },
         "integrations": {
             "title": "Agentstatus in terminals",
-            "description": "Toont of een agent in een terminal werkt, klaar is of op je wacht. Ruimte voegt daarvoor een paar regels toe aan zijn instellingen, die ook buiten Ruimte gelden.",
+            "description": "Toont of een agent in een terminal werkt, klaar is of op je wacht. Ruimte voegt daarvoor een paar regels toe aan de instellingen van de agent. Die gelden ook buiten Ruimte.",
             "dialog": {
                 "title": "Mag Ruimte CLI-instellingen aanpassen?",
                 "description": "Ruimte voegt een paar instellingen toe aan je codeertools. Die gelden overal op deze computer, ook buiten Ruimte.",
@@ -1560,7 +1560,7 @@
     "voice": {
         "key": {
             "title": "Voice Control",
-            "sectionDescription": "Bedien je werkruimte met je stem via OpenAI GPT-Live. Audio gaat alleen tijdens een gesprek naar OpenAI. Vereist je eigen API key.",
+            "sectionDescription": "Bedien je werkruimte met je stem via OpenAI GPT-Live. Audio gaat alleen tijdens een gesprek naar OpenAI. Je hebt een eigen API key nodig.",
             "label": "API key",
             "fieldLabel": "OpenAI API key",
             "desktopOnly": "Stel API keys in via de desktop-app.",
@@ -1569,7 +1569,7 @@
             "configured": "Ingesteld",
             "notConfigured": "Niet ingesteld",
             "persistent": "Versleuteld in de keychain van deze computer en nooit meer getoond.",
-            "session": "Versleutelen niet beschikbaar; de key blijft tot Ruimte afsluit.",
+            "session": "Deze computer kan de key niet versleutelen, dus Ruimte bewaart hem alleen tot het afsluit.",
             "missing": "Nodig voor GPT-Live. Nooit in een project bewaard.",
             "machineKeyLeft": "Deze machine heeft de key voor Voice nog. Ruimte verwijdert hem zodra de machine draait, of verwijder hem opnieuw.",
             "replacePlaceholder": "Nieuwe key",
@@ -1597,8 +1597,8 @@
             "description": "Wijzigingen gelden vanaf het volgende gesprek.",
             "microphone": {
                 "label": "Microfoon",
-                "description": "Microfoon voor dicteren en Voice Control.",
-                "unavailableDescription": "Kon microfoons niet ophalen; de standaard wordt gebruikt.",
+                "description": "Voor dicteren en Voice Control.",
+                "unavailableDescription": "Kon microfoons niet ophalen. Ruimte gebruikt de systeemstandaard.",
                 "selectLabel": "Microfoon"
             },
             "language": {
@@ -1637,7 +1637,7 @@
         "allow": "Computer use toestaan",
         "failed": "Kon Computer use niet laden",
         "machine": {
-            "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Account, of terwijl er een project op open staat.",
+            "notConnected": "Niet verbonden. Pas dit aan in de details van de machine onder Account, of terwijl er een project op open staat.",
             "checking": "Controleren…",
             "unsupported": "Nog niet beschikbaar op het systeem van deze machine.",
             "unavailable": "Niet op deze machine. Het zit in de desktop-app van Ruimte.",
@@ -1645,7 +1645,7 @@
             "starting": "Ruimte Computer Use starten…",
             "grants": "Wacht op twee toestemmingen.",
             "grantsOne": "Wacht op de toestemming voor {{grant}}.",
-            "ready": "Aan. Een agent vraagt het je voordat die een app gebruikt."
+            "ready": "Aan. Een agent vraagt het je voordat hij een app gebruikt."
         },
         "grant": {
             "accessibility": {
@@ -1814,7 +1814,7 @@
         },
         "startFolder": {
             "label": "Bladeren beginnen in",
-            "description": "Waar bladeren naar een map op deze machine begint, voor elke app die haar gebruikt. Leeg is haar thuismap.",
+            "description": "Waar bladeren naar een map op deze machine begint, voor elke app die hem gebruikt. Leeg betekent zijn thuismap.",
             "search": "De map waarin de mappenbrowser op een machine opent",
             "placeholder": "~/projects",
             "placeholderWindows": "C:\\Projects"
@@ -1912,7 +1912,7 @@
             "title": "Niet geopend op dit apparaat",
             "label": "Open hem om de naam, het icoon en de verbinding te wijzigen",
             "canOpen": "Hij verbindt via je account.",
-            "noBroker": "Deze machine is nog niet via je account verbonden, dus hij is alleen op zijn eigen netwerk te bereiken."
+            "noBroker": "Deze machine is nog niet via je account verbonden, dus je bereikt hem alleen op zijn eigen netwerk."
         },
         "identity": {
             "title": "Naam en icoon",
@@ -1935,7 +1935,7 @@
             "registrationFailure": "Kon deze machine niet bijwerken op je account: {{reason}}",
             "addAgain": {
                 "label": "Opnieuw aan account toevoegen",
-                "description": "Van je account gehaald; hij komt er niet vanzelf op terug.",
+                "description": "Van je account gehaald. Hij komt er niet vanzelf op terug.",
                 "action": "Toevoegen"
             },
             "onYours": "Op je account",
@@ -1977,7 +1977,7 @@
         },
         "confirmRemove": {
             "title": "{{machine}} van je account verwijderen?",
-            "description": "Je ingelogde apparaten laten hem vallen bij hun volgende verversing. De machine houdt de apparaten die ze binnenliet.",
+            "description": "Je ingelogde apparaten laten hem vallen bij hun volgende verversing. De machine houdt de apparaten die hij binnenliet.",
             "action": "Verwijderen"
         },
         "subtitle": "{{reach}} · {{version}}"
@@ -2025,7 +2025,7 @@
                     "account": "Het account en de manieren om erop in te loggen.",
                     "sessions": "Elke inlog op het account, op elk apparaat.",
                     "push": "Meldingen op je telefoons en tablets.",
-                    "machines": "Je machines van het account. Elke machine houdt zijn projecten. De machine van deze computer verlaat het meteen. Haal een andere machine eerst op die machine zelf eraf voordat hij op een ander account komt."
+                    "machines": "Je machines van het account. Elke machine houdt zijn projecten. De machine van deze computer verlaat het meteen. Wil je een andere machine op een ander account zetten, haal hem dan eerst op die machine zelf van dit account."
                 },
                 "field": "Typ {{name}} om te bevestigen",
                 "fieldWord": "Dit account heeft geen naam. Typ {{word}} om te bevestigen",
@@ -2126,7 +2126,7 @@
     },
     "providers": {
         "nanogpt": {
-            "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen naar de abonnements-API, nooit naar pay as you go.",
+            "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen via je abonnement, nooit via pay as you go.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
             "key": "API-sleutel",
             "keyDescription": "Een abonnements-API-sleutel van nano-gpt.com.",
@@ -2196,7 +2196,7 @@
             "unavailable": "Kon de agents niet laden",
             "tryAgain": "Opnieuw proberen",
             "empty": "Er is geen agent beschikbaar voor deze machine.",
-            "noMatch": "Geen agent past bij \"{{search}}\".",
+            "noMatch": "Geen agent gevonden voor \"{{search}}\".",
             "localOnly": "Installeer agents in de Ruimte-app op die machine."
         },
         "version": {
@@ -2238,7 +2238,7 @@
             "ready_other": "Gekoppeld, {{count}} modellen beschikbaar.",
             "disconnected": "Geen sleutel opgeslagen op deze machine.",
             "unavailable": "Deze machine biedt de Claude API nog niet aan. Werk Ruimte daar bij.",
-            "failed": "De Claude API kon niet worden gewijzigd op deze machine.",
+            "failed": "Kon de Claude API niet wijzigen op deze machine.",
             "window": {
                 "label": "Contextvenster",
                 "description": "Geldt voor nieuwe chats. Per chat kun je wisselen.",
@@ -2268,14 +2268,14 @@
         "storeSoon": "De store komt binnenkort",
         "storeSoonBody": "Installeer tot die tijd een extensie die iemand met je deelde via Installeren vanaf schijf.",
         "fromDisk": "Installeren vanaf schijf",
-        "fromDiskBody": "Kies een .rex-bestand dat iemand met je deelde. Je ziet wat het vraagt voordat het wordt geïnstalleerd.",
+        "fromDiskBody": "Kies een .rex-bestand dat iemand met je deelde. Je ziet wat het vraagt voordat je het installeert.",
         "chooseFile": "Bestand kiezen…",
         "reviewed": "beoordeeld op {{date}}",
         "asksTo": "Deze extensie vraagt om",
         "trust": "Extensies draaien in Ruimte en kunnen wat jij kunt, op al je machines. Installeer alleen wat je vertrouwt.",
         "install": "Installeren",
         "back": "Terug",
-        "notOnMachine": "{{name}} staat op deze computer, maar het deel voor de machine vraagt de eigenaar van die machine.",
+        "notOnMachine": "{{name}} staat op deze computer, maar alleen de eigenaar van die machine kan het deel voor de machine installeren.",
         "machineFailed": "{{name}} staat op deze computer, maar het deel voor de machine kon niet worden geïnstalleerd",
         "machineKept": "{{name}} is op deze computer aangepast, maar het deel op de machine bleef zoals het was",
         "installFailed": "{{name}} kon niet worden geïnstalleerd",
@@ -2292,10 +2292,10 @@
         "remove": "Verwijderen",
         "desktopOnly": "Extensies werken in de desktopapp.",
         "frameDesktopOnly": "Dit deel van de extensie opent alleen in de desktopapp.",
-        "safeMode": "Veilige modus: er zijn geen extensies geladen.",
+        "safeMode": "De veilige modus staat aan, dus er laden geen extensies.",
         "permissions": "Vraagt om",
         "noPermissions": "Vraagt nergens extra om.",
-        "removeDescription": "Haalt de extensie en wat die bewaarde van deze computer.",
+        "removeDescription": "Verwijdert de extensie en wat die bewaarde van deze computer.",
         "groupDevelopment": "In ontwikkeling",
         "groupInstalled": "Geïnstalleerd",
         "builtIn": "Ingebouwd",
@@ -2307,7 +2307,7 @@
         "outside": {
             "label": "Van buiten deze machine",
             "through": "Via https://{{hostname}}/mcp, op je tunnel.",
-            "none": "Voeg onder Tunnels een hostname voor de MCP van Ruimte toe.",
+            "none": "Voeg onder Tunnels een hostnaam voor de MCP van Ruimte toe.",
             "open": "Tunnels openen"
         }
     }

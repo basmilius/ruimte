@@ -253,7 +253,7 @@ struct ChatLimitBanner: View {
             .disabled(model.continuing || !model.connected)
             .accessibilityLabel("Continue on \(name)")
             .accessibilityHint(
-                "Switches to \(name), which has the most room left, and resends the turn.")
+                "Resends the turn on \(name), the account with the most room left.")
             if model.continueTargets.count > 1 {
                 Menu {
                     ForEach(model.continueTargets) { account in

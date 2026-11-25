@@ -112,7 +112,7 @@ describe('a file dropped on a terminal node', () => {
         await dispatch(bodyOf(), finderDrag('drop', '/work/fine.png', bad));
 
         await until(() => useToasts.getState().toasts.length > 0);
-        expect(useToasts.getState().toasts[0]?.title).toBe('That file name cannot be typed');
+        expect(useToasts.getState().toasts[0]?.title).toBe('Ruimte cannot type that file name');
         expect(machine.requests('session.write')).toEqual([]);
     });
 

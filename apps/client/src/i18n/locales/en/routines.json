@@ -235,7 +235,7 @@
         "save": "Save",
         "failed": "Could not save the routine.",
         "outputAgent": "Results go to Output, not into the project.",
-        "outputPrinted": "Its output goes to Output."
+        "outputPrinted": "What it prints goes to Output."
     },
     "detail": {
         "definition": "What this routine does",

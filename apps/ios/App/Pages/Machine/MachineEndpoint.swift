@@ -94,7 +94,7 @@ extension EndpointUpdate {
         let installs =
             update?.status == "ready"
             ? String(localized: "\(named) installs and Ruimte restarts on \(machine).")
-            : String(localized: "\(named) downloads, installs and Ruimte restarts on \(machine).")
+            : String(localized: "\(named) downloads and installs, then Ruimte restarts on \(machine).")
         if work.idle {
             return String(
                 localized: "\(installs) Nothing that runs there ends.", comment: "%@ is the sentence on what installs")

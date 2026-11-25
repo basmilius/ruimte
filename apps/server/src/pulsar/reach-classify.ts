@@ -66,7 +66,7 @@ export function reachAdvice(cause: string, facts: ReachFacts): { problem: string
         case 'broker-unreachable':
             return {
                 problem: `This machine cannot reach the broker at ${facts.broker.url ?? 'its URL'}, so no device away from this network can find it.`,
-                fix: 'Check the internet connection, and that a firewall or proxy lets this machine open a secure WebSocket to the broker.'
+                fix: 'Check the internet connection, and that a firewall or proxy lets this machine connect to the broker.'
             };
         case 'no-relay':
             return {

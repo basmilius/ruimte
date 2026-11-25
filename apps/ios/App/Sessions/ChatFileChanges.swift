@@ -249,7 +249,7 @@ struct ChatChangedFilesRow: View {
                         header(files, moved: reported ? nil : moved, totals: !reported)
                         if !reported, let moved {
                             Text(
-                                "Branch moved this turn (\(moved.from) to \(moved.to)). Includes its incoming changes."
+                                "The branch moved this turn, from \(moved.from) to \(moved.to). The changes that came in with it count too."
                             )
                             .font(.caption).foregroundStyle(MobileStyle.muted)
                             .padding(.leading, 34).padding(.trailing, 12).padding(.bottom, 10)

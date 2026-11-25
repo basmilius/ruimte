@@ -32,7 +32,7 @@
         },
         "computer": {
             "title": "Computer use",
-            "header": "Optional. Can be turned on later.",
+            "header": "Optional. You can turn it on later.",
             "sub": "Optional · needs permission",
             "done": "Allowed"
         }

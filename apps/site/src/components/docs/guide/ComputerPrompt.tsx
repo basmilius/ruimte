@@ -38,7 +38,7 @@ export function ComputerPrompt() {
                                 <p className="text-sm text-text">Inbox triage in acme-web wants to see and operate Mail on this machine.</p>
                                 <p className="font-mono text-xs text-text-muted">com.apple.mail</p>
                                 <p className="text-xs text-text-muted">
-                                    This time lasts until the agent's turn ends. Always lets every agent on this machine use Mail.
+                                    "Allow this time" lasts until the agent's turn ends. "Always allow" lets every agent on this machine use Mail.
                                 </p>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                     <span className="ml-auto" />

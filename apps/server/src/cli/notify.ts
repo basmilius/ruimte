@@ -26,12 +26,12 @@ export async function runNotify(options: NotifyOptions): Promise<number> {
     }
     const secret = await homeSecret(options);
     if (secret === null) {
-        err(`No local secret in ${options.home}: only a process of the person whose daemon has that home may notify. ${startFirst(options.port)}`);
+        err(`No local secret in ${options.home}. Only a process of the person whose machine has that home may notify.${startFirst(options.port)}`);
         return 1;
     }
     const response = await askLocalDaemon(options, secret, MACHINE_NOTIFY_PATH, { method: 'POST', body: { nodeId, text } });
     if (!response) {
-        err(`No daemon answers on port ${options.port}. ${startFirst(options.port)}`);
+        err(`No Ruimte machine answers on port ${options.port}. ${startFirst(options.port)}`);
         return 1;
     }
     if (response.status === 404) {
@@ -47,7 +47,7 @@ export async function runNotify(options: NotifyOptions): Promise<number> {
         err(
             refusal.success && refusal.data.code === 'node-not-found'
                 ? `No project here holds the node ${nodeId}.`
-                : `The daemon refused the notification (${response.status}).`
+                : `The machine refused the notification (${response.status}).`
         );
         return 1;
     }

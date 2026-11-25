@@ -44,7 +44,7 @@
             "hint": "Een beleidsregel, een extensie of de pagina zelf hield het verzoek tegen."
         },
         "address": {
-            "title": "Dat adres kan niet geopend worden",
+            "title": "Ruimte kan dat adres niet openen",
             "hint": "Controleer het schema en de spelling."
         },
         "other": {
@@ -59,7 +59,7 @@
         "notReady": "De browser is nog niet klaar",
         "status": "De browser antwoordde niet ({{status}})",
         "unknownFormat": "Kon de pagina niet tonen",
-        "stopped": "De browserstream is gestopt",
+        "stopped": "De browser is gestopt",
         "failed": "De browser op afstand gaf een fout"
     },
     "splash": {

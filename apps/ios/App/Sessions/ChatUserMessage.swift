@@ -180,7 +180,7 @@ enum ChatHeldMessages {
                 return ChatModel.uncertainSendMessage
             }
             return String(
-                localized: "The messages could not be delivered: \(error.localizedDescription)",
+                localized: "Could not deliver the messages: \(error.localizedDescription)",
                 comment: "%@ is the reason the machine gave")
         }
     }
@@ -195,7 +195,7 @@ struct ChatHeldMessageState: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 12) {
-                Text("Waiting: messages woke this chat as often as they may this hour")
+                Text("Waiting. Messages may not wake this chat again this hour.")
                 Button {
                     Task {
                         sending = true

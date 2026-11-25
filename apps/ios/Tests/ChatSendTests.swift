@@ -183,7 +183,7 @@ import XCTest
 
         let problem = await ChatHeldMessages.deliver(chatID: "chat", client: client)
 
-        XCTAssertEqual(problem, "The messages could not be delivered: The chat is busy")
+        XCTAssertEqual(problem, "Could not deliver the messages: The chat is busy")
     }
 
     func testDeliverNowAsksToCheckTheChatWhenTheAnswerGotLost() async {

@@ -78,14 +78,14 @@
         "placeholder": "Wat is er gebeurd?"
     },
     "progress": {
-        "ranOf": "{{finished}} van {{total}} gedraaid",
+        "ranOf": "{{finished}} van {{total}} uitgevoerd",
         "doneOf": "{{done}} van {{total}} klaar",
         "passed": "{{count}} geslaagd",
         "warning_one": "{{count}} waarschuwing",
         "warning_other": "{{count}} waarschuwingen",
         "withWarning_one": "{{count}} met een waarschuwing",
         "withWarning_other": "{{count}} met waarschuwingen",
-        "info": "{{count}} met info",
+        "info": "{{count}} info",
         "withInfo": "{{count}} met info",
         "failed": "{{count}} mislukt",
         "skipped": "{{count}} overgeslagen",

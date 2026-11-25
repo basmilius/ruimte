@@ -36,11 +36,11 @@ describe('ruimte logout', () => {
     test('a daemon that is down, refuses the secret or predates the command ends with 1 and a reason', async () => {
         const down = harness(() => null);
         expect(await down.run()).toBe(1);
-        expect(down.err).toEqual(['No daemon answers on port 4210; start one first.']);
+        expect(down.err).toEqual(['No Ruimte machine answers on port 4210. Start one first.']);
 
         const forbidden = harness(() => new Response('Forbidden', { status: 403 }));
         expect(await forbidden.run()).toBe(1);
-        expect(forbidden.err[0]).toContain('set RUIMTE_HOME');
+        expect(forbidden.err[0]).toContain('Set RUIMTE_HOME');
 
         const older = harness(() => new Response('Not found', { status: 404 }));
         expect(await older.run()).toBe(1);

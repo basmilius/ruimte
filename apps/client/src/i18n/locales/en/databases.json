@@ -9,10 +9,10 @@
         "unsubmitted": "Unsubmitted edits",
         "gone": "This connection is no longer in the project.",
         "close": "Close tab",
-        "failed": "This tab could not be shown",
+        "failed": "Could not show this tab",
         "discard": {
             "title": "Discard changes to {{table}}?",
-            "description": "These edits were never submitted.",
+            "description": "You never submitted these edits.",
             "confirm": "Discard and close"
         }
     },
@@ -26,7 +26,7 @@
         "asFile": "File only",
         "untitled": "Untitled connection",
         "failed": "Could not create the console",
-        "failedToDraw": "This console could not be shown",
+        "failedToDraw": "Could not show this console",
         "taken": "Every console name for {{name}} is taken.",
         "moveFailed": "Could not move the console to that connection",
         "rename": {
@@ -40,7 +40,7 @@
         "reading": "Reading connections…",
         "failed": "Could not read connections: {{reason}}",
         "emptyTitle": "No connections yet",
-        "empty": "Connect to MySQL or SQLite to browse tables and run queries beside your code. Agents can query it too.",
+        "empty": "Connect to MySQL or SQLite to browse tables and run queries beside your code. Agents can run queries too.",
         "add": "Add connection",
         "containers": "Running database containers",
         "addContainer": "Add {{name}}",
@@ -53,11 +53,11 @@
     },
     "dialog": {
         "title": "Database connections",
-        "description": "What each connection may be used for.",
+        "description": "Who may use each connection.",
         "share": {
             "label": "Share with team",
-            "description": "Saves the connection with the project for everyone who works on it. The password is never shared.",
-            "outside": "The database file is outside the project folder, so the connection cannot be shared."
+            "description": "Saves the connection with the project for everyone who works on it. Ruimte never shares the password.",
+            "outside": "The database file is outside the project folder, so you cannot share the connection."
         },
         "agents": {
             "label": "Agents",
@@ -113,6 +113,6 @@
         "refresh": "Read schema again",
         "bindFailed": "Could not save the connection",
         "refreshFailed": "Could not read the schema",
-        "failedToDraw": "The SQL connection picker could not be shown"
+        "failedToDraw": "Could not show the SQL connection picker"
     }
 }

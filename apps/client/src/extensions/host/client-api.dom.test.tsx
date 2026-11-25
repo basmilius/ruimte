@@ -809,7 +809,7 @@ describe('the client API', () => {
         await until(() => mounted?.host.textContent === 'count 1');
 
         expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
-            'Probe could not keep what it stores',
+            'Probe could not save its data',
             'storage count: The disk is full'
         ]);
     });

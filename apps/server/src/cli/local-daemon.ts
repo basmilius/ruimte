@@ -50,9 +50,9 @@ export function startFirst(port: number): string {
 }
 
 export function otherHome(options: LocalDaemonOptions): string {
-    return `The daemon on port ${options.port} does not use ${options.home}; set RUIMTE_HOME to the home it was started with.`;
+    return `The machine on port ${options.port} does not use ${options.home}. Set RUIMTE_HOME to the home it was started with.`;
 }
 
 export function tooOld(port: number, command: string): string {
-    return `The daemon on port ${port} is older than \`ruimte ${command}\`; update it first.`;
+    return `The machine on port ${port} is older than \`ruimte ${command}\`. Update it first.`;
 }

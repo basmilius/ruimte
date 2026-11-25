@@ -43,7 +43,7 @@
     },
     "error": {
         "start": "GPT-Live kon niet starten",
-        "session": "GPT-Live meldde een fout in de sessie",
+        "session": "GPT-Live stopte met een fout",
         "noSession": "Kon de microfoon niet starten",
         "connectionLost": "Verbinding met GPT-Live verbroken"
     },
@@ -75,7 +75,7 @@
             "noBridge": "Speech to text werkt alleen in de desktop-app.",
             "overrun": "De spraakherkenning kon de microfoon niet bijhouden. Probeer het opnieuw.",
             "recognition": "De spraakherkenning stopte met een fout. Probeer het opnieuw.",
-            "unknown": "Dicteren stopte onverwacht. Probeer het opnieuw.",
+            "unknown": "Dicteren stopte. Probeer het opnieuw.",
             "targetChanged": "Het tekstveld is gewijzigd. Dicteer opnieuw."
         }
     },
