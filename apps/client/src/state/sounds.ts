@@ -8,7 +8,7 @@ export type SoundEvent = (typeof SOUND_EVENTS)[number];
 export const SOUND_MOTIFS: Readonly<Record<SoundEvent, string>> = { question: 'rise', alert: 'chime', limit: 'fall', error: 'knock', finished: 'trio' };
 
 /* The packs `scripts/make-sounds.ts` writes, in the order a person picks from. */
-export const SOUND_PACKS = ['marimba-low', 'marimba', 'kalimba-low', 'kalimba', 'log', 'vibes', 'tine', 'music-box', 'string'] as const;
+export const SOUND_PACKS = ['marimba', 'marimba-low', 'kalimba', 'kalimba-low', 'log', 'vibes', 'tine', 'music-box', 'string'] as const;
 export type BuiltInSoundPack = (typeof SOUND_PACKS)[number];
 
 /* Also what a stored built-in pack that is gone reads as, so a person who chose one still hears a sound. */
