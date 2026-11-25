@@ -27,6 +27,7 @@ export function quietFacts(overrides: Partial<ChatFacts> = {}): ChatFacts {
         modeCeiling: OPEN_BOUNDS.modeCeiling,
         peerChat: () => false,
         checkCwd: OPEN_BOUNDS.checkCwd,
+        projectFolder: () => null,
         holdsProject: () => Promise.resolve(true),
         projectAccount: () => null,
         skills: () => [],

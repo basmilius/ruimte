@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, expect, setSystemTime, test } from 'bun:test';
-import { readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { claudeProjectSlug } from '@adecore/agents/chat';
 import { fakeClaude, inProcess } from '@adecore/agents/testing';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
+import { startCwdGuard } from '../canvas/project-paths.ts';
 import { makeChatFixture, retire } from './chat-manager.fixture.test.ts';
 import { ChatRecorder, FakeCheckpoints } from './chat-test-helpers.ts';
 
@@ -343,4 +345,35 @@ test('a turn carries its checkpoint and the diff of what it changed', async () =
     expect(turn?.checkpoint).toBe(tree);
     expect(turn?.checkpointDiff).toEqual(diff);
     expect(await manager.core.turnDiff('chat-diff', turn!.id)).toEqual(diff);
+});
+
+test('a chat whose worktree is gone opens, and at its next start continues in the project folder with its transcript', async () => {
+    const project = await realpath(home);
+    const worktree = join(project, 'worktree');
+    await mkdir(worktree);
+    const facts = {
+        checkCwd: startCwdGuard({ madeByAgent: () => true, folderOf: () => project, worktreePaths: async () => [worktree] }),
+        projectFolder: () => project
+    };
+    manager = await remake(manager, facts);
+    await open(manager, 'chat-wt', { cwd: worktree });
+    await manager.core.send('chat-wt', 'hello');
+    await recorder.untilIdle();
+    const sessionId = manager.core.get('chat-wt')!.info.agentSessionId!;
+    const projectsDir = join(home, '.claude', 'projects');
+    await mkdir(join(projectsDir, claudeProjectSlug(worktree)), { recursive: true });
+    await writeFile(join(projectsDir, claudeProjectSlug(worktree), `${sessionId}.jsonl`), '{}\n');
+    await manager.core.save('chat-wt');
+
+    await rm(worktree, { recursive: true });
+    manager = await remake(manager, facts);
+    expect((await open(manager, 'chat-wt')).cwd).toBe(worktree);
+
+    await manager.core.send('chat-wt', 'again');
+    await recorder.until(() => claude.started.length === 2);
+    await recorder.untilIdle();
+
+    expect(manager.core.get('chat-wt')!.info.cwd).toBe(project);
+    expect(claude.started.at(-1)!.argv).toContain(`--resume=${sessionId}`);
+    expect(await readFile(join(projectsDir, claudeProjectSlug(project), `${sessionId}.jsonl`), 'utf8')).toBe('{}\n');
 });
