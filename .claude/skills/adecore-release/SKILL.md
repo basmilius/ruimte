@@ -15,7 +15,7 @@ ADE CORE (`../adecore`, `basmilius/adecore`) releases every package under one ve
 4. **Release.** Notes with the `release-notes` skill from the previous ADE CORE release, then:
 
     ```sh
-    gh release create v<version> --repo basmilius/adecore --draft --notes-file <notes>
+    gh release create v<version> --repo basmilius/adecore --draft --title v<version> --notes-file <notes>
     gh workflow run release.yml --repo basmilius/adecore -f version=<version>
     ```
 
