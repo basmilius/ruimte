@@ -352,6 +352,13 @@
         "react-dom": "^19.3.1",
       },
     },
+    "extensions/devcontainers": {
+      "name": "@ruimte/extension-devcontainers",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+      },
+    },
     "extensions/limits": {
       "name": "@ruimte/extension-limits",
       "version": "0.0.0",
@@ -1380,6 +1387,8 @@
     "@ruimte/extension-dev-pulseboard": ["@ruimte/extension-dev-pulseboard@workspace:extensions/dev/pulseboard"],
 
     "@ruimte/extension-dev-trackline": ["@ruimte/extension-dev-trackline@workspace:extensions/dev/trackline"],
+
+    "@ruimte/extension-devcontainers": ["@ruimte/extension-devcontainers@workspace:extensions/devcontainers"],
 
     "@ruimte/extension-limits": ["@ruimte/extension-limits@workspace:extensions/limits"],
 

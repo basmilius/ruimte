@@ -42,6 +42,7 @@ describe('ruimte extension test', () => {
 
     test.each<[string, readonly string[]]>([
         ['limits', []],
+        ['devcontainers', []],
         ['dev/trackline', []],
         ['dev/harbor', []],
         ['dev/lintel', []],

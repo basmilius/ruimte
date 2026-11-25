@@ -32,9 +32,10 @@ if (offenders.length > 0) {
 
 /*
  * And a built-in reaches the core only through the public extension API, as an installed extension does, so it
- * keeps working when it is packed like one. A test may also use the test runner and the testing package.
+ * keeps working when it is packed like one. A test may also use the test runner and the testing package. The same holds
+ * for an extension that is packed on its own (`limits`) or linked by the dev launch until it can be (`devcontainers`).
  */
-const BUILT_IN_SOURCES = ['extensions/pets', 'extensions/limits', 'extensions/theme-umbra'];
+const BUILT_IN_SOURCES = ['extensions/pets', 'extensions/limits', 'extensions/theme-umbra', 'extensions/devcontainers'];
 const PUBLIC = ['@ruimte/extension/client', '@ruimte/extension/ui', '@ruimte/extension/agents-ui', '@ruimte/extension/charts', '@ruimte/extension/server'];
 const LIBRARIES = ['react', 'react-dom', 'react/jsx-runtime', 'clsx', 'zod', 'zustand', 'lucide-react'];
 const IN_TESTS = ['bun:test', '@ruimte/extension/testing'];
