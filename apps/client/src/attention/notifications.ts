@@ -46,7 +46,7 @@ function notify(nodeId: string, title: string, body: string, reveal?: () => void
 }
 
 export function notifyRequested(endpointId: string, alert: EventMap['push.notification']): void {
-    if (!mayNotify() || (endpointId === currentEndpointId() && seenNodeIds().has(alert.nodeId))) {
+    if (!mayNotify() || !useSettings.getState().notifyEvents.alert || (endpointId === currentEndpointId() && seenNodeIds().has(alert.nodeId))) {
         return;
     }
 
@@ -101,8 +101,8 @@ const MAX_TIMER_MS = 2_000_000_000;
  * a person's own doing (here or on another client), and stays quiet. Quiet hours read the same way, and
  * one timer on their end announces what still waits. Counts, the queue and the marks stay as they are.
  *
- * A turn that stops (finished, on an error, on a usage limit) is announced only while its event has a
- * sound, so a client nobody gave sounds raises what it always did.
+ * Each of these is raised only while its event is on in the settings, and sounds only in a pack that
+ * has a sound for it.
  */
 export function startAgentNotifications(now: () => number = Date.now): () => void {
     const shown = new Map<string, Notification>();
@@ -187,11 +187,15 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
 
             const limit = chats[endpointKey(endpointOfNode(node, endpointId), node.id)]?.info.limit;
             const event = previous.get(node.id) === 'running' ? stopEvent(status, limit?.kind === 'usage') : null;
-            const sound = event === null ? null : soundHere(event);
 
-            if (event !== null && sound !== null && canNotify(node.id, seen)) {
+            if (event !== null && settings.notifyEvents[event] && canNotify(node.id, seen)) {
+                const sound = soundHere(event);
+
                 stopped.set(node.id, notify(node.id, node.title, i18next.t(`shell:notifications.${event}`)));
-                playSound(sound);
+
+                if (sound !== null) {
+                    playSound(sound);
+                }
             }
 
             if (status !== 'needs-you') {
@@ -204,16 +208,17 @@ export function startAgentNotifications(now: () => number = Date.now): () => voi
 
             const ask = nodeWaitAsk(node, sessions, chats, endpointId);
             const line = ask ? waitAskLine(ask) : i18next.t('shell:notifications.needsYou');
+            const mayAsk = settings.notifyEvents.question && canNotify(node.id, seen);
             // The request can land after the status, or a second one join it: the notification follows, without a second sound.
             if (shown.has(node.id)) {
-                if (lines.get(node.id) !== line && canNotify(node.id, seen)) {
+                if (lines.get(node.id) !== line && mayAsk) {
                     shown.get(node.id)?.close();
                     shown.set(node.id, notify(node.id, node.title, line));
                     lines.set(node.id, line);
                 }
                 continue;
             }
-            if (endedEarly || !canNotify(node.id, seen)) {
+            if (endedEarly || !mayAsk) {
                 cancelPending(node.id);
                 continue;
             }

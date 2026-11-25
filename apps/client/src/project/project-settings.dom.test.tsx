@@ -55,11 +55,11 @@ describe('Project settings', () => {
     });
 
     test('its search finds a row in another section and goes there', async () => {
-        await typeInto(document.querySelector<HTMLInputElement>('[role="dialog"] input[aria-label="Search settings"]')!, 'silent');
-        await until(() => result('Silent') !== null);
+        await typeInto(document.querySelector<HTMLInputElement>('[role="dialog"] input[aria-label="Search settings"]')!, 'sound pack');
+        await until(() => result('Sound pack of this project') !== null);
         expect(result('Name')).toBeNull();
 
-        await clickOn(result('Silent'));
-        await until(() => document.querySelector('[role="switch"][aria-label="Silent"]') !== null);
+        await clickOn(result('Sound pack of this project'));
+        await until(() => document.querySelector('button[aria-label="Sound pack of this project"]') !== null);
     });
 });

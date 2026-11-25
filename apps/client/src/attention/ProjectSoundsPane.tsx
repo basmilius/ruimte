@@ -1,12 +1,13 @@
-import { Select, Switch } from '@adecore/ui';
+import { Select } from '@adecore/ui';
 import { SettingsRow, SettingsSection } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { addCustomSoundPack } from '@/attention/custom-sounds';
+import { useSoundPackItems } from '@/attention/sound-pack-items';
 import { SoundPackRows } from '@/attention/SoundPackRows';
 import { useProjectSettingsSubject } from '@/project/project-settings-subject';
 import { useSettings } from '@/state/settings';
-import { soundPackItems, soundPackName } from '@/state/sound-packs';
-import { projectSoundKey, withProjectSounds } from '@/state/sounds';
+import { soundPackName } from '@/state/sound-packs';
+import { NO_SOUND_PACK, projectSoundKey, withProjectSounds } from '@/state/sounds';
 
 const AS_IN_SETTINGS = '';
 const NEW_PACK = 'new';
@@ -23,6 +24,7 @@ export function ProjectSoundsPane() {
     const projects = useSettings((s) => s.projectSounds);
     const pack = useSettings((s) => s.soundPack);
     const custom = useSettings((s) => s.customSoundPacks);
+    const packs = useSoundPackItems();
     const update = useSettings((s) => s.update);
     const sounds = projects[key] ?? {};
 
@@ -36,36 +38,23 @@ export function ProjectSoundsPane() {
                     <Select
                         label={t('projectSettings.soundsPack')}
                         size="sm"
-                        disabled={sounds.silent === true}
                         value={sounds.pack ?? AS_IN_SETTINGS}
                         onValueChange={(value) => {
                             if (value === NEW_PACK) {
                                 addCustomSoundPack(settingsWords('agents.sounds.newPackName'), key);
                             } else {
-                                update({ projectSounds: withProjectSounds(projects, key, { ...sounds, pack: value === AS_IN_SETTINGS ? undefined : value }) });
+                                update({ projectSounds: withProjectSounds(projects, key, { pack: value === AS_IN_SETTINGS ? undefined : value }) });
                             }
                         }}
                         items={[
                             { value: AS_IN_SETTINGS, label: t('projectSettings.soundsAsInSettings', { pack: soundPackName(pack, custom, settingsWords) }) },
-                            ...soundPackItems(custom, settingsWords),
+                            ...packs,
                             { value: NEW_PACK, label: settingsWords('agents.sounds.newPack') }
                         ]}
                     />
                 }
             />
-            {sounds.pack !== undefined && <SoundPackRows key={sounds.pack} pack={sounds.pack} />}
-            <SettingsRow
-                searchId="sounds.silent"
-                label={t('projectSettings.soundsSilent')}
-                description={t('projectSettings.soundsSilentNote')}
-                control={
-                    <Switch
-                        checked={sounds.silent === true}
-                        onCheckedChange={(next) => update({ projectSounds: withProjectSounds(projects, key, { ...sounds, silent: next }) })}
-                        label={t('projectSettings.soundsSilent')}
-                    />
-                }
-            />
+            {sounds.pack !== undefined && sounds.pack !== NO_SOUND_PACK && <SoundPackRows key={sounds.pack} pack={sounds.pack} />}
         </SettingsSection>
     );
 }

@@ -616,7 +616,7 @@
         },
         "notifications": {
             "label": "Meldingen",
-            "description": "Geluiden, stille uren en pauzeherinneringen."
+            "description": "Gebeurtenissen, geluiden, stille uren en pauzeherinneringen."
         },
         "keyboard": {
             "label": "Toetsenbord",
@@ -1286,14 +1286,14 @@
         },
         "quietHours": {
             "label": "Stille uren",
-            "description": "Geen melding op deze computer in deze uren. Agents blijven werken, en wat nog wacht hoor je als de uren eindigen.",
+            "description": "Geen meldingen in deze uren. Wat nog wacht, zie je als ze voorbij zijn.",
             "days": {
                 "label": "Dagen",
                 "description": "Een nacht hoort bij de dag waarop hij begint."
             },
             "times": {
                 "label": "Uren",
-                "description": "Op de klok van deze computer. Een einde voor het begin loopt door tot de volgende dag.",
+                "description": "Een einde voor het begin loopt door tot de volgende dag.",
                 "from": "Stil vanaf",
                 "to": "tot",
                 "until": "Stil tot"
@@ -1301,20 +1301,31 @@
         },
         "breakReminder": {
             "label": "Pauzeherinnering",
-            "description": "Stelt een pauze voor na een tijd werken aan deze computer. Vijf minuten van je computer af tellen als pauze.",
+            "description": "Stelt een pauze voor na een tijd werken. Vijf minuten weg telt als pauze.",
             "stretch": {
                 "label": "Herinner me na",
                 "description": "Werken zonder pauze."
             }
+        },
+        "notify": {
+            "title": "Meldingen over",
+            "preview": "Voorbeeld: {{event}}",
+            "sample": "Voorbeeldchat",
+            "sampleAlert": "De deploy staat live."
+        },
+        "rest": {
+            "title": "Rust"
         },
         "working": {
             "title": "Wakker houden",
             "description": "Als deze computer slaapt, pauzeert elke agent."
         },
         "sounds": {
+            "title": "Geluid",
+            "none": "Geen geluid",
             "pack": {
                 "label": "Geluidspack",
-                "description": "Elk pack speelt dezelfde vijf geluiden in een eigen stem. Een project kan in zijn instellingen een ander pack krijgen."
+                "description": "Hoe je meldingen klinken."
             },
             "packs": {
                 "bar": "Staaf",
@@ -1331,18 +1342,20 @@
             "newPack": "Nieuw pack",
             "newPackName": "Mijn pack",
             "events": {
-                "question": "Een vraag of goedkeuring wacht",
-                "alert": "Een alert waar iemand om vroeg",
-                "limit": "Een verbruikslimiet is bereikt",
-                "error": "Een sessie stopt met een fout",
-                "finished": "Een beurt is klaar"
+                "question": "Vragen en goedkeuringen",
+                "alert": "Alerts van agents",
+                "limit": "Verbruikslimieten",
+                "error": "Fouten",
+                "finished": "Afgeronde turns"
             },
             "play": "Speel het geluid af voor: {{event}}",
+            "playPack": "Speel {{pack}} af",
             "custom": {
+                "noFile": "Geen bestand, klinkt zoals in {{pack}}",
+                "noSound": "Geen bestand, geen geluid",
                 "name": "Naam van het pack",
                 "choose": "Kies bestand",
                 "chooseFor": "Kies het bestand voor: {{event}}",
-                "noFile": "Geen bestand, klinkt zoals in {{pack}}",
                 "off": "Uit in dit pack",
                 "turnOff": "Zet uit in dit pack: {{event}}",
                 "turnOn": "Zet aan in dit pack: {{event}}",

@@ -1,6 +1,6 @@
 import { endpointKey } from '@/state/keys';
 
-/* What a session can announce with a sound, in the order the settings list them. */
+/* What a session can announce, in the order the settings list them. */
 export const SOUND_EVENTS = ['question', 'alert', 'limit', 'error', 'finished'] as const;
 export type SoundEvent = (typeof SOUND_EVENTS)[number];
 
@@ -13,9 +13,16 @@ export type BuiltInSoundPack = (typeof SOUND_PACKS)[number];
 
 export const DEFAULT_SOUND_PACK: BuiltInSoundPack = 'bar';
 
+/* The choice that plays nothing: what notifies still does, without a sound. */
+export const NO_SOUND_PACK = 'none';
+
 const CUSTOM_PREFIX = 'custom-';
 
-export type SoundEvents = Record<SoundEvent, boolean>;
+/* Which events raise a notification. Whether one sounds is the pack's. */
+export type NotifyEvents = Record<SoundEvent, boolean>;
+
+/* A question and an alert someone asked for always notified, so they start on. The rest waits for a person. */
+export const DEFAULT_NOTIFY_EVENTS: NotifyEvents = { question: true, alert: true, limit: false, error: false, finished: false };
 
 /* A pack of a person's own files. The files live in this client's IndexedDB; this is their index. */
 export interface CustomSoundPack {
@@ -30,15 +37,12 @@ export interface CustomSoundPack {
 }
 
 export interface ProjectSounds {
-    silent?: boolean;
-
     /* Absent follows the pack of the settings. */
     pack?: string;
 }
 
 export interface SoundSettings {
     soundPack: string;
-    soundEvents: SoundEvents;
     customSoundPacks: readonly CustomSoundPack[];
     projectSounds: Readonly<Record<string, ProjectSounds>>;
 }
@@ -68,13 +72,39 @@ function record(value: unknown): Record<string, unknown> | null {
     return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
-/* Every event is off until a person turns it on. `legacy` is the one switch there was before, which covered the two alerts the desktop raised. */
-export function soundEventsFrom(stored: unknown, legacy: unknown): SoundEvents {
-    const events = record(stored);
+/* What a blob may hold about notifications: today's keys, and the two a switch per event was a sound switch under. */
+export interface StoredAnnouncements {
+    notifyEvents?: unknown;
+    soundPack?: unknown;
+    soundEvents?: unknown;
+    agentsTurnSound?: unknown;
+}
 
-    return Object.fromEntries(
-        SOUND_EVENTS.map((event) => [event, events === null ? legacy === true && (event === 'question' || event === 'alert') : events[event] === true])
-    ) as SoundEvents;
+/*
+ * The switches and the pack of a stored blob. One from before `notifyEvents` held a sound switch per
+ * event (`soundEvents`, and before that `agentsTurnSound` for the two alerts the desktop raised), and it
+ * reads as what it did then: a question and an alert always notified, the other events only while
+ * their sound was on, and a blob with every sound off played none.
+ */
+export function announcementsFrom(stored: StoredAnnouncements, custom: readonly CustomSoundPack[]): { notifyEvents: NotifyEvents; soundPack: string } {
+    const events = record(stored.notifyEvents);
+
+    if (events !== null) {
+        return {
+            notifyEvents: Object.fromEntries(SOUND_EVENTS.map((event) => [event, events[event] === true])) as NotifyEvents,
+            soundPack: soundPackFrom(stored.soundPack, custom)
+        };
+    }
+
+    const sounds = record(stored.soundEvents);
+    const heard = SOUND_EVENTS.filter((event) =>
+        sounds === null ? stored.agentsTurnSound === true && (event === 'question' || event === 'alert') : sounds[event] === true
+    );
+
+    return {
+        notifyEvents: Object.fromEntries(SOUND_EVENTS.map((event) => [event, DEFAULT_NOTIFY_EVENTS[event] || heard.includes(event)])) as NotifyEvents,
+        soundPack: heard.length === 0 ? NO_SOUND_PACK : soundPackFrom(stored.soundPack, custom)
+    };
 }
 
 export function customSoundPacksFrom(stored: unknown): CustomSoundPack[] {
@@ -104,26 +134,29 @@ export function customSoundPacksFrom(stored: unknown): CustomSoundPack[] {
 }
 
 function knownPack(id: unknown, custom: readonly CustomSoundPack[]): id is string {
-    return typeof id === 'string' && (isBuiltInPack(id) || custom.some((pack) => pack.id === id));
+    return typeof id === 'string' && (id === NO_SOUND_PACK || isBuiltInPack(id) || custom.some((pack) => pack.id === id));
 }
 
 export function soundPackFrom(stored: unknown, custom: readonly CustomSoundPack[]): string {
     return knownPack(stored, custom) ? stored : DEFAULT_SOUND_PACK;
 }
 
-/* A project that follows the settings in everything is left out, so the map holds only what a person chose. */
+/*
+ * A project that follows the settings is left out, so the map holds only what a person chose. The
+ * `silent` switch a project had before reads as the pack that plays nothing.
+ */
 export function projectSoundsFrom(stored: unknown, custom: readonly CustomSoundPack[]): Record<string, ProjectSounds> {
     const projects = record(stored) ?? {};
 
     return Object.fromEntries(
         Object.entries(projects).flatMap(([key, value]) => {
             const choice = record(value);
-            const sounds: ProjectSounds = {
-                ...(choice?.silent === true ? { silent: true } : {}),
-                ...(knownPack(choice?.pack, custom) ? { pack: choice.pack } : {})
-            };
 
-            return Object.keys(sounds).length === 0 ? [] : [[key, sounds]];
+            if (choice?.silent === true) {
+                return [[key, { pack: NO_SOUND_PACK }]];
+            }
+
+            return knownPack(choice?.pack, custom) ? [[key, { pack: choice.pack }]] : [];
         })
     );
 }
@@ -131,21 +164,24 @@ export function projectSoundsFrom(stored: unknown, custom: readonly CustomSoundP
 /* The settings after a project's choice changed; a choice that says nothing drops the project from the map. */
 export function withProjectSounds(projects: Readonly<Record<string, ProjectSounds>>, key: string, sounds: ProjectSounds): Record<string, ProjectSounds> {
     const { [key]: _before, ...rest } = projects;
-    const kept: ProjectSounds = { ...(sounds.silent === true ? { silent: true } : {}), ...(sounds.pack === undefined ? {} : { pack: sounds.pack }) };
 
-    return Object.keys(kept).length === 0 ? rest : { ...rest, [key]: kept };
+    return sounds.pack === undefined ? rest : { ...rest, [key]: { pack: sounds.pack } };
 }
 
 /*
- * The sound a pack makes for an event, or null where a person turned the event off in it. A pack of a
- * person's own without a file for the event sounds as the pack of the settings does, and that one, when
- * it has no file either, as the default pack, so a pack with one file of its own is never silent elsewhere.
+ * The sound a pack makes for an event, or null where it makes none: the pack plays nothing, or a person
+ * turned the event off in it. A pack of a person's own without a file for the event sounds as the pack
+ * of the settings does, and that one, when it has no file either, as the default pack.
  */
 export function packSound(settings: Pick<SoundSettings, 'soundPack' | 'customSoundPacks'>, pack: string, event: SoundEvent): SoundChoice | null {
     const tried = new Set<string>();
     let current = pack;
 
     while (!isBuiltInPack(current)) {
+        if (current === NO_SOUND_PACK) {
+            return null;
+        }
+
         const own = settings.customSoundPacks.find((custom) => custom.id === current);
 
         if (own?.off?.includes(event)) {
@@ -164,15 +200,11 @@ export function packSound(settings: Pick<SoundSettings, 'soundPack' | 'customSou
 }
 
 /*
- * The sound an event makes for a project, or null for none: the event is off, in the settings or in the
- * pack, or the project is silent. `projectKey` null is an event no project owns.
+ * The sound an event makes for a project, in the project's pack or else the settings', or null where
+ * that pack makes none. `projectKey` null is an event no project owns.
  */
 export function soundFor(settings: SoundSettings, event: SoundEvent, projectKey: string | null): SoundChoice | null {
     const project = projectKey === null ? undefined : settings.projectSounds[projectKey];
-
-    if (!settings.soundEvents[event] || project?.silent === true) {
-        return null;
-    }
 
     return packSound(settings, project?.pack ?? settings.soundPack, event);
 }

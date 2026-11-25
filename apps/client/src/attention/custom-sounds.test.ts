@@ -79,16 +79,10 @@ test('deleting a pack removes its files and puts whatever used it back on the se
     const id = addCustomSoundPack('My pack');
 
     await setCustomSound(id, 'question', sound('ping.wav'));
-    useSettings
-        .getState()
-        .update({ projectSounds: { 'local:atlas': { silent: true, pack: id }, 'local:other': { pack: id }, 'local:third': { pack: 'glass' } } });
+    useSettings.getState().update({ projectSounds: { 'local:atlas': { pack: 'none' }, 'local:other': { pack: id }, 'local:third': { pack: 'glass' } } });
     await removeCustomSoundPack(id);
 
     expect(kept.size).toBe(0);
-    expect(useSettings.getState()).toMatchObject({
-        soundPack: 'bar',
-        customSoundPacks: [],
-        projectSounds: { 'local:atlas': { silent: true }, 'local:third': { pack: 'glass' } }
-    });
-    expect(useSettings.getState().projectSounds['local:other']).toBeUndefined();
+    expect(useSettings.getState()).toMatchObject({ soundPack: 'bar', customSoundPacks: [] });
+    expect(useSettings.getState().projectSounds).toEqual({ 'local:atlas': { pack: 'none' }, 'local:third': { pack: 'glass' } });
 });

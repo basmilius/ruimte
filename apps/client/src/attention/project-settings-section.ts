@@ -13,8 +13,5 @@ export const SOUND_PROJECT_SETTINGS_SECTION: ProjectSettingsSectionDefinition = 
     label: words('sounds'),
     description: words('soundsNote'),
     pane: lazyNamed(() => import('@/attention/ProjectSoundsPane'), 'ProjectSoundsPane'),
-    rows: [
-        { id: 'sounds.pack', label: words('soundsPack') },
-        { id: 'sounds.silent', label: words('soundsSilent') }
-    ]
+    rows: [{ id: 'sounds.pack', label: words('soundsPack') }]
 };

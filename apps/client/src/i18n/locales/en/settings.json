@@ -616,7 +616,7 @@
         },
         "notifications": {
             "label": "Notifications",
-            "description": "Sounds, quiet hours and break reminders."
+            "description": "Events, sounds, quiet hours and break reminders."
         },
         "keyboard": {
             "label": "Keyboard",
@@ -1286,14 +1286,14 @@
         },
         "quietHours": {
             "label": "Quiet hours",
-            "description": "No alert on this computer in these hours. Agents keep working, and what still waits is announced when the hours end.",
+            "description": "No notifications during these hours. What still waits shows up when they end.",
             "days": {
                 "label": "Days",
                 "description": "A night belongs to the day it starts on."
             },
             "times": {
                 "label": "Hours",
-                "description": "On this computer's clock. An end before the start runs into the next day.",
+                "description": "An end before the start runs into the next day.",
                 "from": "Quiet from",
                 "to": "to",
                 "until": "Quiet until"
@@ -1301,20 +1301,31 @@
         },
         "breakReminder": {
             "label": "Break reminder",
-            "description": "Suggests a break after a stretch of work at this computer. Five minutes away counts as a break.",
+            "description": "Suggests a break after a stretch of work. Five minutes away counts as one.",
             "stretch": {
                 "label": "Remind me after",
                 "description": "Of work without a break."
             }
+        },
+        "notify": {
+            "title": "Notify me about",
+            "preview": "Preview: {{event}}",
+            "sample": "Example chat",
+            "sampleAlert": "The deploy is live."
+        },
+        "rest": {
+            "title": "Rest"
         },
         "working": {
             "title": "Keep awake",
             "description": "When this computer sleeps, every agent pauses."
         },
         "sounds": {
+            "title": "Sound",
+            "none": "No sound",
             "pack": {
                 "label": "Sound pack",
-                "description": "Every pack plays the same five sounds in a voice of its own. A project can take another pack in its settings."
+                "description": "How your notifications sound."
             },
             "packs": {
                 "bar": "Bar",
@@ -1331,18 +1342,20 @@
             "newPack": "New pack",
             "newPackName": "My pack",
             "events": {
-                "question": "A question or approval waits",
-                "alert": "An alert someone asked for",
-                "limit": "A usage limit is hit",
-                "error": "A session stops with an error",
-                "finished": "A turn finishes"
+                "question": "Questions and approvals",
+                "alert": "Alerts from agents",
+                "limit": "Usage limits",
+                "error": "Errors",
+                "finished": "Finished turns"
             },
             "play": "Play the sound for: {{event}}",
+            "playPack": "Play {{pack}}",
             "custom": {
+                "noFile": "No file, sounds as in {{pack}}",
+                "noSound": "No file, no sound",
                 "name": "Name of the pack",
                 "choose": "Choose file",
                 "chooseFor": "Choose the file for: {{event}}",
-                "noFile": "No file, sounds as in {{pack}}",
                 "off": "Off in this pack",
                 "turnOff": "Turn off in this pack: {{event}}",
                 "turnOn": "Turn on in this pack: {{event}}",
