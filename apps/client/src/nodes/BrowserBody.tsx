@@ -1,6 +1,6 @@
-import { Button, ButtonGroup, EmptyState, Icon, IconButton, Select, formatShortcut, KEY_SHORTCUTS, isApplePlatform } from '@adecore/ui';
+import { Button, ButtonGroup, EmptyState, Icon, IconButton, Input, Select, formatShortcut, KEY_SHORTCUTS, isApplePlatform } from '@adecore/ui';
 import clsx from 'clsx';
-import { ArrowLeft, ArrowRight, Code, ExternalLink, Lock, RotateCw, Unplug, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Code, ExternalLink, Globe, Lock, RotateCw, Unplug, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -74,16 +74,12 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     />
                 )}
             </ButtonGroup>
-            <div
-                className={clsx(
-                    'app-no-drag relative mx-[30px] flex h-7 grow items-center gap-2 overflow-hidden rounded-md border border-border-soft bg-surface-sunken px-2.5 text-xs text-text-muted',
-                    focused && 'ring-1 ring-border-strong'
-                )}
-            >
-                {secure && <Icon icon={Lock} size={12} className="shrink-0" />}
-                <input
+            <div className="app-no-drag relative mx-[30px] grow overflow-hidden rounded-md">
+                {/* Always an icon, so the field keeps one shape and typing `https://` does not remount the input under the caret. */}
+                <Input
                     ref={field}
-                    className="grow bg-transparent font-sans text-sm text-text outline-none placeholder:text-text-faint"
+                    size="sm"
+                    icon={secure ? Lock : Globe}
                     aria-label={t('browser.address')}
                     placeholder={t('browser.addressPlaceholder')}
                     value={editing ? url : prettyUrl(url)}
