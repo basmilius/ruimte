@@ -12,8 +12,8 @@ import {
 /*
  * The address a window loads for its key. Without a key it opens on the start screen, except the
  * one window of a start without a session (`first`): that one loads the bare address, where the
- * page opens the project it remembers. A `dormant` window leaves its project closed until it has
- * the focus.
+ * page opens the project it remembers. A `dormant` window leaves its project closed until it is on
+ * screen or has the focus.
  */
 export function windowUrl(base: string, key: string | null, first: boolean, view: string | null = null, state: string | null = null, dormant = false): string {
     if (key === null && first && state === null) {

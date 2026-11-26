@@ -288,7 +288,7 @@ describe('the cold start', () => {
         expect(opened).toEqual(['daemon-b:q1']);
     });
 
-    test('a dormant window opens its project only once it has the focus', async () => {
+    test('a dormant window opens its project only once it is seen', async () => {
         let focus!: () => void;
         const opened: string[] = [];
         const booted = bootWindow(
