@@ -125,6 +125,25 @@ describe('the client extensions of the shell', () => {
         expect((await store.answer('/__extensions/acme.builds/other/client/index.js', ORIGIN)).status).toBe(404);
     });
 
+    test("let a window keep an installed version's files, never a dev folder's, and serve what a new install put in place", async () => {
+        const store = extensions();
+        const first = await store.install(pack({ 'client/index.js': 'export const one = 1;' }));
+        const folder = join(root, 'dev');
+
+        mkdirSync(join(folder, 'client'), { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ id: 'acme.dev', name: 'Dev', version: '1.0.0', api: 1 }));
+        writeFileSync(join(folder, 'client', 'index.js'), 'export {};');
+        await store.link(folder, 1);
+
+        expect((await store.answer(`${first.base}client/index.js`, ORIGIN)).headers.get('cache-control')).toContain('immutable');
+        expect((await store.answer('/__extensions/acme.dev/dev-1/client/index.js', ORIGIN)).headers.get('cache-control')).toBe('no-cache');
+
+        const second = await store.install(pack({ 'client/index.js': 'export const two = 2;' }));
+
+        expect((await store.answer(`${first.base}client/index.js`, ORIGIN)).status).toBe(404);
+        expect(await (await store.answer(`${second.base}client/index.js`, ORIGIN)).text()).toBe('export const two = 2;');
+    });
+
     test('never follow a symlink in a dev folder out of it', async () => {
         const store = extensions();
         const folder = join(root, 'dev');
