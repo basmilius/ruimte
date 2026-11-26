@@ -94,6 +94,25 @@ describe('a slot', () => {
         expect(reported).toContain('No items');
     });
 
+    test('hands an entry the theme of the page, and follows it when it changes', async () => {
+        add({ slots: { viewToolbar: (context) => ({ title: `In ${(context as { theme: string }).theme}` }) } });
+        document.documentElement.dataset.theme = 'dark';
+        mounted = mount();
+
+        try {
+            await mounted.render(<SlotRow place="viewToolbar" context={{}} words />);
+
+            expect(mounted.host.textContent).toContain('In dark');
+
+            await act(async () => {
+                document.documentElement.dataset.theme = 'light';
+            });
+            await until(() => mounted?.host.textContent?.includes('In light') ?? false);
+        } finally {
+            delete document.documentElement.dataset.theme;
+        }
+    });
+
     test('reads a node again when it changes, also where the host drew it a render ago', async () => {
         add({ slots: { nodeHeader: (context) => ({ title: `About ${(context as { node: { title: string } }).node.title}` }) } });
         focusedCanvas().setState({ nodes: { one: { id: 'one', kind: 'note', title: 'First', x: 0, y: 0, w: 100, h: 100 } as CanvasNode } });

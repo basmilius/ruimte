@@ -1,5 +1,6 @@
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
 import { useSyncExternalStore } from 'react';
+import { onlyCameraMoved } from '@/canvas-model/camera-slice';
 import { viewIdsIn } from '@/layout/split';
 import { defaultCanvases, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -65,9 +66,14 @@ function build(): ProjectSource {
     return cached;
 }
 
-function subscribe(listener: () => void): () => void {
+export function subscribeProjectSource(listener: () => void): () => void {
     const offDocument = useDocument.subscribe(listener);
-    const offCanvases = defaultCanvases.subscribe(listener);
+    // A pan or a zoom moves the camera on every frame and no row reads it.
+    const offCanvases = defaultCanvases.subscribe((_viewId, state, previous) => {
+        if (!onlyCameraMoved(state, previous)) {
+            listener();
+        }
+    });
     const offShape = defaultCanvases.subscribeShape(listener);
     return () => {
         offDocument();
@@ -77,5 +83,5 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function useProjectSource(): ProjectSource {
-    return useSyncExternalStore(subscribe, build);
+    return useSyncExternalStore(subscribeProjectSource, build);
 }
