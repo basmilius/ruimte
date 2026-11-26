@@ -230,6 +230,7 @@
     },
     "viewWindows": {
         "toNewWindow": "Naar nieuw venster verplaatsen",
+        "openInNewWindow": "Openen in nieuw venster",
         "toMainWindow": "Naar hoofdvenster verplaatsen",
         "held": "Sla eerst de wijzigingen in {{name}} op",
         "showProject": "{{project}} tonen"

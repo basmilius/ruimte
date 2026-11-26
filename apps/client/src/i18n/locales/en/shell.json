@@ -230,6 +230,7 @@
     },
     "viewWindows": {
         "toNewWindow": "Move to new window",
+        "openInNewWindow": "Open in new window",
         "toMainWindow": "Move to main window",
         "held": "Save the changes in {{name}} first",
         "showProject": "Show {{project}}"

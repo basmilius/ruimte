@@ -3,7 +3,7 @@ import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel, isApple
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { AgentKind, AgentStatus, CanvasNodeKind } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
+import { ChevronRight, Globe, PanelTop, Pencil, PictureInPicture2, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
 import { createContext, useContext, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/action-port/person-actions';
@@ -42,6 +42,7 @@ import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
+import { canMoveToNewWindow, moveViewToNewWindow } from '@/view-windows/commands';
 import { NewViewItems } from '@/views/NewViewMenu';
 
 const ROW = 'w-full gap-2 text-left text-sm';
@@ -571,6 +572,11 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                         <ContextMenu.Item onClick={() => showView(view.id, { newTab: true })}>
                             <Icon icon={PanelTop} size={14} /> {t('viewMenu.openInNewTab')}
                         </ContextMenu.Item>
+                        {canMoveToNewWindow(view.id) && (
+                            <ContextMenu.Item onClick={() => moveViewToNewWindow(view.id)}>
+                                <Icon icon={PictureInPicture2} size={14} /> {t('viewWindows.openInNewWindow')}
+                            </ContextMenu.Item>
+                        )}
                         <ContextMenu.Separator />
                     </>
                 )}
