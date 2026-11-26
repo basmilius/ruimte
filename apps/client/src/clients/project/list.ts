@@ -4,9 +4,10 @@ import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { browserStorage, storedJson, type KeyValueStorage, type StoredValue } from '@/state/stored-json';
+import { orNull } from '@/transport-api/transport';
 import { pool, transportFor, type ConnectionState } from '@/transport/index';
 import { watchPool } from '@/transport/pool-watch';
-import { rememberClosedProject } from '../../state/closed-projects';
+import { followReopenedProjects, rememberClosedProject } from '../../state/closed-projects';
 import { readLastProject, rememberProject } from './last-project';
 
 const CACHE_PREFIX = 'ruimte.projects.';
@@ -200,8 +201,10 @@ export function startProjectList(): () => void {
     const offSummaries = watchPool((link, endpointId) => ({
         subscriptions: [link.on('project.summary', ({ summary }) => foldSummary(endpointId, summary))]
     }));
+    const offReopened = followReopenedProjects((endpointId) => void orNull('listProjects', listProjects(endpointId)));
     return () => {
         offLists();
         offSummaries();
+        offReopened();
     };
 }
