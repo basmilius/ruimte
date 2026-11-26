@@ -4,7 +4,8 @@ import { sessionNodesOf } from '@/clients/project/project-sessions';
 import { watchNodes, type NodeExit } from '@/clients/terminal/lifecycle-watch';
 import { forgetScreen } from '@/clients/terminal/registry';
 import { useChatTextSizes } from '@/state/chat-text-size';
-import { endpointKey } from '@/state/keys';
+import { endpointKey, endpointOfNode } from '@/state/keys';
+import { nodeRefsOfView } from '@/state/view-nodes';
 import { fireAndForget } from '@/transport-api/transport';
 import { browserClientFor, chatClientFor, sessionClientFor } from '@/workspace/connections';
 
@@ -38,12 +39,20 @@ export function startSessionLifecycle(): () => void {
  * What a closing project leaves behind inside this client. Ending the sessions themselves is the
  * daemon's: a project can be closed from a client that never had it on screen, and one that another
  * client still has open keeps its sessions running. The last screen of a terminal is a cache either
- * way, and a reattach fills it again.
+ * way, and a reattach fills it again. A page of the project is this client's own, a guest process
+ * nothing shows again before the project opens, which loads it anew.
  */
 export function forgetProjectSessions(endpointId: string, views: readonly ProjectView[]): void {
     for (const node of sessionNodesOf(views)) {
         if (node.kind === 'terminal') {
             forgetScreen(endpointId, node.id);
+        }
+    }
+    for (const view of views) {
+        for (const node of nodeRefsOfView(view)) {
+            if (node.kind === 'browser') {
+                browserRegistry.destroy(endpointKey(endpointOfNode(node, endpointId), node.id));
+            }
         }
     }
 }
