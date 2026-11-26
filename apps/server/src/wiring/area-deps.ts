@@ -182,8 +182,9 @@ export function chatSearchDeps({ projects, agents, providers, sessionFs }: AreaI
                 );
                 const own = new Set(resumes);
                 for (const chatId of chatIds) {
-                    const sessionId = (await chats.readChat(chatId))?.info.agentSessionId;
-                    if (sessionId !== null && sessionId !== undefined) {
+                    // Most of these chats are not open, and their threads would be read and checked in full for one field.
+                    const sessionId = await chats.agentSessionIdOf(chatId);
+                    if (sessionId !== null) {
                         own.add(sessionId);
                     }
                 }
