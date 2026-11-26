@@ -72,8 +72,11 @@ export class FramePainter {
                 const bitmap = await createImageBitmap(new Blob([frame.data.slice().buffer], { type: 'image/jpeg' }));
                 const canvas = this.target.canvas.current;
                 if (canvas) {
-                    canvas.width = frame.width;
-                    canvas.height = frame.height;
+                    // Setting a size, even the same one, clears the canvas and its context; the frame covers it all anyway.
+                    if (canvas.width !== frame.width || canvas.height !== frame.height) {
+                        canvas.width = frame.width;
+                        canvas.height = frame.height;
+                    }
                     canvas.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, frame.width, frame.height);
                     this.target.painted();
                 }
