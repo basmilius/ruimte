@@ -174,6 +174,12 @@ describe('the binary sniff', () => {
         expect(sniffMime(latin1('OggS\x00\x02' + '\x00'.repeat(22) + '\x80theora'))).toBe('video/ogg');
     });
 
+    test('names a generic brand by the handlers of its tracks', () => {
+        const handler = (type: string): Buffer => Buffer.concat([Buffer.from('hdlr'), Buffer.alloc(8), Buffer.from(type)]);
+        expect(sniffMime(new Uint8Array(Buffer.concat([isoMedia('isom'), handler('soun')])))).toBe('audio/mp4');
+        expect(sniffMime(new Uint8Array(Buffer.concat([isoMedia('isom'), handler('vide'), handler('soun')])))).toBe('video/mp4');
+    });
+
     test('names sound by its container or its first frame', () => {
         expect(sniffMime(latin1('ID3\x04\x00'))).toBe('audio/mpeg');
         // An MP3 without a tag: MPEG-1 layer III, 128 kbit/s at 44.1 kHz.
