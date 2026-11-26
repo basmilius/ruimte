@@ -17,6 +17,12 @@ export interface CameraFields {
     camera: Camera;
     viewport: Viewport;
     pendingCamera: CameraRequest | null;
+
+    /*
+     * True once the surface was measured at no size, which is a cell behind a maximized one or a tab
+     * behind another. Apart from an unmeasured viewport, which a first render reads as all in sight.
+     */
+    viewportHidden: boolean;
 }
 
 interface CameraActions {
@@ -59,10 +65,12 @@ export function createCameraSlice<TState extends CameraSlice>(
         camera: { x: 0, y: 0, zoom: 1 },
         viewport: { w: 0, h: 0 },
         pendingCamera: null,
+        viewportHidden: false,
 
         setViewport(viewport) {
-            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
-            set({ viewport });
+            const measured = isMeasured(viewport);
+            const waiting = measured ? get().pendingCamera : null;
+            set({ viewport, viewportHidden: !measured });
             if (waiting === null) {
                 return;
             }
