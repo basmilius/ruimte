@@ -67,9 +67,13 @@ function sayHeld({ held }: TakenItems): void {
     }
 }
 
-/* The other window only knows a view that is in the project's file, and one made a moment ago may not be yet. */
-async function flushProject(): Promise<void> {
-    await fireAndForget('projects.flush', windowWorkspace()?.connection.projects.flush());
+/*
+ * The other window only knows a view that is in the project's file, and one made a moment ago may not
+ * be yet. Not waited for: that window places a view once its document has it (`placeItems`), and a
+ * round trip to the machine before every move is a pause a person sees.
+ */
+function flushProject(): void {
+    void fireAndForget('projects.flush', windowWorkspace()?.connection.projects.flush());
 }
 
 /* The new window asks for the views once it is up (`ready`). `at` is where its corner goes on the screen. */
@@ -87,7 +91,7 @@ export async function moveToNewWindow(ids: readonly string[], at?: WindowPoint):
         return false;
     }
 
-    await flushProject();
+    flushProject();
 
     const key = auxWindowKey(project, crypto.randomUUID());
     pending.set(key, taken.items);
@@ -139,21 +143,25 @@ export async function endFollowing(keep: boolean): Promise<void> {
 
     const taken = keep ? itemsOf(ended.ids) : null;
     const moves = taken !== null && taken.items.length > 0;
+
+    // The views go first, so the window fills while this one is still letting go of them.
+    if (taken !== null && moves) {
+        if (ended.asked) {
+            tellWindow(ended.key, { type: 'give', items: taken.items, place: null });
+        } else {
+            pending.set(ended.key, taken.items);
+        }
+    }
+
     await fireAndForget('viewDrag', desktop()?.viewDrag?.('end', ended.key, moves));
 
     if (taken === null || !moves) {
         return;
     }
 
-    await flushProject();
+    flushProject();
     letGo(taken.items.map(idOf));
     keepLocal();
-
-    if (ended.asked) {
-        tellWindow(ended.key, { type: 'give', items: taken.items, place: null });
-    } else {
-        pending.set(ended.key, taken.items);
-    }
 }
 
 export async function moveToMainWindow(ids: readonly string[]): Promise<boolean> {
@@ -170,7 +178,7 @@ export async function moveToMainWindow(ids: readonly string[]): Promise<boolean>
         return false;
     }
 
-    await flushProject();
+    flushProject();
     // Raised first, since a window that keeps the project as a tab in the back takes the views only once it shows the project.
     desktop()?.openWindow?.(project);
 

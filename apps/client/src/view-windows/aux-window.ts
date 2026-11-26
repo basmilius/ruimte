@@ -9,10 +9,11 @@ import { auxWindowId } from '@/state/window-target';
 import { fireAndForget } from '@/transport-api/transport';
 import { leaveWorkspace } from '@/workspace/connections';
 import { AUX_COMMAND_RELAY } from './aux-commands';
+import { idOf, placeItems } from './items';
 import { ownWindowKey, postToWindow, projectKey, readWindowMessage } from './messages';
 import { usePendingViews } from './pending-views';
 import { writeAuxViews } from './registry';
-import { answerWindow, isGranted, isOfProject, resetWindows, ungrant } from './windows';
+import { answerWindow, grant, isGranted, isOfProject, resetWindows, ungrant } from './windows';
 
 interface AuxWindowDeps {
     /* Replaced in a test, which has no window to lose. */
@@ -67,6 +68,11 @@ export function startAuxWindow(overrides: Partial<AuxWindowDeps> = {}): () => vo
     let filled = standing.length > 0;
     // A view made a moment ago lands only once the project's change does, and the grid is empty until then.
     let expecting = false;
+    /*
+     * The views of a drag that is still under way, which this window shows already. The window they
+     * are dragged out of keeps them until the drag ends, so the other windows do not hear of them here.
+     */
+    const previewing = new Set<string>();
     let waiting = 0;
 
     const follow = (): void => {
@@ -80,7 +86,10 @@ export function startAuxWindow(overrides: Partial<AuxWindowDeps> = {}): () => vo
         // A view that left this grid needs a new grant to come back.
         ungrant(standing.filter((id) => !now.includes(id)));
         standing = now;
-        writeAuxViews(own, ownViewIds());
+        writeAuxViews(
+            own,
+            ownViewIds().filter((id) => !previewing.has(id))
+        );
 
         if (now.length > 0) {
             filled = true;
@@ -126,12 +135,24 @@ export function startAuxWindow(overrides: Partial<AuxWindowDeps> = {}): () => vo
             }
 
             if (message?.type === 'wait') {
+                // Shown at once, so the window is full by the time the drag lets go. They are not this window's yet.
+                const ids = message.items.map(idOf);
+                ids.forEach((id) => previewing.add(id));
                 usePendingViews.getState().set(message.items);
+                grant(ids);
+                placeItems(message.items, null);
 
                 return;
             }
 
+            if (message?.type === 'give') {
+                message.items.forEach((item) => previewing.delete(idOf(item)));
+            }
+
             if (message === null || answerWindow(from, message)) {
+                // A view that was shown ahead of the drag's end moves nothing in the grid when it is given, so the list is written here.
+                follow();
+
                 return;
             }
 

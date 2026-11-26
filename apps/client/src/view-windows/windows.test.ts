@@ -290,7 +290,7 @@ describe('an auxiliary window', () => {
         expect(closed).toBe(0);
     });
 
-    test('stays through the drag that opened it, and knows which view is on its way', async () => {
+    test('shows the view of the drag that opened it at once, and names it as its own only once the drag gave it', async () => {
         const shell = fakeShell(['w1', 'w2']);
         setAuxWindowId('w1');
         open(shell, ['a', 'b'], { activeViewId: null, views: {}, emptyLayout: true });
@@ -301,11 +301,13 @@ describe('an auxiliary window', () => {
         shell.message(auxWindowKey(PROJECT, 'w2'), { type: 'none' });
 
         expect(closed).toBe(0);
-        expect(usePendingViews.getState().items).toEqual([{ kind: 'view', id: 'b' }]);
+        expect(standing()).toEqual(['b']);
+        expect(readAuxViews()).toEqual({ [own]: [] });
 
         shell.message(PROJECT, { type: 'give', items: [{ kind: 'view', id: 'b' }], place: null });
 
         expect(standing()).toEqual(['b']);
+        expect(readAuxViews()).toEqual({ [own]: ['b'] });
     });
 
     test('goes when no window has views for it', async () => {
