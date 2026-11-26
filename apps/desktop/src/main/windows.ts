@@ -1,8 +1,10 @@
 import type { Theme, Windows } from '@adecore/shell';
 import type { ThemeState } from '@adecore/shell/bridge';
-import { isWindowKey, isWindowState, isWindowView, tabStripOf, windowPointOf } from '../app-windows';
+import { splitAuxWindowKey } from '@ruimte/desktop-bridge';
+import { auxIdsOf, isWindowKey, isWindowMessage, isWindowState, isWindowView, tabStripOf, windowPointOf } from '../app-windows';
 import { electron } from '../electron';
 import { createTabDrag } from '../tab-drag';
+import { createViewDrag } from '../view-drag';
 import type { DesktopIpc } from './ipc';
 
 const { screen } = electron;
@@ -21,6 +23,10 @@ export interface Opening {
 interface WindowChannels {
     /* Taken once by the window being created, so the next one opens without it. */
     takeOpening(): Opening;
+    /* Called for every new window. Every page hears of an auxiliary window that opens or goes. */
+    opened(window: Electron.BrowserWindow, key: string | null): void;
+    /* While the app quits, a window that closes comes back at the next start, so no page hears that a person closed it. */
+    setLeaving(going: boolean): void;
 }
 
 function onScreen(at: { x: number; y: number }, size: { width: number; height: number }): { x: number; y: number } {
@@ -39,6 +45,7 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
     // Where each window's page draws its tab strip, in the page's coordinates, for a tab dragged over it.
     const tabStrips = new Map<number, { x: number; y: number; width: number; height: number }>();
     const stripWatched = new WeakSet<Electron.BrowserWindow>();
+    let leaving = false;
 
     /* A window that keeps a project as a tab it does not show is asked to show it, once it came to the front. */
     const showOnHolder = (key: string | null): void => {
@@ -130,6 +137,45 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
         tabStrips.set(window.id, strip);
     });
 
+    const projectOf = (key: string | null): string | null => (key === null ? null : (splitAuxWindowKey(key)?.project ?? key));
+
+    const viewDrag = createViewDrag<Electron.BrowserWindow>({
+        open: (key, at) => {
+            // Without the focus, which stays with the window the drag came from until the drag ends.
+            openingInactive = true;
+            try {
+                return windows.open(key, at);
+            } finally {
+                openingInactive = false;
+            }
+        },
+        windowAt: (point, except) => windows.windowAt(point, except),
+        takes: (window, key) => projectOf(windows.keyOf(window)) === projectOf(key),
+        cursor: () => screen.getCursorScreenPoint(),
+        every: (tick) => {
+            const timer = setInterval(tick, 16);
+            return () => clearInterval(timer);
+        }
+    });
+
+    // The page a view is dragged out of says when the drag left its window and how it ended.
+    ipc.handle('window:view-drag', (event, phase: unknown, key: unknown, keep: unknown) => {
+        const window = ipc.senderWindow(event);
+        if (window === null) {
+            return false;
+        }
+        if (phase === 'end') {
+            viewDrag.end(keep === true);
+            return true;
+        }
+        // Only for a new auxiliary window of the project the asking window shows.
+        const own = projectOf(windows.keyOf(window));
+        if (phase !== 'start' || !isWindowKey(key) || own === null || splitAuxWindowKey(key)?.project !== own || windows.holderOf(key) !== null) {
+            return false;
+        }
+        return viewDrag.start(key);
+    });
+
     // The page that holds the press says when a tab leaves its window and when the press lets go.
     ipc.handle('window:tab-drag', (event, phase: unknown, key: unknown, grab: unknown, whole: unknown, tabWidth: unknown) => {
         const window = ipc.senderWindow(event);
@@ -194,7 +240,46 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
 
     ipc.on('window:theme', (_event, state: ThemeState) => theme.apply(state));
 
+    ipc.handle('window:aux-list', (_event, project: unknown) =>
+        isWindowKey(project)
+            ? auxIdsOf(
+                  windows.all().map((window) => windows.keyOf(window)),
+                  project
+              )
+            : []
+    );
+
+    // The receiver trusts `from`, so it is the key the shell holds for the sender and never one the page names.
+    ipc.handle('window:post', (event, to: unknown, message: unknown) => {
+        const window = ipc.senderWindow(event);
+        const from = window === null ? null : windows.keyOf(window);
+        const target = isWindowKey(to) ? windows.holderOf(to) : null;
+        if (from === null || target === null || target === window || !isWindowMessage(message) || target.webContents.isDestroyed()) {
+            return false;
+        }
+        target.webContents.send('window:message', from, message);
+        return true;
+    });
+
     return {
+        opened: (window, key) => {
+            if (key === null || splitAuxWindowKey(key) === null) {
+                return;
+            }
+            window.once('closed', () => {
+                // A page asks for the list when it hears this, and the window leaves the list only after this event's handlers.
+                setImmediate(() => {
+                    windows.send('window:aux-changed');
+                    if (!leaving) {
+                        windows.send('window:aux-closed', key);
+                    }
+                });
+            });
+            setImmediate(() => windows.send('window:aux-changed'));
+        },
+        setLeaving: (going) => {
+            leaving = going;
+        },
         takeOpening: () => {
             const opening = { view: openingView, inactive: openingInactive };
             openingView = null;

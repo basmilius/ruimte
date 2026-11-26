@@ -4,9 +4,10 @@ import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { endpointKey } from '@/state/keys';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { browserStorage, storedJson, type KeyValueStorage, type StoredValue } from '@/state/stored-json';
+import { orNull } from '@/transport-api/transport';
 import { pool, transportFor, type ConnectionState } from '@/transport/index';
 import { watchPool } from '@/transport/pool-watch';
-import { rememberClosedProject } from '../../state/closed-projects';
+import { followReopenedProjects, rememberClosedProject } from '../../state/closed-projects';
 import { readLastProject, rememberProject } from './last-project';
 
 const CACHE_PREFIX = 'ruimte.projects.';
@@ -42,13 +43,26 @@ export function foldList(endpointId: string, summaries: ProjectSummary[]): void 
     writeCachedList(endpointId, summaries);
 }
 
-function foldSummary(endpointId: string, summary: ProjectSummary): void {
-    useProjectList.getState().patchProject(endpointId, summary);
+function writeListedProjects(endpointId: string, storage?: KeyValueStorage | null): void {
     const projects = useProjectList
         .getState()
         .projects.filter((row) => row.endpointId === endpointId)
         .map((row) => row.summary);
-    writeCachedList(endpointId, projects);
+    writeCachedList(endpointId, projects, storage);
+}
+
+function foldSummary(endpointId: string, summary: ProjectSummary): void {
+    useProjectList.getState().patchProject(endpointId, summary);
+    writeListedProjects(endpointId);
+}
+
+/*
+ * Drops a row of a machine this client cannot reach, from the list and its cache. The machine itself
+ * is not asked, so the row comes back once it answers again with the project still on it.
+ */
+export function forgetListedProjectLocally(endpointId: string, projectId: string, storage?: KeyValueStorage | null): void {
+    useProjectList.getState().forgetProject(endpointId, projectId);
+    writeListedProjects(endpointId, storage);
 }
 
 export function closeListedProjectLocally(endpointId: string, summary: ProjectSummary): void {
@@ -200,8 +214,10 @@ export function startProjectList(): () => void {
     const offSummaries = watchPool((link, endpointId) => ({
         subscriptions: [link.on('project.summary', ({ summary }) => foldSummary(endpointId, summary))]
     }));
+    const offReopened = followReopenedProjects((endpointId) => void orNull('listProjects', listProjects(endpointId)));
     return () => {
         offLists();
         offSummaries();
+        offReopened();
     };
 }

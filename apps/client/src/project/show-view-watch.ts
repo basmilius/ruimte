@@ -2,7 +2,7 @@ import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { showViewOnceThere } from '@/project/show-view-once';
-import { useDocument } from '@/state/document';
+import { canStandInCell, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { backOffer, goOffer, showMoveToast } from '@/state/show-toast';
@@ -14,6 +14,10 @@ function showInWorkspace(payload: ProjectShowViewEvent): void {
     const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === payload.viewId);
     if (!view || !isOpenableView(view)) {
+        return;
+    }
+    // Every window of the project hears the event, and only the one that may show the view answers.
+    if (!canStandInCell(state, payload.viewId)) {
         return;
     }
     const follow = useSettings.getState().agentsShowViews;

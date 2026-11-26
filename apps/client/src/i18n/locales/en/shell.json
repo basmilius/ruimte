@@ -228,6 +228,12 @@
     "rail": {
         "label": "Tools"
     },
+    "viewWindows": {
+        "toNewWindow": "Move to new window",
+        "toMainWindow": "Move to main window",
+        "held": "Save the changes in {{name}} first",
+        "showProject": "Show {{project}}"
+    },
     "toolbar": {
         "unsaved": "Unsaved changes",
         "saved": "Everything saved",
@@ -474,6 +480,7 @@
         "openInNewWindow": "Open in new window",
         "moveToNewWindow": "Move to new window",
         "copyPath": "Copy path",
+        "removeFromRecent": "Remove from Recent",
         "pinTab": "Pin tab",
         "unpinTab": "Unpin tab",
         "moveTabLeft": "Move tab left",
@@ -758,6 +765,8 @@
             "toggleFlag": "Flag or unflag",
             "newWindow": "New window",
             "moveToNewWindow": "Move project to new window",
+            "moveViewToNewWindow": "Move view to new window",
+            "moveViewToMainWindow": "Move view to main window",
             "onboarding": "Set up Ruimte",
             "findReplace": "Find and replace in file",
             "findNext": "Find next match in file",
@@ -1130,6 +1139,8 @@
         "newChat": "New Chat",
         "newChatInWorktree": "New Chat in Worktree…",
         "moveToNewWindow": "Move to New Window",
+        "moveViewToNewWindow": "Move View to New Window",
+        "moveViewToMainWindow": "Move View to Main Window",
         "onboarding": "Set Up Ruimte…",
         "findReplace": "Find and Replace",
         "findNext": "Find Next",

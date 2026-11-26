@@ -19,6 +19,7 @@ import { viewKindRegistry } from '@/registry/view-kinds';
 import { ROUTINE_NODE_KIND } from '@/routines/node-kind';
 import { tabBodyRegistry } from '@/state/tab-bodies';
 import { tabDragRegistry } from '@/surface/tab-drags';
+import { WINDOW_VIEW_TAB_DRAG } from '@/view-windows/drag';
 
 let installed = false;
 
@@ -45,5 +46,5 @@ export function installWorkspaceSurfaces(): void {
         DATABASE_VIEW_KIND
     );
     tabBodyRegistry.add(DATABASE_TAB_BODY, ARTIFACT_TAB_BODY, SESSION_TAB_BODY);
-    tabDragRegistry.add(DATABASE_TAB_DRAG, ARTIFACT_TAB_DRAG, DIFF_TAB_DRAG);
+    tabDragRegistry.add(DATABASE_TAB_DRAG, ARTIFACT_TAB_DRAG, DIFF_TAB_DRAG, WINDOW_VIEW_TAB_DRAG);
 }

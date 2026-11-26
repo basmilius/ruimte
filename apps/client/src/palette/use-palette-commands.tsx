@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 import { useBrowser } from '@/clients/browser/registry';
-import type { Command } from '@/commands/behavior';
+import { relayCommand, type Command } from '@/commands/behavior';
 import { countCommand } from '@/commands/usage';
 import { usePaletteHits } from '@/extensions/palette-sources';
 import { appCommands, OPENING_COMMAND_IDS } from '@/palette/app-commands';
@@ -27,6 +27,7 @@ import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useViewNodes } from '@/state/view-nodes';
+import { auxWindowId } from '@/state/window-target';
 import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
 import { viewShortcut } from '@/surface/canvas/shortcuts';
 import { viewGlyphOf } from '@/surface/cell-view';
@@ -95,6 +96,8 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
         const switches: Entry[] = projects
             .filter(
                 (row) =>
+                    // An auxiliary window never leaves its project.
+                    auxWindowId() === null &&
                     row.summary.available &&
                     row.summary.scratch !== true &&
                     !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId)
@@ -160,7 +163,9 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
            files share its words, and what extensions found always closes the list. Views go before nodes: every node's hint names
            its view, so its nodes would otherwise bury the view under its own name. */
         const keep = (entry: Entry): boolean => entryMatches(query, entry);
-        const settings = settingsEntries(findSettings(query, isApplePlatform())).map((command): Entry => ({
+        // The settings dialog opens in the window that has the project, so a row that jumps into it has nothing to open here.
+        const found = auxWindowId() === null ? findSettings(query, isApplePlatform()) : [];
+        const settings = settingsEntries(found).map((command): Entry => ({
             ...command,
             icon: <Icon icon={SlidersHorizontal} size={14} />,
             section: 'settings'
@@ -182,6 +187,9 @@ export function usePaletteCommands(context: PaletteContext, files: readonly Entr
             countCommand(entry.id, 'palette');
         }
         close();
+        if ((entry.section === 'actions' || entry.section === 'recent') && relayCommand(entry.id)) {
+            return;
+        }
         if (newWindow && entry.inNewWindow) {
             entry.inNewWindow();
             return;

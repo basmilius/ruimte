@@ -1,12 +1,24 @@
 import { copyText, Icon, Menu } from '@adecore/ui';
-import { AppWindow, Copy, ExternalLink, Settings2, X } from 'lucide-react';
+import { isRecentProject } from '@ruimte/contracts';
+import { AppWindow, Copy, ExternalLink, ListX, Settings2, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ProjectMenuRow } from '@/clients/project/list';
+import { forgetListedProjectLocally, type ProjectMenuRow } from '@/clients/project/list';
+import { deleteProject } from '@/project/open';
 import { canOpenWindows, moveToNewWindow, openInNewWindow } from '@/project/windows';
 import { fileManagerName } from '@/state/server';
 import { fireAndForget } from '@/transport-api/transport';
 import { transportFor } from '@/transport/index';
+
+/* A machine that is not connected may be gone for good, so its row leaves this client's list alone. */
+function removeFromRecent(row: ProjectMenuRow): void {
+    if (!row.connected) {
+        forgetListedProjectLocally(row.endpointId, row.summary.projectId);
+        return;
+    }
+
+    void fireAndForget('project.delete', deleteProject(row.endpointId, row.summary.projectId, false));
+}
 
 /*
  * What a row offers for its window and its folder; a recent project offers only these. The Chats
@@ -41,6 +53,16 @@ export function ProjectPlaceActions({ row, platform, current }: { row: ProjectMe
                     </Menu.Item>
                     <Menu.Item onClick={() => copyText(folder)}>
                         <Icon icon={Copy} size={14} /> {t('projectMenu.copyPath')}
+                    </Menu.Item>
+                </>
+            )}
+            {!current && isRecentProject(summary) && summary.scratch !== true && (
+                <>
+                    <Menu.Separator />
+                    {/* Only the row goes; the folder and its files stay, so opening the folder again brings it back. Its
+                        menu leaves with the row, and the list stays open for the next one. */}
+                    <Menu.Item closeOnClick={false} onClick={() => removeFromRecent(row)}>
+                        <Icon icon={ListX} size={14} /> {t('projectMenu.removeFromRecent')}
                     </Menu.Item>
                 </>
             )}

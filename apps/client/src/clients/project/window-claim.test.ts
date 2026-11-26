@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { auxWindowKey } from '@ruimte/desktop-bridge';
 import { claimWindow, type WindowAddress } from './window-claim';
 
 function fakeAddress(initial: string): WindowAddress & { writes: string[] } {
@@ -53,6 +54,15 @@ describe('claimWindow', () => {
         expect(await claimWindow({ endpointId: 'local', projectId: 'p1' }, {}, address)).toBe(true);
         expect(await claimWindow({ endpointId: 'local', projectId: 'p1' }, null, address)).toBe(true);
         expect(address.writes).toEqual([]);
+    });
+
+    test('an auxiliary window claims a key of its own, and its address keeps the project and its id', async () => {
+        const asked: (string | null)[] = [];
+        const address = fakeAddress('?project=local%3Ap1&aux=w1');
+
+        expect(await claimWindow({ endpointId: 'local', projectId: 'p1' }, grantingShell(asked), address, 'w1')).toBe(true);
+        expect(asked).toEqual([auxWindowKey('local:p1', 'w1')]);
+        expect(address.writes).toEqual(['?aux=w1&project=local%3Ap1']);
     });
 
     test('a shell that fails to answer does not keep the project out', async () => {

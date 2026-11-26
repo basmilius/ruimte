@@ -1,5 +1,6 @@
 import type { SplitRect } from '@adecore/ui';
 import type { CellAt, SplitZone } from '@/layout/split';
+import { noteDragStart, startDragChip, type DragOrigin } from '@/surface/drag-chip';
 
 /*
  * What a dragged view carries. A sidebar row and a grid cell are the same gesture with two targets and
@@ -21,6 +22,25 @@ export function draggedViewId(transfer: Pick<DataTransfer, 'types' | 'getData'>)
 /* Whether a drag carries a view at all. `getData` is empty during dragover, so the types decide. */
 export function carriesView(transfer: Pick<DataTransfer, 'types'>): boolean {
     return transfer.types.includes(VIEW_DRAG_TYPE);
+}
+
+type WindowCarry = (transfer: DataTransfer, viewId: string, whole: boolean) => void;
+
+let windowCarry: WindowCarry | null = null;
+
+/* `view-windows` writes what a dragged view carries for another window of the app. */
+export function provideWindowCarry(carry: WindowCarry | null): void {
+    windowCarry = carry;
+}
+
+/* `whole` is the bar of a tab host, which carries every tab of its cell. */
+export function writeViewDrag(transfer: DataTransfer, viewId: string, whole = false, origin?: DragOrigin): void {
+    transfer.setData(VIEW_DRAG_TYPE, viewId);
+    windowCarry?.(transfer, viewId, whole);
+    // Only where a window follows the pointer outside this one. Anywhere else the system's own picture is the better one.
+    if (origin !== undefined && windowCarry !== null) {
+        startDragChip(transfer, origin);
+    }
 }
 
 let held: string | null = null;
@@ -75,12 +95,15 @@ export function watchDrags(): () => void {
     for (const type of starts) {
         window.addEventListener(type, begin, true);
     }
+    // In the capture phase, so the origin is there before the source's own handler asks for it.
+    window.addEventListener('dragstart', noteDragStart, true);
     for (const type of ends) {
         window.addEventListener(type, end, true);
     }
     window.addEventListener('dragend', forget);
     return () => {
         window.removeEventListener('dragend', forget);
+        window.removeEventListener('dragstart', noteDragStart, true);
         for (const type of starts) {
             window.removeEventListener(type, begin, true);
         }

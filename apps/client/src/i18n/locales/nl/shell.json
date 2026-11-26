@@ -228,6 +228,12 @@
     "rail": {
         "label": "Gereedschappen"
     },
+    "viewWindows": {
+        "toNewWindow": "Naar nieuw venster verplaatsen",
+        "toMainWindow": "Naar hoofdvenster verplaatsen",
+        "held": "Sla eerst de wijzigingen in {{name}} op",
+        "showProject": "{{project}} tonen"
+    },
     "toolbar": {
         "unsaved": "Niet-opgeslagen wijzigingen",
         "saved": "Alles opgeslagen",
@@ -474,6 +480,7 @@
         "openInNewWindow": "Openen in nieuw venster",
         "moveToNewWindow": "Naar nieuw venster verplaatsen",
         "copyPath": "Pad kopiëren",
+        "removeFromRecent": "Verwijderen uit Recent",
         "pinTab": "Tab vastzetten",
         "unpinTab": "Tab losmaken",
         "moveTabLeft": "Tab naar links",
@@ -758,6 +765,8 @@
             "toggleFlag": "Vlag zetten of weghalen",
             "newWindow": "Nieuw venster",
             "moveToNewWindow": "Project naar nieuw venster verplaatsen",
+            "moveViewToNewWindow": "Weergave naar nieuw venster verplaatsen",
+            "moveViewToMainWindow": "Weergave naar hoofdvenster verplaatsen",
             "onboarding": "Ruimte instellen",
             "findReplace": "Zoeken en vervangen in bestand",
             "findNext": "Volgende treffer in bestand zoeken",
@@ -1130,6 +1139,8 @@
         "newChat": "Nieuwe chat",
         "newChatInWorktree": "Nieuwe chat in worktree…",
         "moveToNewWindow": "Naar nieuw venster verplaatsen",
+        "moveViewToNewWindow": "Weergave naar nieuw venster verplaatsen",
+        "moveViewToMainWindow": "Weergave naar hoofdvenster verplaatsen",
         "onboarding": "Ruimte instellen…",
         "findReplace": "Zoeken en vervangen",
         "findNext": "Volgende zoeken",

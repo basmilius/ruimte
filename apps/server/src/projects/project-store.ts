@@ -1276,6 +1276,26 @@ export class ProjectStore {
         return this.locked(projectId, () => this.deleteUnlocked(projectId, removeFiles));
     }
 
+    /*
+     * Drops every project whose folder is gone, by Bas's choice also one on a drive that is not
+     * mounted: opening that folder again brings it back. The Chats project is left to its own code.
+     */
+    async forgetMissingFolders(): Promise<string[]> {
+        const entries = await this.registry.load();
+        const forgotten: string[] = [];
+
+        for (const entry of entries) {
+            if (entry.folder === this.scratchFolder || (await isDirectory(entry.folder))) {
+                continue;
+            }
+
+            await this.delete(entry.projectId, false);
+            forgotten.push(entry.projectId);
+        }
+
+        return forgotten;
+    }
+
     private async deleteUnlocked(projectId: string, removeFiles: boolean): Promise<void> {
         const entry = await this.registry.entry(projectId);
         this.release(projectId);

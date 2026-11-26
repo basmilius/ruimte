@@ -13,10 +13,12 @@ import { allSettingsSections } from '@/settings/sections';
 import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { useNativeMenu } from '@/shell/menu/native-menu';
 import { StartScreen } from '@/shell/StartScreen';
+import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
+import { auxWindowId } from '@/state/window-target';
 import { FLOATING_FAILURE, failed } from '@/surface/surface-failure';
 import { watchDrags } from '@/surface/view-drag';
 import { fireAndForget } from '@/transport-api/transport';
@@ -65,7 +67,8 @@ function WindowContent() {
     }
     return (
         <div className="relative h-full w-full bg-bg">
-            {!booting && <StartScreen />}
+            {/* An auxiliary window never leaves its project, so it has no start screen. */}
+            {!booting && auxWindowId() === null && <StartScreen />}
             <DormantScreen />
             <ProjectSwitchScreen />
         </div>
@@ -88,9 +91,11 @@ export function App() {
     const dialogs = windowDialogs.useAll();
 
     // The Electron window has no title of its own, so this names it as well.
+    // Several auxiliary windows of one project differ only in what they show, so the title starts with the view in front.
+    const view = useDocument((s) => (auxWindowId() === null ? null : (activeViewOf(s)?.name ?? null)));
     useEffect(() => {
-        document.title = name ? `${name} - Ruimte` : 'Ruimte';
-    }, [name]);
+        document.title = name ? `${view ? `${view} - ` : ''}${name} - Ruimte` : 'Ruimte';
+    }, [name, view]);
 
     // Once, with the preference as it stands. The shell reads it again from About.
     useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload, useSettings.getState().updatesTrack, startMachineUpdate) ?? undefined, []);
