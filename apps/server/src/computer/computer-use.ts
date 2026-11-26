@@ -123,6 +123,26 @@ interface InstalledAppSources {
     read?: (plist: string, key: string) => Promise<string | null>;
 }
 
+// Each read is a `plutil` process, and a Mac has hundreds of apps; all at once would start them all together.
+const PLIST_READS_AT_ONCE = 8;
+
+/* `work` over every item, at most `limit` at a time, the answers in the order of the items. */
+export async function mapLimited<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>): Promise<R[]> {
+    const answers = new Array<R>(items.length);
+    let next = 0;
+    const worker = async (): Promise<void> => {
+        while (next < items.length) {
+            const at = next;
+            next += 1;
+            answers[at] = await work(items[at]!);
+        }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+
+    return answers;
+}
+
 /*
  * An app that does not run yet, for `open`: by the file name of its bundle, or else by the name it
  * shows (`CFBundleDisplayName`), which differs for some apps. Only the second reads every bundle.
@@ -142,7 +162,7 @@ export async function findInstalledApp(name: string, sources: InstalledAppSource
     const infoOf = (bundle: string): string => join(bundle, 'Contents', 'Info.plist');
     let matches = bundles.filter((bundle) => fileNameOf(bundle).toLowerCase() === wanted);
     if (matches.length === 0) {
-        const shown = await Promise.all(bundles.map((bundle) => read(infoOf(bundle), 'CFBundleDisplayName')));
+        const shown = await mapLimited(bundles, PLIST_READS_AT_ONCE, (bundle) => read(infoOf(bundle), 'CFBundleDisplayName'));
         matches = bundles.filter((_bundle, i) => shown[i]?.toLowerCase() === wanted);
     }
     for (const bundle of matches) {
