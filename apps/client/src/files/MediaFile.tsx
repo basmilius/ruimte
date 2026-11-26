@@ -64,7 +64,7 @@ export function MediaFile({ kind, source, name, read }: MediaFileProps) {
                             controls
                             preload="metadata"
                             src={bytes.url}
-                            className={kind === 'audio' ? 'my-auto w-full' : 'min-h-0 w-full grow'}
+                            className={kind === 'audio' ? 'm-auto w-full max-w-2xl' : 'min-h-0 w-full grow'}
                             onLoadedMetadata={(event) => {
                                 const media = event.currentTarget;
                                 setLoaded({
