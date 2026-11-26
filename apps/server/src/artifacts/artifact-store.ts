@@ -18,6 +18,7 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { bestEffort } from '../best-effort.ts';
+import type { FileDigest } from '../disk/hash.ts';
 import { isDiskFull, NODE_ARTIFACT_FS, type ArtifactFs } from './artifact-fs.ts';
 import { ArtifactError, checkFileName, checkKey, kindOf, mimeOf, SNIFF_HEAD_BYTES } from './artifact-names.ts';
 
@@ -130,6 +131,8 @@ export class ArtifactStore {
     private readonly now: () => number;
     private readonly newId: () => string;
     private readonly entries = new Map<string, Entry>();
+    // What a copy into staging hashed and flushed on its way in, per staging and file, so its commit reads the file once.
+    private readonly copied = new Map<string, Map<number, FileDigest>>();
     private readonly writes = new Serializer();
     private readonly listeners = new Set<(event: ArtifactChangedEvent) => void>();
 
@@ -240,6 +243,7 @@ export class ArtifactStore {
     }
 
     discardStaging(stagingId: string): Promise<void> {
+        this.copied.delete(stagingId);
         return this.fs.remove(join(this.root, STAGING_FOLDER, stagingId));
     }
 
@@ -253,7 +257,10 @@ export class ArtifactStore {
 
     async stageCopy(stagingId: string, index: number, from: string): Promise<void> {
         try {
-            await this.fs.copyIn(from, this.stagedFile(stagingId, index));
+            const digest = await this.fs.copyIn(from, this.stagedFile(stagingId, index));
+            const copies = this.copied.get(stagingId) ?? new Map<number, FileDigest>();
+            copies.set(index, digest);
+            this.copied.set(stagingId, copies);
         } catch (e) {
             throw saveFailure(e);
         }
@@ -506,11 +513,17 @@ export class ArtifactStore {
         if (sizes.size !== names.length || names.some((_name, index) => !sizes.has(index))) {
             throw new ArtifactError('upload-incomplete', `${names.length} files were named and ${sizes.size} arrived`);
         }
+        const copies = this.copied.get(stagingId);
+        this.copied.delete(stagingId);
         const files: ArtifactFile[] = [];
         for (const [index, name] of names.entries()) {
             const path = this.stagedFile(stagingId, index);
-            const digest = await this.fs.digest(path);
-            await this.fs.syncFile(path);
+            // A copy hashed and flushed what it wrote; a size that moved since means more came in, which is hashed again.
+            const copy = copies?.get(index);
+            const digest = copy !== undefined && copy.size === sizes.get(index) ? copy : await this.fs.digest(path);
+            if (digest !== copy) {
+                await this.fs.syncFile(path);
+            }
             const head = await this.fs.readHead(path, SNIFF_HEAD_BYTES);
             files.push({ name, mime: mimeOf(name, head, digest.size), size: digest.size, sha256: digest.sha256 });
         }

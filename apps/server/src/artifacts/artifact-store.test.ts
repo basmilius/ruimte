@@ -229,4 +229,27 @@ describe('ArtifactStore', () => {
         expect(store.list({ chatId: 'chat-2' })).toEqual([]);
         expect(store.list({ projectId: 'project-2' })).toEqual([]);
     });
+
+    test('a copied file is hashed and flushed once, on its way in, and an appended one at the commit', async () => {
+        const fs = new MemoryArtifactFs();
+        const store = await loaded(fs);
+        fs.put('/project/report.md', '# Copied');
+        const steps: string[] = [];
+        fs.fail = (step, path) => {
+            if (path.includes('/.staging/') && (step === 'digest' || step === 'syncFile')) {
+                steps.push(step);
+            }
+            return null;
+        };
+        const stagingId = await store.openStaging();
+        await store.stageCopy(stagingId, 0, '/project/report.md');
+        await store.stageAppend(stagingId, 1, new TextEncoder().encode('# Appended'));
+        const result = await store.commit(stagingId, input({ names: ['report.md', 'notes.md'] }));
+
+        expect(steps).toEqual(['digest', 'syncFile']);
+        expect(store.get(result.artifactId)!.versions[0]!.files.map((file) => file.sha256)).toEqual([
+            new Bun.CryptoHasher('sha256').update('# Copied').digest('hex'),
+            new Bun.CryptoHasher('sha256').update('# Appended').digest('hex')
+        ]);
+    });
 });
