@@ -1,4 +1,4 @@
-import { ButtonGroup, EmptyState, ScrollArea } from '@adecore/ui';
+import { ButtonGroup, EmptyState, ScrollArea, Separator } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { Fullscreen, ImageOff, Ratio } from 'lucide-react';
@@ -12,6 +12,18 @@ import { machineResourceOf, revealablePath, useEndpointIdOf, type FileSource } f
 import { useMachineUrl } from '@/transport/machine-url';
 
 type Zoom = 'fit' | 'full';
+
+/* How large the image is drawn. Without `onZoom` the pair is disabled, keeping its place while another view of the file is up. */
+export function ImageZoomButtons({ zoom, onZoom }: { zoom: Zoom; onZoom?: (zoom: Zoom) => void }) {
+    const { t } = useTranslation('panels');
+    const disabled = onZoom === undefined;
+    return (
+        <ButtonGroup>
+            <FileToolbarToggle icon={Fullscreen} label={t('file.image.fit')} active={zoom === 'fit'} disabled={disabled} onClick={() => onZoom?.('fit')} />
+            <FileToolbarToggle icon={Ratio} label={t('file.image.actual')} active={zoom === 'full'} disabled={disabled} onClick={() => onZoom?.('full')} />
+        </ButtonGroup>
+    );
+}
 
 /* An image from the daemon's own route, on a plain surface: a checkerboard would fight every icon
    drawn for a light background. */
@@ -30,10 +42,8 @@ export function ImageFile({ source, name, read, toolbarExtra }: { source: FileSo
             {drawable ? (
                 <FileToolbar>
                     {toolbarExtra}
-                    <ButtonGroup>
-                        <FileToolbarToggle icon={Fullscreen} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
-                        <FileToolbarToggle icon={Ratio} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
-                    </ButtonGroup>
+                    {toolbarExtra !== undefined && <Separator />}
+                    <ImageZoomButtons zoom={zoom} onZoom={setZoom} />
                 </FileToolbar>
             ) : (
                 <FileToolbar>{toolbarExtra}</FileToolbar>

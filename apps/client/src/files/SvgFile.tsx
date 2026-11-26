@@ -1,11 +1,11 @@
-import { EmptyState } from '@adecore/ui';
+import { EmptyState, Separator } from '@adecore/ui';
 import type { FsReadBinary, FsReadText } from '@ruimte/contracts';
 import { FileWarning, Image } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CodeFile } from '@/files/CodeFile';
 import { FileToolbar } from '@/files/FileToolbar';
-import { ImageFile } from '@/files/ImageFile';
+import { ImageFile, ImageZoomButtons } from '@/files/ImageFile';
 import { useSourceToggle } from '@/files/use-source-toggle';
 import { useEndpointId } from '@/state/current-endpoint';
 import { fileSource } from '@/surface/panels/file-source';
@@ -49,12 +49,20 @@ export function SvgFile({ path, name, read }: { path: string; name: string; read
     if (!source) {
         return <ImageFile source={fileSource(path)} name={name} read={read} toolbarExtra={toggle} />;
     }
+    // The zoom pair stays in its place while the source is up, so the toggle does not move under the pointer.
+    const controls = (
+        <>
+            {toggle}
+            <Separator />
+            <ImageZoomButtons zoom="fit" />
+        </>
+    );
     if (text.status === 'ready') {
-        return <CodeFile path={path} read={text.read} toolbarExtra={toggle} />;
+        return <CodeFile path={path} read={text.read} toolbarExtra={controls} />;
     }
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
-            <FileToolbar>{toggle}</FileToolbar>
+            <FileToolbar>{controls}</FileToolbar>
             {text.status === 'failed' && <EmptyState icon={FileWarning}>{t('file.readFailed')}</EmptyState>}
         </div>
     );
