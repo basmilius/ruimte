@@ -196,6 +196,8 @@ function PickTunnel({ state, endpointId, change }: { state: TunnelState; endpoin
     const starting = state.stage === 'starting';
 
     useEffect(() => {
+        // A new account starts its list from empty before the machine lists its tunnels.
+        // oxlint-disable-next-line react/set-state-in-effect
         setTunnels([]);
         setChosen(NEW_TUNNEL);
         setFailure(null);

@@ -10,10 +10,10 @@
   "dependencies": {
     "@ruimte/pulsar": "workspace:*",
     "@ruimte/telemetry": "workspace:*",
-    "@sentry/bun": "11.12.0"
+    "@sentry/bun": "11.18.0"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.4",
+    "@types/bun": "^1.4.5",
     "typescript": "^7.0.2"
   }
 }

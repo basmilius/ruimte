@@ -13,14 +13,14 @@
         "@adecore/agents": "catalog:",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
-        "@sentry/cloudflare": "11.12.0",
+        "@sentry/cloudflare": "11.18.0",
         "zod": "^4.6.7"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^5.20261116.1",
-        "@types/bun": "^1.4.4",
+        "@cloudflare/workers-types": "^5.20261125.1",
+        "@types/bun": "^1.4.5",
         "miniflare": "4.20260730.0",
         "typescript": "^7.0.2",
-        "wrangler": "^4.163.0"
+        "wrangler": "^4.168.0"
     }
 }

@@ -9,10 +9,10 @@
     "typecheck": "bun check --no-script && bun check --no-script -p tsconfig.test.json"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261116.1",
-    "@types/bun": "^1.4.4",
+    "@cloudflare/workers-types": "^5.20261125.1",
+    "@types/bun": "^1.4.5",
     "typescript": "^7.0.2",
-    "wrangler": "^4.163.0"
+    "wrangler": "^4.168.0"
   },
   "dependencies": {
     "@ruimte/csp": "workspace:*"
