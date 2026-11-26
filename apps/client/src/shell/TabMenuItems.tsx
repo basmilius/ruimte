@@ -10,6 +10,7 @@ import { setTabPinned, tabsToClose } from '@/state/tab-close';
 import { useCurrentProjectKey, useViewPins } from '@/state/view-pins';
 import { RowKbd } from '@/surface/RowKbd';
 import { SplitItems } from '@/view-menu/ViewMenuItems';
+import { WindowMoveItems } from '@/view-windows/WindowMoveItems';
 
 function usePinnedOf(): (id: string) => boolean {
     const loose = useFiles((s) => s.tabs);
@@ -69,6 +70,7 @@ export function TabMenuItems({ viewId }: { viewId: string }) {
                     <Menu.Item disabled={tabs.length < 2 || !splittable} onClick={() => useDocument.getState().splitTabOff(viewId)}>
                         <Icon icon={PanelRight} size={14} /> {t('viewMenu.moveTabToNewCell')}
                     </Menu.Item>
+                    <WindowMoveItems viewId={viewId} />
                 </Menu.Popup>
             </Menu.SubmenuRoot>
             <Menu.SubmenuRoot>

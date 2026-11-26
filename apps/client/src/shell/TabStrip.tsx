@@ -41,7 +41,7 @@ import { isLooseView, viewGlyphOf, type LooseCellView } from '@/surface/cell-vie
 import { useKeyOf } from '@/surface/shortcut-overrides';
 import { StatusDot } from '@/surface/StatusDot';
 import { databaseTabTitle } from '@/surface/tab-look';
-import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { setDragging, writeViewDrag } from '@/surface/view-drag';
 import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
 
 interface TabShellProps {
@@ -66,7 +66,7 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
     const onDragStart = (event: React.DragEvent<HTMLButtonElement>): void => {
         // The bar is a drag handle of its own, whose payload would take the place of this one.
         event.stopPropagation();
-        event.dataTransfer.setData(VIEW_DRAG_TYPE, id);
+        writeViewDrag(event.dataTransfer, id);
         onDragData?.(event.dataTransfer);
         event.dataTransfer.effectAllowed = onDragData === undefined ? 'move' : 'copyMove';
         // The drop indicator in another cell is as wide as this tab is.

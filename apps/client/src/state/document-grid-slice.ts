@@ -19,6 +19,7 @@ import {
 } from '@/layout/split';
 import type { DocumentState } from '@/state/document';
 import { canStandInCell, type DocumentKit } from '@/state/document-model';
+import { isElsewhere, reachElsewhere } from '@/state/view-homes';
 
 export function createDocumentGridSlice({
     set,
@@ -44,9 +45,16 @@ export function createDocumentGridSlice({
 > {
     return {
         setActiveView(id) {
-            if (get().activeViewId !== id) {
-                get().showView(id);
+            const state = get();
+            if (state.activeViewId === id) {
+                return;
             }
+            // Only a person calls this, so the window that has the view may take the front.
+            if (!canStandInCell(state, id) && isElsewhere(id)) {
+                reachElsewhere(id);
+                return;
+            }
+            state.showView(id);
         },
 
         showView(id, options) {

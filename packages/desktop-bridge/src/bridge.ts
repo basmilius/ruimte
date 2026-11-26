@@ -199,6 +199,16 @@ export interface DesktopBridge {
     onTabDragOver?(listener: (key: string, x: number) => void): () => void;
     /* Where this page draws its tab strip, which a tab dragged out of another window drops into; null without one. */
     setTabStrip?(rect: { x: number; y: number; width: number; height: number } | null): void;
+    /* The ids of the auxiliary windows open on a project (`endpointKey`). `auxWindowKey` makes the key `openWindow` raises one by. */
+    auxWindows?(project: string): Promise<string[]>;
+    /* An auxiliary window of any project opened or went. */
+    onAuxWindows?(listener: () => void): () => void;
+    /* A person closed the auxiliary window with this key. Not sent for one that goes with a quit, since that one comes back at the next start. */
+    onAuxWindowClosed?(listener: (key: string) => void): () => void;
+    /* False when no window has the key. The shell never reads the message. */
+    postToWindow?(to: string, message: string): Promise<boolean>;
+    /* `from` is the key the shell holds for the window that posted. */
+    onWindowMessage?(listener: (from: string, message: string) => void): () => void;
     /* Superseded by `requestKeepAwake`, and still what a shell from before that one understands. The
        shell drops the block on a reload or when the window goes. */
     setKeepAwake?(keep: boolean): void;

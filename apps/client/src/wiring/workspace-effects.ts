@@ -4,6 +4,7 @@ import { startLaunchWatch } from '@/launches/watch';
 import { workspaceEffects } from '@/registry/workspace-effects';
 import { machineAnswers } from '@/transport/features';
 import { pool } from '@/transport/index';
+import { startViewWindows } from '@/view-windows/start';
 import { stopVoice } from '@/voice/controller';
 import { watchEveryMachine } from '@/workspace/connections';
 
@@ -13,6 +14,7 @@ export function installWorkspaceEffects(): void {
         { id: 'database-connections', mounted: () => ensureDatabaseConnections() },
         { id: 'voice', mounted: () => stopVoice },
         { id: 'launch-watch', mounted: () => startLaunchWatch() },
+        { id: 'view-windows', mounted: () => startViewWindows() },
         // Only a chat in a workspace offers Ruimte's skills, so the start screen's chunk does without them.
         {
             id: 'host-skills',

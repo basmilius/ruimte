@@ -148,7 +148,9 @@ function Cell({
         if (carriesFiles(transfer.types)) {
             return true;
         }
-        return carriesPaths(transfer.types) && !(carriesView(transfer) && dragging() !== null && takesDrop(event.target, false) === null);
+        // `dragging()` is null for a view out of another window, which still is a view and not a path.
+        const view = carriesView(transfer) && (dragging() !== null || carriesTabDrag(transfer));
+        return carriesPaths(transfer.types) && !(view && takesDrop(event.target, false) === null);
     };
 
     // Only inside the drop event: the shell names a file manager's files from items that are emptied right after.

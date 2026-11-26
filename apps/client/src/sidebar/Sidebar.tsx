@@ -87,7 +87,7 @@ import {
     draggingWholeCell,
     PROJECT_DRAG_TYPE,
     setDragging as setDraggedView,
-    VIEW_DRAG_TYPE
+    writeViewDrag
 } from '@/surface/view-drag';
 import { Brand } from '@/ui/Brand';
 import { NewViewItems } from '@/views/NewViewMenu';
@@ -288,7 +288,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
             return;
         }
         if (transfer) {
-            transfer.setData(VIEW_DRAG_TYPE, drag.viewId);
+            writeViewDrag(transfer, drag.viewId);
             transfer.effectAllowed = 'move';
         }
     };

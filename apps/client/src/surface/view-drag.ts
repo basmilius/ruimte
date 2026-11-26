@@ -23,6 +23,21 @@ export function carriesView(transfer: Pick<DataTransfer, 'types'>): boolean {
     return transfer.types.includes(VIEW_DRAG_TYPE);
 }
 
+type WindowCarry = (transfer: DataTransfer, viewId: string, whole: boolean) => void;
+
+let windowCarry: WindowCarry | null = null;
+
+/* `view-windows` writes what a dragged view carries for another window of the app. */
+export function provideWindowCarry(carry: WindowCarry | null): void {
+    windowCarry = carry;
+}
+
+/* `whole` is the bar of a tab host, which carries every tab of its cell. */
+export function writeViewDrag(transfer: DataTransfer, viewId: string, whole = false): void {
+    transfer.setData(VIEW_DRAG_TYPE, viewId);
+    windowCarry?.(transfer, viewId, whole);
+}
+
 let held: string | null = null;
 let heldWhole = false;
 let heldTabWidth: number | null = null;

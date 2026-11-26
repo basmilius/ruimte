@@ -25,6 +25,7 @@ import { ROUTINE_BEHAVIORS } from '@/routines/commands';
 import { GRID_BEHAVIORS } from '@/shell/grid-commands';
 import { sidebarKeys } from '@/sidebar/workspace-keys';
 import { TERMINAL_BEHAVIORS } from '@/terminal/commands';
+import { VIEW_WINDOW_BEHAVIORS } from '@/view-windows/commands';
 import { VIEW_BEHAVIORS, VIEW_KEY_HANDLERS } from '@/views/commands';
 import { voiceKeys } from '@/voice/workspace-keys';
 import { WORKTREE_BEHAVIORS } from '@/worktrees/commands';
@@ -62,6 +63,7 @@ export function installWorkspaceCommands(replacing: boolean = import.meta.hot !=
         ROUTINE_BEHAVIORS,
         TERMINAL_BEHAVIORS,
         VIEW_BEHAVIORS,
+        VIEW_WINDOW_BEHAVIORS,
         WORKTREE_BEHAVIORS
     ]) {
         registerBehaviors(table, replacing);
