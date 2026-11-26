@@ -44,7 +44,9 @@ export function MediaFile({ kind, source, name, read }: MediaFileProps) {
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
             {/* Black behind a player, the way a player looks everywhere; the sunken ground stays for the message that it cannot play. */}
-            <FileContextMenu className={clsx('flex min-h-0 grow flex-col', unplayable ? 'bg-surface-sunken' : 'bg-black')}>
+            <FileContextMenu
+                className={clsx('flex min-h-0 grow flex-col', unplayable ? 'bg-surface-sunken' : 'bg-media-bg', !unplayable && kind === 'audio' && 'px-4')}
+            >
                 {unplayable ? (
                     <ScrollArea axis="both" className="grow" viewportClassName="grid place-items-center p-4">
                         <EmptyState
@@ -62,7 +64,7 @@ export function MediaFile({ kind, source, name, read }: MediaFileProps) {
                             controls
                             preload="metadata"
                             src={bytes.url}
-                            className={kind === 'audio' ? 'mx-4 my-auto' : 'min-h-0 w-full grow'}
+                            className={kind === 'audio' ? 'my-auto w-full' : 'min-h-0 w-full grow'}
                             onLoadedMetadata={(event) => {
                                 const media = event.currentTarget;
                                 setLoaded({
