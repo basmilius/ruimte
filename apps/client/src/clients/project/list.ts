@@ -43,13 +43,26 @@ export function foldList(endpointId: string, summaries: ProjectSummary[]): void 
     writeCachedList(endpointId, summaries);
 }
 
-function foldSummary(endpointId: string, summary: ProjectSummary): void {
-    useProjectList.getState().patchProject(endpointId, summary);
+function writeListedProjects(endpointId: string, storage?: KeyValueStorage | null): void {
     const projects = useProjectList
         .getState()
         .projects.filter((row) => row.endpointId === endpointId)
         .map((row) => row.summary);
-    writeCachedList(endpointId, projects);
+    writeCachedList(endpointId, projects, storage);
+}
+
+function foldSummary(endpointId: string, summary: ProjectSummary): void {
+    useProjectList.getState().patchProject(endpointId, summary);
+    writeListedProjects(endpointId);
+}
+
+/*
+ * Drops a row of a machine this client cannot reach, from the list and its cache. The machine itself
+ * is not asked, so the row comes back once it answers again with the project still on it.
+ */
+export function forgetListedProjectLocally(endpointId: string, projectId: string, storage?: KeyValueStorage | null): void {
+    useProjectList.getState().forgetProject(endpointId, projectId);
+    writeListedProjects(endpointId, storage);
 }
 
 export function closeListedProjectLocally(endpointId: string, summary: ProjectSummary): void {

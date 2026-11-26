@@ -474,6 +474,7 @@
         "openInNewWindow": "Open in new window",
         "moveToNewWindow": "Move to new window",
         "copyPath": "Copy path",
+        "removeFromRecent": "Remove from Recent",
         "pinTab": "Pin tab",
         "unpinTab": "Unpin tab",
         "moveTabLeft": "Move tab left",

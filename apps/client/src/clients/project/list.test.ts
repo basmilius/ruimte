@@ -8,6 +8,7 @@ import { pool } from '../../transport/index';
 import {
     chatsProjects,
     closeListedProjectLocally,
+    forgetListedProjectLocally,
     listProjects,
     menuProjects,
     openableRows,
@@ -252,6 +253,19 @@ describe('the list and the links', () => {
         const lists = menuProjects(useProjectList.getState().projects, endpoints, []);
         expect(lists.open.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['offline-vps:p2', 'other:p1']);
         expect(lists.recent.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['offline-vps:p1']);
+        expect(pool.peek('offline-vps')).toBeNull();
+    });
+
+    test('a row of a machine without a link leaves the list and its cache, the same id on another machine stays', () => {
+        const storage = new Map<string, string>();
+        useProjectList.getState().setProjects('offline-vps', [summary('p1', 0, 1), summary('p2')]);
+        useProjectList.getState().setProjects('other', [summary('p1', 0, 1)]);
+
+        forgetListedProjectLocally('offline-vps', 'p1', fakeStorage(storage));
+
+        const rows = useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.projectId}`);
+        expect(rows).toEqual(['offline-vps:p2', 'other:p1']);
+        expect(readCachedList('offline-vps', fakeStorage(storage)).map((project) => project.projectId)).toEqual(['p2']);
         expect(pool.peek('offline-vps')).toBeNull();
     });
 

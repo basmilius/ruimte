@@ -319,6 +319,20 @@ describe('ProjectStore', () => {
         expect(forgotten).toEqual([projectId]);
     });
 
+    test('a project whose folder is gone is forgotten, one whose folder is there stays', async () => {
+        const gone = join(root, 'gone');
+        await mkdir(gone);
+        const missing = await store.openProject({ folder: gone });
+        const kept = await store.openProject({ folder });
+        await rm(gone, { recursive: true });
+
+        expect(await store.forgetMissingFolders()).toEqual([missing.summary.projectId]);
+
+        const listed = (await store.list()).map((project) => project.projectId);
+        expect(listed).toContain(kept.summary.projectId);
+        expect(listed).not.toContain(missing.summary.projectId);
+    });
+
     test('deleting a folder project without removing files keeps the canvas on disk', async () => {
         const opened = await store.openProject({ folder });
         await store.delete(opened.summary.projectId, false);
