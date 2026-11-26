@@ -11,6 +11,7 @@ mock.module('./MarkdownFile.tsx', () => stand('MarkdownFile'));
 mock.module('./MediaFile.tsx', () => stand('MediaFile'));
 mock.module('./UnsupportedFile.tsx', () => stand('UnsupportedFile'));
 mock.module('./PdfPreview.tsx', () => stand('PdfPreview'));
+mock.module('./SvgFile.tsx', () => stand('SvgFile'));
 mock.module('./patch-file-lazy.tsx', () => stand('PatchFileSlot'));
 
 const { renderFile } = await import('./renderers.tsx');
@@ -34,5 +35,17 @@ describe('which view draws a text file', () => {
         expect(drawnBy('main.ts')).toBe('CodeFile');
         expect(drawnBy('patch')).toBe('CodeFile');
         expect(drawnBy('a.patch.bak')).toBe('CodeFile');
+    });
+});
+
+describe('which view draws an image', () => {
+    const drawnAs = (mime: string): string => {
+        const element = renderFile({ path: '/p/logo', name: 'logo', read: { kind: 'binary', mime, size: 1, mtime: 0 } });
+        return (element.type as { displayName: string }).displayName;
+    };
+
+    test('an SVG gets the view with its source beside the picture, any other image the picture alone', () => {
+        expect(drawnAs('image/svg+xml')).toBe('SvgFile');
+        expect(drawnAs('image/png')).toBe('ImageFile');
     });
 });
