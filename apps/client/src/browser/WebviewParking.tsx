@@ -105,8 +105,14 @@ export function WebviewParking() {
 // The React Compiler leaves this as written (a `??=`), so its memo stays by hand.
 function DesktopWebviewParking() {
     /* One string, so the list is new only when a page comes or goes: every title, favicon and loading
-       state patches the object, and a new list restarts the effects below with their listeners. */
-    const keyList = useBrowser((s) => Object.keys(s.byKey).join('\n'));
+       state patches the object, and a new list restarts the effects below with their listeners. Only
+       pages the registry holds count. A row can come before its page (a remembered favicon), and a
+       host drawn without its page never adopts it later. */
+    const keyList = useBrowser((s) =>
+        Object.keys(s.byKey)
+            .filter((key) => browserRegistry.has(key))
+            .join('\n')
+    );
     const keys = useMemo(() => (keyList === '' ? [] : keyList.split('\n')), [keyList]);
     const hosts = useRef(new Map<string, HTMLDivElement>());
     const clips = useRef(new Map<string, HTMLDivElement>());
