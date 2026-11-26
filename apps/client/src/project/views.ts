@@ -23,7 +23,7 @@ import { focusedCanvas, liveCanvas, revealWhenItLands } from '@/state/canvas';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { databaseTargetOf, databaseViewName } from '@/state/database-view-name';
 import { useDesignChat } from '@/state/design-chat';
-import { useDocument, viewOfNode } from '@/state/document';
+import { canStandInCell, useDocument, viewOfNode } from '@/state/document';
 import { fileTabOf, isDatabaseTab, useFiles } from '@/state/files';
 import { announceActivation } from '@/state/node-activation';
 import { endpointOfNodeId } from '@/state/node-endpoint';
@@ -32,12 +32,18 @@ import { useProject } from '@/state/project';
 import { leaveRoutines } from '@/state/routines-stage';
 import { useToasts } from '@/state/toasts';
 import { closeAfterSaving } from '@/state/unsaved-close';
+import { isElsewhere, reachElsewhere } from '@/state/view-homes';
 import { nodesOfView } from '@/state/view-nodes';
 import { transportFor } from '@/transport';
 
 export function showView(id: string, options: { newTab?: boolean } = {}): void {
     // Picking a view is how a person leaves Routines, so it goes before the view shows.
     leaveRoutines();
+    // Another window has the view, so that window comes to the front with it.
+    if (!canStandInCell(useDocument.getState(), id) && isElsewhere(id)) {
+        reachElsewhere(id);
+        return;
+    }
     if (options.newTab) {
         openInNewTabAction(id);
         return;

@@ -9,7 +9,7 @@ import { SlotRow } from '@/extensions/SlotSurfaces';
 import { TerminalViewAccessory } from '@/extensions/ViewAccessorySlot';
 import { FileMenuItems } from '@/files/FileMenuItems';
 import { LooseGlyph } from '@/files/LooseGlyph';
-import { cellAt, type CellAt } from '@/layout/split';
+import { cellAt, cellCount, type CellAt } from '@/layout/split';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { MaximizedIndicator } from '@/shell/MaximizedIndicator';
 import { TabStrip } from '@/shell/TabStrip';
@@ -17,10 +17,12 @@ import { useCellBarSlot } from '@/shell/top-row-slot';
 import { useHasViewToolbar, useViewToolbarLeads } from '@/shell/view-toolbar';
 import { ViewToolbar } from '@/shell/ViewToolbar';
 import { useDocument } from '@/state/document';
+import { auxWindowId } from '@/state/window-target';
 import { isLooseView, viewGlyphOf, type CellView } from '@/surface/cell-view';
 import { FileToolbarSlotProvider } from '@/surface/panels/file-toolbar-slot';
-import { setDragging, VIEW_DRAG_TYPE } from '@/surface/view-drag';
+import { setDragging, writeViewDrag } from '@/surface/view-drag';
 import { SplitItems, ViewMenuItems } from '@/view-menu/ViewMenuItems';
+import { WindowMoveItems } from '@/view-windows/WindowMoveItems';
 
 function CellTitle({ at, view, tabs, title }: { at: CellAt; view: CellView; tabs: readonly string[] | undefined; title: string | undefined }) {
     if (tabs !== undefined) {
@@ -93,6 +95,7 @@ export function CellToolbar({
     };
     const maximized = useDocument((s) => s.maximized === view.id);
     const closable = useDocument((s) => s.layout !== null);
+    const alone = useDocument((s) => s.layout !== null && cellCount(s.layout) === 1);
     /* The tabs of the cell when it is a host. A host keeps its bar whatever the view in front is. */
     const tabs = useDocument((s) => (s.layout === null ? undefined : cellAt(s.layout, at)?.tabs));
     const hosted = tabs !== undefined;
@@ -136,19 +139,25 @@ export function CellToolbar({
                         </>
                     }
                     focused={focused}
-                    onClose={closable ? () => closeCellAction(view.id) : undefined}
+                    // Closing the only cell of an auxiliary window closes the window, which the window's own controls do.
+                    onClose={closable && !(alone && auxWindowId() !== null) ? () => closeCellAction(view.id) : undefined}
                     closeLabel={t('cellToolbar.closeCell')}
                     moreActionsLabel={t('cellToolbar.moreActions')}
                     // A tab in the back keeps its bar on its hidden body, so the top row holds the one in front.
                     container={hidden ? null : slot}
                     onDragStart={(event) => {
-                        event.dataTransfer.setData(VIEW_DRAG_TYPE, view.id);
+                        writeViewDrag(event.dataTransfer, view.id, hosted, {
+                            element: event.currentTarget,
+                            clientX: event.clientX,
+                            clientY: event.clientY
+                        });
                         event.dataTransfer.effectAllowed = 'move';
                         setDragging(view.id, hosted);
                     }}
                     menu={
                         <>
                             <SplitItems at={at} separated />
+                            <WindowMoveItems viewId={view.id} separated />
                             {/* A loose view is no view of the project: nothing to rename, share or delete. */}
                             {isLooseView(view) ? <FileMenuItems tabKey={view.id} /> : <ViewMenuItems viewId={view.id} kind={view.kind} />}
                         </>

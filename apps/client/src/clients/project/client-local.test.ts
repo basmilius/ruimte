@@ -2,8 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import type { ProjectLocal } from '@ruimte/contracts';
 import {
     CLIENT_LOCAL_LIMIT,
+    dropAuxLocals,
     dropClientLocal,
     dropClientLocalOf,
+    localIdOf,
     overlayLocal,
     readClientLocal,
     rekeyClientLocal,
@@ -167,5 +169,49 @@ describe('cleaning up', () => {
         const storage = filled();
         dropClientLocal(storage, 'daemon-b', 'p1');
         expect(keys(storage)).toEqual(['10.0.0.4:4210:p1', '10.0.0.4:4210:p2']);
+    });
+});
+
+describe('the record of an auxiliary window', () => {
+    const own: ProjectLocal = {
+        activeViewId: 'b',
+        views: {},
+        layout: { columns: [{ size: 1, cells: [{ viewId: 'b', size: 1 }] }], focus: { column: 0, cell: 0 } }
+    };
+
+    test('is kept beside the one of the window that has the project', () => {
+        const storage = memory();
+        writeClientLocal(storage, 'local', localIdOf('p1', null), { activeViewId: 'a', views: {} });
+        writeClientLocal(storage, 'local', localIdOf('p1', 'w1'), own);
+
+        expect(readClientLocal(storage, 'local', localIdOf('p1', null))?.activeViewId).toBe('a');
+        expect(readClientLocal(storage, 'local', localIdOf('p1', 'w1'))?.activeViewId).toBe('b');
+    });
+
+    test('goes once its window is gone, and stays for the windows that are open', () => {
+        const storage = memory();
+        writeClientLocal(storage, 'local', localIdOf('p1', null), { activeViewId: 'a', views: {} });
+        writeClientLocal(storage, 'local', localIdOf('p1', 'w1'), own);
+        writeClientLocal(storage, 'local', localIdOf('p1', 'w2'), own);
+        writeClientLocal(storage, 'local', localIdOf('p2', 'w3'), own);
+        dropAuxLocals(storage, 'local', 'p1', ['w2']);
+
+        expect(Object.keys(JSON.parse(storage.map.get('ruimte.local')!) as object).toSorted()).toEqual(['local:p1', 'local:p1#w2', 'local:p2#w3']);
+    });
+
+    test('goes with a deleted project', () => {
+        const storage = memory();
+        writeClientLocal(storage, 'local', localIdOf('p1', null), { activeViewId: 'a', views: {} });
+        writeClientLocal(storage, 'local', localIdOf('p1', 'w1'), own);
+        dropClientLocal(storage, 'local', 'p1');
+
+        expect(JSON.parse(storage.map.get('ruimte.local')!)).toEqual({});
+    });
+
+    test('never starts from the grid of the window that has the project', () => {
+        const machine: ProjectLocal = { activeViewId: 'a', views: { a: { camera: null, focusedNodeId: null } }, layout };
+
+        expect(overlayLocal(machine, null, true)).toEqual({ activeViewId: null, views: machine.views, emptyLayout: true });
+        expect(overlayLocal(machine, own, true).layout).toEqual(own.layout);
     });
 });

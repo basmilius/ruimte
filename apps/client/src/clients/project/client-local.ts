@@ -87,6 +87,27 @@ export function withoutClientBrowserState(local: ProjectLocal): ProjectLocal {
     return { ...local, panels };
 }
 
+const AUX_MARK = '#';
+
+/* Each auxiliary window has a grid of its own, so each keeps a record beside the one of the window that has the project. */
+export function localIdOf(projectId: string, aux: string | null): string {
+    return aux === null ? projectId : `${projectId}${AUX_MARK}${aux}`;
+}
+
+/* Drops the records of a project's auxiliary windows that are not in `alive`. */
+export function dropAuxLocals(storage: ClientLocalStorage | null, endpointId: string, projectId: string, alive: readonly string[] = []): void {
+    const rows = readRows(storage);
+    const prefix = `${endpointKey(endpointId, projectId)}${AUX_MARK}`;
+    const gone = Object.keys(rows).filter((key) => key.startsWith(prefix) && !alive.includes(key.slice(prefix.length)));
+    if (gone.length === 0) {
+        return;
+    }
+    for (const key of gone) {
+        delete rows[key];
+    }
+    writeRows(storage, rows);
+}
+
 export function readClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string): ProjectLocal | null {
     return readRows(storage)[endpointKey(endpointId, projectId)]?.local ?? null;
 }
@@ -103,6 +124,7 @@ export function writeClientLocal(storage: ClientLocalStorage | null, endpointId:
 
 /* A deleted project leaves nothing behind to come back to. */
 export function dropClientLocal(storage: ClientLocalStorage | null, endpointId: string, projectId: string): void {
+    dropAuxLocals(storage, endpointId, projectId);
     const rows = readRows(storage);
     const key = endpointKey(endpointId, projectId);
     if (rows[key] === undefined) {
@@ -146,7 +168,12 @@ export function rekeyClientLocal(storage: ClientLocalStorage | null, oldId: stri
  * looked up on its own, because one made on another screen has no camera here. A favicon follows
  * the client that loaded the page; an old machine-local favicon is discarded during migration.
  */
-export function overlayLocal(machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal {
+export function overlayLocal(machine: ProjectLocal, client: ProjectLocal | null, aux = false): ProjectLocal {
+    if (aux) {
+        // The machine's grid belongs to the window that has the project, and those views stand there.
+        const own = client ?? { activeViewId: null, views: {}, emptyLayout: true };
+        return { ...own, views: { ...machine.views, ...own.views } };
+    }
     if (client === null) {
         return withoutClientBrowserState(machine);
     }

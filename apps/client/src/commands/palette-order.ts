@@ -11,6 +11,8 @@ export type PaletteOrderEntry = string | { readonly rows: PaletteSlot };
 export const PALETTE_ORDER: readonly PaletteOrderEntry[] = [
     'window-new',
     'window-move',
+    'view-window-new',
+    'view-window-main',
     'project-tab-move-left',
     'project-tab-move-right',
     'open-folder',

@@ -19,8 +19,10 @@ import type { SwitchOutcome } from '@/project/project-switch';
 import { currentEndpointId } from '@/state/current-endpoint';
 import type { DocumentState } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
+import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
+import { closeAuxWindowsOf } from '@/view-windows/main-window';
 import { windowWorkspace } from '@/workspace/window';
 
 export interface ListedProject {
@@ -189,6 +191,8 @@ export function projectActions(document: StoreApi<DocumentState>, overrides: Par
             if (asksFirst(call)) {
                 return { confirmation: { title: `Close “${project.name}”?`, consequences: closeConsequences(answer) } };
             }
+            // Before the close, since the machine keeps a project running while one of its auxiliary windows still has it.
+            await closeAuxWindowsOf(endpointKey(endpointId, projectId));
             await machine.close(endpointId, project.summary);
             return { output: { ...projectOutput(project), sessions: answer?.sessions ?? null, otherClients: answer?.otherClients ?? null } };
         },

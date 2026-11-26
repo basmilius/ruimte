@@ -52,4 +52,18 @@ describe('windowSearch', () => {
     test('keeps what else the address carried', () => {
         expect(windowSearch('?debug=1&start=1', 'local:p1')).toBe('?debug=1&project=local%3Ap1');
     });
+
+    test('an auxiliary window stays one through a claim, so a reload opens the same window', () => {
+        expect(windowSearch('?project=local%3Ap1&aux=w1&dormant=1', 'local:p1')).toBe('?aux=w1&project=local%3Ap1');
+    });
+});
+
+describe('an auxiliary window', () => {
+    test('is a project window that names its own id', () => {
+        expect(readWindowTarget('?project=local%3Ap1&aux=w1')).toEqual({ kind: 'project', endpointId: 'local', projectId: 'p1', aux: 'w1' });
+    });
+
+    test('is none without a project to be a window of', () => {
+        expect(readWindowTarget('?aux=w1')).toEqual({ kind: 'last' });
+    });
 });

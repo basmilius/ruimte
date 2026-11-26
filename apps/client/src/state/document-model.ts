@@ -18,6 +18,7 @@ import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
+import { isElsewhere } from '@/state/view-homes';
 
 export interface TrashedView {
     view: ProjectView;
@@ -182,7 +183,9 @@ export function looseIdsOf(state: Pick<DocumentState, 'views' | 'layout'>): stri
 
 export function canStandInCell(state: Pick<DocumentState, 'views' | 'layout'>, id: string): boolean {
     const view = cellViewOf(state, id);
-    return view === null ? state.layout !== null && locateView(state.layout, id) !== null : isOpenableView(view);
+    const standing = state.layout !== null && locateView(state.layout, id) !== null;
+    // A view that stands here may move within this grid, whatever the list of windows says at this moment.
+    return view === null ? standing : isOpenableView(view) && (standing || !isElsewhere(id));
 }
 
 /* The view of the project with this id; a loose view is none, since the document does not hold it. */

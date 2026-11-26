@@ -1,5 +1,5 @@
 import { matchesShortcut, isApplePlatform } from '@adecore/ui';
-import { behaviorOf, rawCanvasKeyHandlers, rawKeyHandlers, takeKey, type KeyHandler, type KeyPress } from '@/commands/behavior';
+import { behaviorOf, commandPlace, rawCanvasKeyHandlers, rawKeyHandlers, relayCommand, takeKey, type KeyHandler, type KeyPress } from '@/commands/behavior';
 import { keyboardOnCanvas } from '@/commands/key-context';
 import { commandForKey } from '@/commands/registry';
 import { countCommand } from '@/commands/usage';
@@ -22,7 +22,16 @@ export function answerWindowKey(event: KeyboardEvent): boolean {
     if (command === null || behavior === undefined) {
         return false;
     }
+    const place = commandPlace(command);
+    if (place === 'dropped') {
+        return false;
+    }
     const press = pressOf(event, apple);
+    if (place === 'relayed') {
+        countCommand(command, 'shortcut');
+
+        return takeKey(press, () => relayCommand(command));
+    }
     const taken = behavior.key !== undefined ? behavior.key(press) : takeKey(press, () => behavior.run());
     if (taken) {
         countCommand(command, 'shortcut');
@@ -31,10 +40,17 @@ export function answerWindowKey(event: KeyboardEvent): boolean {
     return taken;
 }
 
+/* Null also for a row this window does not run, so its key goes to whatever has the focus. */
+function workspaceCommand(event: KeyboardEvent, apple: boolean): string | null {
+    const command = commandForKey('workspace', event, apple);
+
+    return command !== null && commandPlace(command) === 'here' ? command : null;
+}
+
 /* Answers a key for the workspace: the row it binds, then the keys that belong to no row. */
 export function answerWorkspaceKey(event: KeyboardEvent): void {
     const apple = isApplePlatform();
-    const command = commandForKey('workspace', event, apple);
+    const command = workspaceCommand(event, apple);
     const press = pressOf(event, apple);
     const behavior = command === null ? undefined : behaviorOf(command);
     const onCanvasOnly = behavior?.keyTier === 'canvas';
@@ -54,7 +70,7 @@ export function answerWorkspaceKey(event: KeyboardEvent): void {
 /* The capture phase of the workspace listener: a row may take a key before any other listener hears it. */
 export function answerWorkspaceKeyEarly(event: KeyboardEvent): boolean {
     const apple = isApplePlatform();
-    const command = commandForKey('workspace', event, apple);
+    const command = workspaceCommand(event, apple);
     const behavior = command === null ? undefined : behaviorOf(command);
     if (behavior?.captureKey === undefined) {
         return false;

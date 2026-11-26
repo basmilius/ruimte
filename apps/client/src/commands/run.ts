@@ -1,4 +1,4 @@
-import { behaviorOf, runBehavior } from '@/commands/behavior';
+import { behaviorOf, relayCommand, runBehavior } from '@/commands/behavior';
 import { generatedOf } from '@/commands/generated';
 import { CommandMoment } from '@/commands/moment';
 import { commandRows } from '@/commands/palette-rows';
@@ -13,6 +13,9 @@ export function isPaletteId(id: string): boolean {
 /* A click in the application menu. The palette's rows run through the same behaviors, so both do the same thing. */
 export function runMenuCommand(id: string): void {
     countCommand(id, 'menu');
+    if (relayCommand(id)) {
+        return;
+    }
     const behavior = behaviorOf(id);
     if (behavior !== undefined) {
         // A row the palette has runs after the click has finished closing the menu, which hands the focus back to where it was.

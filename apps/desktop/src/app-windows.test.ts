@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { isWindowKey, isWindowState, isWindowView, tabStripOf, totalActivity, windowPointOf, windowUrl } from './app-windows';
+import { auxWindowKey, splitAuxWindowKey } from '@ruimte/desktop-bridge';
+import { auxIdsOf, isWindowKey, isWindowMessage, isWindowState, isWindowView, tabStripOf, totalActivity, windowPointOf, windowUrl } from './app-windows';
 
 describe('windowUrl', () => {
     const base = 'http://127.0.0.1:4210/';
@@ -102,5 +103,39 @@ describe('totalActivity', () => {
                 { working: 1, attention: 1 }
             ])
         ).toEqual({ working: 1, attention: 1 });
+    });
+});
+
+describe('an auxiliary window', () => {
+    const base = 'http://127.0.0.1:4210/';
+    const key = auxWindowKey('local:p1', 'w1');
+
+    test('loads the address of its project with its own id beside it', () => {
+        const query = new URL(windowUrl(base, key, false)).searchParams;
+
+        expect(query.get('project')).toBe('local:p1');
+        expect(query.get('aux')).toBe('w1');
+        expect(new URL(windowUrl(base, 'local:p1', false)).searchParams.has('aux')).toBe(false);
+    });
+
+    test('is listed by its id among the windows of its project, and of no other', () => {
+        const keys = [null, 'local:p1', key, auxWindowKey('local:p1', 'w2'), auxWindowKey('local:p2', 'w3')];
+
+        expect(auxIdsOf(keys, 'local:p1')).toEqual(['w1', 'w2']);
+        expect(auxIdsOf(keys, 'local:p3')).toEqual([]);
+    });
+
+    test('has a key that names its project and its id, which the key of a project does not', () => {
+        expect(splitAuxWindowKey(key)).toEqual({ project: 'local:p1', id: 'w1' });
+        expect(splitAuxWindowKey('local:p1')).toBeNull();
+    });
+});
+
+describe('isWindowMessage', () => {
+    test('takes text up to its limit and nothing else', () => {
+        expect(isWindowMessage('{"type":"ready"}')).toBe(true);
+        expect(isWindowMessage('')).toBe(false);
+        expect(isWindowMessage({ type: 'ready' })).toBe(false);
+        expect(isWindowMessage('x'.repeat(262_145))).toBe(false);
     });
 });

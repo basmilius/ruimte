@@ -62,6 +62,7 @@ import { useUi } from '@/state/ui';
 import { useWaitingSince, waitDetailsOf } from '@/state/waiting';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/surface/canvas/drop';
 import { finderPaths } from '@/surface/canvas/finder-drop';
+import { dragStartOrigin } from '@/surface/drag-chip';
 import { usePanelGap } from '@/surface/panel-layout';
 import {
     buildCombinedSidebar,
@@ -87,7 +88,7 @@ import {
     draggingWholeCell,
     PROJECT_DRAG_TYPE,
     setDragging as setDraggedView,
-    VIEW_DRAG_TYPE
+    writeViewDrag
 } from '@/surface/view-drag';
 import { Brand } from '@/ui/Brand';
 import { NewViewItems } from '@/views/NewViewMenu';
@@ -288,7 +289,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
             return;
         }
         if (transfer) {
-            transfer.setData(VIEW_DRAG_TYPE, drag.viewId);
+            writeViewDrag(transfer, drag.viewId, false, dragStartOrigin());
             transfer.effectAllowed = 'move';
         }
     };
