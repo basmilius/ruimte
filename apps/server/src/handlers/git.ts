@@ -181,7 +181,9 @@ function registerRequests(dispatcher: Dispatcher, deps: GitDeps): void {
             ignoreWhitespace: payload.ignoreWhitespace ?? false,
             ...(payload.commit ? { commit: payload.commit } : {})
         };
-        return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
+        // Only a diff against the base reads the merge base, and finding it costs git runs.
+        const mergeBase = payload.scope === 'base' ? await mergeBaseWith(payload.cwd, payload.base) : null;
+        return await diffFile(payload.cwd, payload.path, options, mergeBase);
     });
 
     dispatcher.register('git.compare', async (payload) => {
