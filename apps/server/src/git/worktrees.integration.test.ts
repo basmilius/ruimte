@@ -124,7 +124,7 @@ describe('Worktrees', () => {
         expect(old.path.startsWith(join(home, 'worktrees'))).toBe(true);
         expect(fresh.worktree.path.startsWith(join(await realpath(root), 'wt'))).toBe(true);
         expect((await worktrees.list(repo)).map((entry) => entry.branch).sort()).toEqual(['fresh', 'lexer']);
-        expect(await worktrees.registeredPaths(repo)).toEqual(expect.arrayContaining([old.path, fresh.worktree.path]));
+        expect((await worktrees.listedAndMade(repo)).made).toEqual(expect.arrayContaining([old.path, fresh.worktree.path]));
 
         await worktrees.remove(repo, old.path);
         await worktrees.remove(repo, fresh.worktree.path);

@@ -37,8 +37,8 @@ class NoWorktrees extends Worktrees {
         throw new Error('not a git repository');
     }
 
-    override async registeredPaths(): Promise<string[]> {
-        return [];
+    override async listedAndMade(): Promise<never> {
+        throw new Error('not a git repository');
     }
 
     override async branches(): Promise<string[]> {

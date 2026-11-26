@@ -7,7 +7,7 @@ import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { readFile as readForViewer } from './read.ts';
 import { codeOf, projectBoundary } from './test-boundary.ts';
-import { openForSave, writeTextFile, type WriteBoundary } from './write.ts';
+import { openForSave, realRoots, worktreeListsOnce, writeTextFile, type WriteBoundary } from './write.ts';
 
 let root: string;
 let project: string;
@@ -168,6 +168,35 @@ describe('fs.write', () => {
 
         expect(await readFile(inside.path, 'utf8')).toBe('two\n');
         expect(await codeOf(writeTextFile(other.path, 'two\n', other.mtime, registered))).toBe('outside-project');
+    });
+
+    test('lists a folder once for both lists and every check of a request, and still refuses what only git names', async () => {
+        const made = join(root, 'wt', 'project-1234', 'feature');
+        const planted = join(root, 'wt', 'project-1234', 'planted');
+        await mkdir(made, { recursive: true });
+        await mkdir(planted, { recursive: true });
+        let listings = 0;
+        const shared: WriteBoundary = {
+            ...boundary(),
+            ...worktreeListsOnce(async () => {
+                listings += 1;
+
+                return { listed: [made, planted], made: [made] };
+            })
+        };
+
+        expect(await realRoots(shared)).toEqual([await filesystem.realpath(project), await filesystem.realpath(made)]);
+        expect(await realRoots(shared)).toHaveLength(2);
+        expect(listings).toBe(1);
+    });
+
+    test('a folder outside a repository has no worktrees to list', async () => {
+        const lists = worktreeListsOnce(async () => {
+            throw new Error('not a repository');
+        });
+
+        expect(await lists.worktreesOf(project)).toEqual([]);
+        expect(await lists.registeredWorktrees!(project)).toEqual([]);
     });
 
     test('never writes over a file the sniff calls binary', async () => {

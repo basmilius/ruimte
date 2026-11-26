@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Worktree } from '@ruimte/contracts';
 import { checkCwd } from '../canvas/project-paths.ts';
 import { tempHomes } from '../temp-home-test-helpers.ts';
 import { checkoutHost } from './worktree-host.ts';
@@ -19,8 +18,7 @@ describe('checkoutHost', () => {
         await Promise.all([project, underRoot, made, planted].map((folder) => mkdir(folder, { recursive: true })));
         const worktrees = {
             root: join(root, 'home', 'worktrees'),
-            list: async () => [project, underRoot, made, planted].map((path) => ({ path }) as Worktree),
-            registeredPaths: async () => [underRoot, made]
+            listedAndMade: async () => ({ listed: [project, underRoot, made, planted], made: [underRoot, made] })
         } as unknown as Worktrees;
         const host = checkoutHost(worktrees);
 
