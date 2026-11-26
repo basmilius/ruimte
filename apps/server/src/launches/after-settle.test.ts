@@ -116,6 +116,35 @@ beforeEach(async () => {
 });
 
 describe('owing a run when a worktree chat settles', () => {
+    test('a streamed delta or a project without a chosen task asks nothing further, the peer check included', async () => {
+        const asked: string[] = [];
+        settle = new AfterSettleLaunches({
+            ...deps(),
+            isPeerChat: (chatId) => {
+                asked.push(chatId);
+                return false;
+            }
+        });
+        chats.set('chat-1', chat());
+        tell('chat-1');
+        await flush();
+
+        expect(asked).toEqual([]);
+
+        await choose('run-tests');
+        settle.chatEvent({ event: 'chat.event', payload: { chatId: 'chat-1', event: { type: 'delta', itemId: 'a', text: 'x' } } } as never);
+        await flush();
+
+        expect(asked).toEqual([]);
+        expect(entries).toEqual([]);
+
+        tell('chat-1');
+        await flush();
+
+        expect(asked).toEqual(['chat-1']);
+        expect(entries).toHaveLength(1);
+    });
+
     test('a turn that ended done in a worktree owes one run, however often the chat says so', async () => {
         await choose('run-tests');
         chats.set('chat-1', chat());
