@@ -1,25 +1,11 @@
+import { AgentIcon } from '@adecore/agents-react/providers';
 import { niceScale } from '@adecore/agents-react/usage';
-import {
-    messageOf,
-    ScrollArea,
-    Segmented,
-    Button,
-    Icon,
-    IconButton,
-    ListRow,
-    Menu,
-    Tooltip,
-    PanelEmpty,
-    PromptDialog,
-    SectionLabel,
-    ContextMenu
-} from '@adecore/ui';
-import type { ProcessAlert, ProcessGroup, ProcessGroupKind, ProcessRow, ProcessSignal, ProcessSort } from '@ruimte/contracts';
+import { messageOf, ScrollArea, Button, Icon, IconButton, ListRow, Menu, PanelEmpty, PromptDialog, SectionLabel, ContextMenu } from '@adecore/ui';
+import { isCanvasView, projectSidebarViews, type ProcessAlert, type ProcessGroupKind, type ProcessRow, type ProcessSignal } from '@ruimte/contracts';
 import clsx from 'clsx';
 import {
     Activity,
     AppWindow,
-    ArrowDown,
     ChevronRight,
     CircleStop,
     Cpu,
@@ -32,9 +18,10 @@ import {
     X,
     type LucideIcon
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ignoreRefusal, perform } from '@/action-port/perform';
+import { chatsProjects, menuProjects } from '@/clients/project/list';
 import {
     actionLabel,
     alertActions,
@@ -45,38 +32,40 @@ import {
     formatBytes,
     formatPercent,
     formatRate,
-    groupTitle,
     type AlertAction
 } from '@/processes/format';
-import { ProcessChart } from '@/processes/ProcessChart';
-import { revealNode } from '@/project/views';
+import { processOutline, type OutlineNode, type OutlineProject, type OutlineSource, type OutlineView, type Totals } from '@/processes/outline';
+import { ProcessBars } from '@/processes/ProcessBars';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { useSidebarMachines } from '@/project/sidebar-projects';
+import { ViewGlyph } from '@/project/ViewGlyph';
 import { useEndpointId } from '@/state/current-endpoint';
+import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { EMPTY_PROCESSES, useProcessAlerts, useProcesses } from '@/state/processes';
+import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useToasts } from '@/state/toasts';
-import { useProjectNodes } from '@/state/view-nodes';
-import { PanelHeaderActions, PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
+import { nodesOfView, useProjectNodes } from '@/state/view-nodes';
+import { NODE_KIND_ICONS } from '@/surface/canvas/node-icons';
+import { PanelHeaderSlot } from '@/surface/PanelHeaderSlot';
 import { fireAndForget } from '@/transport-api/transport';
 import { useEndpointConnection } from '@/transport/status';
+import { RuimteMark } from '@/ui/RuimteMark';
 import { useTransport } from '@/workspace/context';
-
-/* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
-const SCOPES = ['ruimte', 'all'] as const;
-
-const COLUMNS: readonly { sort: ProcessSort; width: string }[] = [
-    { sort: 'cpu', width: 'w-12' },
-    { sort: 'memory', width: 'w-16' },
-    { sort: 'disk', width: 'w-16' }
-];
 
 const GROUP_ICONS: Record<ProcessGroupKind, LucideIcon> = { terminal: Terminal, chat: MessageSquare, app: AppWindow, daemon: Server, other: Cpu };
 
-/* Whole pixels per level of a process under its node, past the chevron and the icon of the row above. */
-const INDENT_BASE = 36;
-const INDENT_STEP = 12;
+/* The sidebar's grammar: a 16px slot at the left edge of every row, 24 pixels in per level. */
+const ICON_SLOT = 'grid size-4 shrink-0 place-items-center';
+const ROW = 'group gap-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text';
+const ROW_START = 8;
+const LEVEL = 24;
+/* A process under another in its group, past the 24 pixels of its level. */
+const DEPTH_STEP = 16;
 
-const ROW_NUMBERS = 'shrink-0 text-right text-xs tabular-nums text-text-muted';
+const VALUES = 'shrink-0 text-right text-xs tabular-nums text-text-faint group-hover:text-text-muted';
+const COLUMN_WIDTHS = ['w-11', 'w-16', 'w-16'] as const;
 
 interface Target {
     pid: number;
@@ -91,19 +80,18 @@ function signalable(row: ProcessRow): boolean {
 
 /*
  * Keeps this client subscribed while the panel is on screen. The subscription is per socket on the
- * daemon, so a socket that comes back asks again, and a change of scope or sort is a fresh ask.
+ * daemon, so a socket that comes back asks again. The panel lists only what belongs to Ruimte, so it
+ * always asks that scope; the rest of the machine is in the machine's numbers.
  */
 function useProcessesFeed(): void {
     const transport = useTransport();
     const endpointId = useEndpointId();
-    const scope = useProcesses((s) => s.scope);
-    const sort = useProcesses((s) => s.sort);
 
     useEffect(() => {
         const subscribe = (): void => {
             void fireAndForget(
                 'processes.subscribe',
-                transport.request('processes.subscribe', { scope, sort }).then((result) => useProcesses.getState().receive(endpointId, result))
+                transport.request('processes.subscribe', { scope: 'ruimte', sort: 'cpu' }).then((result) => useProcesses.getState().receive(endpointId, result))
             );
         };
         if (transport.status === 'open') {
@@ -115,14 +103,13 @@ function useProcessesFeed(): void {
             }
         });
         const offSample = transport.on('processes.sample', (sample) => {
-            const current = useProcesses.getState();
-            useProcesses.getState().applySample(endpointId, sample, sample.scope === current.scope);
+            useProcesses.getState().applySample(endpointId, sample, sample.scope === 'ruimte');
         });
         return () => {
             offStatus();
             offSample();
         };
-    }, [transport, endpointId, scope, sort]);
+    }, [transport, endpointId]);
 
     useEffect(
         () => () => {
@@ -132,14 +119,106 @@ function useProcessesFeed(): void {
     );
 }
 
-function Numbers({ row }: { row: { cpu: number | null; memory: number | null; diskRead: number | null; diskWrite: number | null } }) {
+/* The projects of this machine in the order of the project menu, the one this window shows first. */
+function useOutlineSources(endpointId: string): OutlineSource[] {
+    const rows = useProjectList((s) => s.projects);
+    const endpoints = useEndpoints((s) => s.endpoints);
+    const current = useProject((s) => s.current);
+    const views = useDocument((s) => s.views);
+    const shared = useDocument((s) => s.shared);
+    const machines = useSidebarMachines(true, [endpointId], false);
+    const here = rows.filter((row) => row.endpointId === endpointId);
+    const menu = [...menuProjects(here, endpoints, []).open, ...chatsProjects(here, endpoints, [])].map((row) => row.summary);
+    const listed = current === null ? menu : [current, ...menu.filter((summary) => summary.projectId !== current.projectId)];
+    const snapshot = machines[endpointId];
+
+    return listed.map((summary) => {
+        if (summary.projectId === current?.projectId) {
+            // What the editors hold, so a node added since the last save has its row already.
+            const live = views.map((entry) => (isCanvasView(entry) ? { ...entry, nodes: [...nodesOfView(entry)] } : entry));
+            return { summary, views: projectSidebarViews(live, shared ?? []) };
+        }
+
+        return { summary, views: snapshot?.projects.find((project) => project.summary.projectId === summary.projectId)?.views ?? null };
+    });
+}
+
+function Values({ totals }: { totals: Totals }) {
+    const values = [formatPercent(totals.cpu), formatBytes(totals.memory), formatRate(totals.disk)];
     return (
         <>
-            <span className={clsx(ROW_NUMBERS, 'w-12')}>{formatPercent(row.cpu)}</span>
-            <span className={clsx(ROW_NUMBERS, 'w-16')}>{formatBytes(row.memory)}</span>
-            <span className={clsx(ROW_NUMBERS, 'w-16')}>{formatRate(diskOf(row))}</span>
+            {values.map((value, at) => (
+                <span key={COLUMN_WIDTHS[at]} className={clsx(VALUES, COLUMN_WIDTHS[at])}>
+                    {value}
+                </span>
+            ))}
         </>
     );
+}
+
+function NodeGlyph({ glyph }: { glyph: OutlineNode['glyph'] }) {
+    if ('group' in glyph) {
+        return <Icon icon={GROUP_ICONS[glyph.group]} size={14} />;
+    }
+
+    const { node } = glyph;
+
+    if (node.provider !== null && (node.kind === 'chat' || node.kind === 'terminal')) {
+        return <AgentIcon kind={node.provider} size={14} />;
+    }
+
+    return <Icon icon={NODE_KIND_ICONS[node.kind]} size={14} />;
+}
+
+/*
+ * A row with something under it, which a click anywhere on it folds, as a project heading in the sidebar.
+ * Its mark gives way to the chevron under the pointer; a row with nothing under it keeps its mark.
+ */
+function FoldRow({
+    open,
+    foldable,
+    level,
+    glyph,
+    className,
+    onToggle,
+    children
+}: {
+    open: boolean;
+    foldable: boolean;
+    level: number;
+    glyph: ReactNode;
+    className?: string;
+    onToggle(): void;
+    children: ReactNode;
+}) {
+    return (
+        <ListRow
+            variant="inset"
+            indent={level}
+            render={<button type="button" />}
+            aria-expanded={foldable ? open : undefined}
+            className={clsx(ROW, 'w-full text-left focus-visible:outline-2 focus-visible:outline-accent-on-surface', className)}
+            onClick={foldable ? onToggle : undefined}
+        >
+            <span className={ICON_SLOT}>
+                <span className={clsx('col-start-1 row-start-1 grid place-items-center', foldable && 'group-hover:hidden group-focus-visible:hidden')}>
+                    {glyph}
+                </span>
+                {foldable && (
+                    <Icon
+                        icon={ChevronRight}
+                        size={14}
+                        className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', open && 'rotate-90')}
+                    />
+                )}
+            </span>
+            {children}
+        </ListRow>
+    );
+}
+
+function WarningMark() {
+    return <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />;
 }
 
 function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(target: Target, signal: ProcessSignal): void; onForce(target: Target): void }) {
@@ -162,12 +241,24 @@ function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(ta
     );
 }
 
-function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; now: number; onAction(action: AlertAction): void; onDismiss(): void }) {
+function AlertLine({
+    alert,
+    now,
+    inset,
+    onAction,
+    onDismiss
+}: {
+    alert: ProcessAlert;
+    now: number;
+    inset: number;
+    onAction(action: AlertAction): void;
+    onDismiss(): void;
+}) {
     const { t } = useTranslation('common');
     return (
-        <div className="flex flex-col gap-1.5 border-b border-border bg-surface-sunken py-2 pr-2 pl-3">
+        <div className="my-1 mr-2 flex flex-col gap-1.5 rounded-md border border-border bg-surface-sunken py-2 pr-2 pl-3" style={{ marginInlineStart: inset }}>
             <div className="flex items-start gap-1.5">
-                <Icon icon={TriangleAlert} size={12} className="mt-0.5 text-status-needs-you" />
+                <Icon icon={TriangleAlert} size={12} className="mt-1 shrink-0 text-status-needs-you" />
                 <p className="grow text-xs text-text">{alertText(alert, now)}</p>
                 <IconButton icon={X} size="xs" label={t('action.dismiss')} className="-my-1" onClick={onDismiss} />
             </div>
@@ -182,37 +273,46 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
     );
 }
 
+/* The keys of the rows above a group, outermost first, so a warning can open the way down to it. */
+function pathTo(projects: readonly OutlineProject[], groupId: string): string[] {
+    for (const project of projects) {
+        for (const item of project.items) {
+            const nodes = item.kind === 'view' ? item.nodes : [item];
+            const node = nodes.find((entry) => entry.groups.some((group) => group.id === groupId));
+
+            if (node !== undefined) {
+                return [projectKey(project), ...(item.kind === 'view' ? [`view:${item.id}`] : []), `node:${node.id}`];
+            }
+        }
+    }
+
+    return [];
+}
+
+function projectKey(project: OutlineProject): string {
+    return `project:${project.projectId ?? 'ruimte'}`;
+}
+
 /*
- * What runs on the machine of this workspace: charts of the machine against Ruimte's share, then a row
- * per node with its processes. Every signal goes through the daemon, which checks that the pid still
- * names the process this row showed.
+ * What runs on the machine of this workspace: the machine's CPU, memory and disk as bars of Ruimte's
+ * projects, then those projects with their views, nodes and processes in the order of the sidebar.
+ * Every signal goes through the daemon, which checks that the pid still names the process this row showed.
  */
 export function ProcessesPanel() {
-    const { t } = useTranslation('panels');
+    const { t } = useTranslation(['panels', 'processes']);
     useProcessesFeed();
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
     const machineName = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label ?? null);
-    const scope = useProcesses((s) => s.scope);
-    const sort = useProcesses((s) => s.sort);
     const row = useProcesses((s) => s.byEndpoint[endpointId] ?? EMPTY_PROCESSES);
     const alerts = useProcessAlerts(endpointId);
-    const projectRows = useProjectList((s) => s.projects);
-    const projectNames = new Map(projectRows.filter((entry) => entry.endpointId === endpointId).map((entry) => [entry.summary.projectId, entry.summary.name]));
+    const sources = useOutlineSources(endpointId);
     const nodes = useProjectNodes();
     const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
     const [highlight, setHighlight] = useState<Target | null>(null);
     const [forcing, setForcing] = useState<Target | null>(null);
-    const scopes = SCOPES.map((id) => ({ id, label: id === 'ruimte' ? 'Ruimte' : t('processes.scope.all') }));
 
-    const header = (
-        <PanelHeaderSlot>
-            {machineName !== null && <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>}
-            <PanelHeaderActions>
-                <Segmented value={scope} options={scopes} label={t('processes.scopeLabel')} onValueChange={(next) => useProcesses.getState().setScope(next)} />
-            </PanelHeaderActions>
-        </PanelHeaderSlot>
-    );
+    const header = <PanelHeaderSlot>{machineName !== null && <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>}</PanelHeaderSlot>;
 
     if (row.supported === false) {
         return (
@@ -221,6 +321,7 @@ export function ProcessesPanel() {
             </PanelEmpty>
         );
     }
+
     if (connection.status !== 'open') {
         return (
             <PanelEmpty header={header} icon={Activity}>
@@ -228,7 +329,9 @@ export function ProcessesPanel() {
             </PanelEmpty>
         );
     }
+
     const sample = row.sample;
+
     if (sample === null) {
         return (
             <PanelEmpty header={header} icon={Activity}>
@@ -240,16 +343,18 @@ export function ProcessesPanel() {
     const now = sample.at;
     const titles = new Map(nodes.map((node) => [node.id, node.title]));
     const groups = sample.groups;
+    const projects = processOutline(groups, sources, titles);
     const series = chartSeries(row.fine, row.coarse);
-    const span = { points: series.points, windowMs: series.windowMs, end: now };
-    const { machine } = sample;
-    const diskMax = niceScale(Math.max(1, ...series.points.map((point) => point.disk ?? 0))).max;
-    const isOpen = (group: ProcessGroup): boolean => (group.kind === 'other' ? !toggled.has(group.id) : toggled.has(group.id));
-    const toggle = (id: string): void => setToggled(toggled.has(id) ? new Set([...toggled].filter((entry) => entry !== id)) : new Set([...toggled, id]));
+    const diskScale = niceScale(Math.max(1, diskOf(sample.machine) ?? 0, ...series.points.map((point) => point.disk ?? 0))).max;
+    // A node is folded until a person opens it; a project and a view are open until a person folds them.
+    const isOpen = (key: string): boolean => (key.startsWith('node:') ? toggled.has(key) : !toggled.has(key));
+    const toggle = (key: string): void => setToggled(toggled.has(key) ? new Set([...toggled].filter((entry) => entry !== key)) : new Set([...toggled, key]));
     const placed = new Map<string, ProcessAlert[]>();
     const loose: ProcessAlert[] = [];
+
     for (const alert of alerts) {
         const place = alertPlacement(alert, groups);
+
         if (place === null) {
             loose.push(alert);
         } else {
@@ -257,208 +362,229 @@ export function ProcessesPanel() {
         }
     }
 
+    const alertsOf = (node: OutlineNode): ProcessAlert[] => node.groups.flatMap((group) => placed.get(group.id) ?? []);
+    const warns = (nodes: readonly OutlineNode[]): boolean => nodes.some((node) => alertsOf(node).length > 0);
+
     const fail = (title: string, e: unknown): void => {
         useToasts.getState().show({ title, description: messageOf(e), kind: 'error' });
     };
+
     /* SIGKILL only comes here after the force dialog, which is the person's answer to the action's question. */
     const signal = (target: Target, kind: ProcessSignal): void => {
         perform('process.signal', { pid: target.pid, startTime: target.startTime, name: target.name, signal: kind }, { confirmed: true }).catch((e: unknown) =>
             fail(t('processes.signalFailed', { name: target.name }), e)
         );
     };
+
     const act = (alert: ProcessAlert, action: AlertAction): void => {
         const target =
             alert.pid !== null && alert.startTime !== null
                 ? { pid: alert.pid, startTime: alert.startTime, name: alert.name ?? t('processes.theProcess') }
                 : null;
+
         if (action === 'show') {
             const place = alertPlacement(alert, groups);
-            const group = groups.find((entry) => entry.id === place);
-            if (group !== undefined && !isOpen(group)) {
-                toggle(group.id);
+            const closed = place === null ? [] : pathTo(projects, place).filter((key) => !isOpen(key));
+
+            if (closed.length > 0) {
+                setToggled(new Set([...toggled].filter((key) => !closed.includes(key)).concat(closed.filter((key) => key.startsWith('node:')))));
             }
+
             setHighlight(target);
             return;
         }
+
         if (action === 'resume' && alert.nodeId !== null) {
             perform('terminal.resumeAgent', { terminalId: alert.nodeId }).catch((e: unknown) => fail(t('processes.resumeFailed'), e));
             return;
         }
+
         const chat = alert.nodeId !== null && groups.some((group) => group.kind === 'chat' && group.nodeId === alert.nodeId);
+
         if (action === 'interrupt' && chat) {
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
             perform('chat.stopTurn', { chatId: alert.nodeId!, subagents: false }).catch((e: unknown) => fail(t('processes.interruptFailed'), e));
             return;
         }
+
         if (target !== null) {
             signal(target, action === 'interrupt' ? 'SIGINT' : 'SIGTERM');
         }
     };
+
     const dismiss = (alert: ProcessAlert): void => {
         void perform('process.dismissAlert', { alertId: alert.id }).catch(ignoreRefusal);
+    };
+
+    const processRows = (node: OutlineNode, level: number) =>
+        node.groups.flatMap((group) =>
+            group.processes.map((process) => {
+                const line = (
+                    <ListRow
+                        variant="inset"
+                        className={clsx(
+                            'group h-7 gap-2 text-xs text-text-muted hover:bg-surface-hover hover:text-text',
+                            highlight?.pid === process.pid && highlight.startTime === process.startTime && 'bg-surface-active text-text'
+                        )}
+                        style={{ paddingInlineStart: ROW_START + level * LEVEL + process.depth * DEPTH_STEP }}
+                    >
+                        <span className={clsx('min-w-0 truncate', !process.readable && 'text-text-faint')}>{process.name}</span>
+                        <span className="shrink-0 text-text-faint tabular-nums">{process.pid}</span>
+                        {process.family !== null && <span className="shrink-0 text-text-faint">{process.family}</span>}
+                        <span className="grow" />
+                        <Values totals={{ cpu: process.cpu, memory: process.memory, disk: diskOf(process) }} />
+                    </ListRow>
+                );
+                const key = `${process.pid}:${process.startTime}`;
+
+                return signalable(process) ? (
+                    <ContextMenu.Root key={key}>
+                        <ContextMenu.Trigger render={<div />}>{line}</ContextMenu.Trigger>
+                        <SignalMenu target={process} onSignal={signal} onForce={setForcing} />
+                    </ContextMenu.Root>
+                ) : (
+                    <div key={key}>{line}</div>
+                );
+            })
+        );
+
+    const nodeBlock = (node: OutlineNode, level: number) => {
+        const key = `node:${node.id}`;
+        const open = isOpen(key);
+        const here = alertsOf(node);
+        const root = node.groups[0]?.processes[0];
+        const kind = node.groups[0]?.kind;
+        const nodeRow = (
+            <FoldRow
+                open={open}
+                foldable={node.groups.some((group) => group.processes.length > 0)}
+                level={level}
+                glyph={<NodeGlyph glyph={node.glyph} />}
+                onToggle={() => toggle(key)}
+            >
+                <span className="min-w-0 truncate">{node.title}</span>
+                {here.length > 0 && <WarningMark />}
+                <span className="grow" />
+                <Values totals={node.totals} />
+            </FoldRow>
+        );
+
+        return (
+            <div key={key}>
+                {root !== undefined && signalable(root) && (kind === 'terminal' || kind === 'chat') ? (
+                    <ContextMenu.Root>
+                        <ContextMenu.Trigger render={<div />}>{nodeRow}</ContextMenu.Trigger>
+                        <SignalMenu target={root} onSignal={signal} onForce={setForcing} />
+                    </ContextMenu.Root>
+                ) : (
+                    nodeRow
+                )}
+                {here.map((alert) => (
+                    <AlertLine
+                        key={alert.id}
+                        alert={alert}
+                        now={now}
+                        inset={ROW_START + level * LEVEL}
+                        onAction={(action) => act(alert, action)}
+                        onDismiss={() => dismiss(alert)}
+                    />
+                ))}
+                {open && processRows(node, level + 1)}
+            </div>
+        );
+    };
+
+    const viewBlock = (item: OutlineView) => {
+        const key = `view:${item.id}`;
+        const open = isOpen(key);
+        const { view } = item;
+
+        return (
+            <div key={key}>
+                <FoldRow
+                    open={open}
+                    foldable
+                    level={1}
+                    glyph={
+                        <ViewGlyph id={view.id} kind={view.design === true ? 'design' : view.kind} icon={view.icon} provider={view.provider} path={view.path} />
+                    }
+                    onToggle={() => toggle(key)}
+                >
+                    <span className="min-w-0 truncate">{view.name}</span>
+                    {!open && warns(item.nodes) && <WarningMark />}
+                    <span className="grow" />
+                    <Values totals={item.totals} />
+                </FoldRow>
+                {open && item.nodes.map((node) => nodeBlock(node, 2))}
+            </div>
+        );
+    };
+
+    const projectBlock = (project: OutlineProject) => {
+        const key = projectKey(project);
+        const open = isOpen(key);
+        const name = project.summary?.name ?? t('processes.ruimteItself');
+        const nodesOf = project.items.flatMap((item) => (item.kind === 'view' ? item.nodes : [item]));
+
+        return (
+            <div key={key} className="not-first:mt-1.5">
+                <FoldRow
+                    open={open}
+                    foldable
+                    level={0}
+                    className="font-medium text-text"
+                    glyph={
+                        project.summary === null ? (
+                            <RuimteMark size={14} />
+                        ) : (
+                            <ProjectGlyph
+                                projectId={project.summary.projectId}
+                                endpointId={endpointId}
+                                icon={project.summary.icon}
+                                color={project.summary.color}
+                                size={14}
+                                scratch={project.summary.scratch === true}
+                            />
+                        )
+                    }
+                    onToggle={() => toggle(key)}
+                >
+                    <span className="min-w-0 truncate">{name}</span>
+                    {!open && warns(nodesOf) && <WarningMark />}
+                    <span className="grow" />
+                    <span className="contents font-normal">
+                        <Values totals={project.totals} />
+                    </span>
+                </FoldRow>
+                {open && project.items.map((item) => (item.kind === 'view' ? viewBlock(item) : nodeBlock(item, 1)))}
+            </div>
+        );
     };
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             {header}
-            <div className="flex shrink-0 flex-col gap-3 border-b border-border p-3">
-                <div className="flex items-center gap-3 text-xs text-text-faint">
-                    <span className="flex items-center gap-1.5">
-                        <span className="h-px w-3 bg-text-muted" />
-                        {t('processes.legend.machine')}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                        <span className="h-2 w-3 rounded-sm bg-accent/30" />
-                        Ruimte
-                    </span>
-                    <span className="grow" />
-                    {series.fine ? t('processes.range.fine') : t('processes.range.coarse')}
-                </div>
-                <ProcessChart
-                    label={t('processes.column.cpu')}
-                    name={t('processes.chart', { measure: t('processes.column.cpu') })}
-                    headline={formatPercent(machine.cpu)}
-                    {...span}
-                    max={100}
-                    machine={(point) => point.cpu}
-                    ruimte={(point) => point.cpuRuimte}
-                    format={formatPercent}
-                />
-                <ProcessChart
-                    label={t('processes.column.memory')}
-                    name={t('processes.chart', { measure: t('processes.column.memory') })}
-                    headline={t('processes.memoryHeadline', { used: formatBytes(machine.memoryUsed), total: formatBytes(machine.memoryTotal) })}
-                    {...span}
-                    max={machine.memoryTotal}
-                    machine={(point) => point.memory}
-                    ruimte={(point) => point.memoryRuimte}
-                    format={formatBytes}
-                />
-                <ProcessChart
-                    label={
-                        <Tooltip
-                            label={`${t('processes.diskTooltip')}${machine.diskFree === null ? '' : ` ${t('processes.diskFree', { size: formatBytes(machine.diskFree) })}`}`}
-                        >
-                            <span>{t('processes.column.disk')}</span>
-                        </Tooltip>
-                    }
-                    name={t('processes.chart', { measure: t('processes.column.disk') })}
-                    headline={t('processes.diskHeadline', { read: formatRate(machine.diskRead), write: formatRate(machine.diskWrite) })}
-                    {...span}
-                    max={diskMax}
-                    machine={(point) => point.disk}
-                    ruimte={(point) => point.diskRuimte}
-                    format={formatRate}
-                />
-            </div>
-            <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border pr-3 pl-3">
-                <SectionLabel className="grow">{t('processes.column.node')}</SectionLabel>
-                {COLUMNS.map((column) => (
-                    <Tooltip key={column.sort} label={t(`processes.sortBy.${column.sort}`)}>
-                        <SectionLabel
-                            render={<button type="button" />}
-                            aria-pressed={sort === column.sort}
-                            className={clsx(
-                                column.width,
-                                'group inline-flex shrink-0 items-center justify-end gap-0.5 hover:text-text',
-                                sort === column.sort && 'text-text'
-                            )}
-                            onClick={() => useProcesses.getState().setSort(column.sort)}
-                        >
-                            {/* The sort only runs high to low, so one arrow is the whole state. On the
-                                other columns it shows under the pointer to say they sort as well. */}
-                            <Icon icon={ArrowDown} size={12} className={clsx('shrink-0', sort !== column.sort && 'opacity-0 group-hover:opacity-100')} />
-                            {t(`processes.column.${column.sort}`)}
-                        </SectionLabel>
-                    </Tooltip>
+            <ProcessBars projects={projects} machine={sample.machine} endpointId={endpointId} diskScale={diskScale} />
+            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border px-4">
+                <span className="grow" />
+                {(['cpu', 'memory', 'disk'] as const).map((column, at) => (
+                    <SectionLabel key={column} className={clsx('shrink-0 text-right', COLUMN_WIDTHS[at])}>
+                        {t(`processes.column.${column}`)}
+                    </SectionLabel>
                 ))}
             </div>
             <ScrollArea className="grow">
                 {loose.map((alert) => (
-                    <AlertLine key={alert.id} alert={alert} now={now} onAction={(action) => act(alert, action)} onDismiss={() => dismiss(alert)} />
+                    <AlertLine
+                        key={alert.id}
+                        alert={alert}
+                        now={now}
+                        inset={ROW_START}
+                        onAction={(action) => act(alert, action)}
+                        onDismiss={() => dismiss(alert)}
+                    />
                 ))}
-                {groups.map((group) => {
-                    const open = isOpen(group);
-                    const { title, known } = groupTitle(group, titles);
-                    const root = group.processes[0];
-                    const reveal = group.nodeId !== null && known && group.label === undefined ? group.nodeId : null;
-                    const here = placed.get(group.id) ?? [];
-                    const groupRow = (
-                        <ListRow variant="flat" className="gap-1.5 pr-3 pl-1 hover:bg-surface-hover">
-                            <IconButton
-                                icon={ChevronRight}
-                                size="xs"
-                                iconClassName={clsx(open && 'rotate-90')}
-                                label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
-                                tooltip={false}
-                                aria-expanded={open}
-                                onClick={() => toggle(group.id)}
-                            />
-                            <Icon icon={GROUP_ICONS[group.kind]} size={14} className="shrink-0 text-text-muted" />
-                            {reveal !== null ? (
-                                <button className="min-w-0 truncate text-left text-sm text-text hover:underline" onClick={() => revealNode(reveal)}>
-                                    {title}
-                                </button>
-                            ) : (
-                                <span className="min-w-0 truncate text-sm text-text">{title}</span>
-                            )}
-                            {!known && (
-                                <span className="min-w-0 shrink truncate text-xs text-text-faint">
-                                    {(group.projectId === undefined ? undefined : projectNames.get(group.projectId)) ?? t('processes.anotherProject')}
-                                </span>
-                            )}
-                            {group.hidden > 0 && <span className="shrink-0 text-xs text-text-faint tabular-nums">+{group.hidden}</span>}
-                            {here.length > 0 && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
-                            <span className="grow" />
-                            <Numbers row={group} />
-                        </ListRow>
-                    );
-                    return (
-                        <div key={group.id} className="border-b border-border-soft">
-                            {root !== undefined && signalable(root) && group.kind !== 'other' && group.kind !== 'daemon' && group.kind !== 'app' ? (
-                                <ContextMenu.Root>
-                                    <ContextMenu.Trigger render={<div />}>{groupRow}</ContextMenu.Trigger>
-                                    <SignalMenu target={root} onSignal={signal} onForce={setForcing} />
-                                </ContextMenu.Root>
-                            ) : (
-                                groupRow
-                            )}
-                            {here.map((alert) => (
-                                <AlertLine key={alert.id} alert={alert} now={now} onAction={(action) => act(alert, action)} onDismiss={() => dismiss(alert)} />
-                            ))}
-                            {open &&
-                                group.processes.map((process) => {
-                                    const line = (
-                                        <ListRow
-                                            variant="flat"
-                                            className={clsx(
-                                                'gap-1.5 pr-3 hover:bg-surface-hover',
-                                                highlight?.pid === process.pid && highlight.startTime === process.startTime && 'bg-surface-active'
-                                            )}
-                                            style={{ paddingLeft: INDENT_BASE + process.depth * INDENT_STEP }}
-                                        >
-                                            <span className={clsx('min-w-0 truncate text-xs', process.readable ? 'text-text' : 'text-text-faint')}>
-                                                {process.name}
-                                            </span>
-                                            <span className="shrink-0 text-xs text-text-faint tabular-nums">{process.pid}</span>
-                                            {process.family !== null && <span className="shrink-0 text-xs text-text-faint">{process.family}</span>}
-                                            <span className="grow" />
-                                            <Numbers row={process} />
-                                        </ListRow>
-                                    );
-                                    const key = `${process.pid}:${process.startTime}`;
-                                    return signalable(process) ? (
-                                        <ContextMenu.Root key={key}>
-                                            <ContextMenu.Trigger render={<div />}>{line}</ContextMenu.Trigger>
-                                            <SignalMenu target={process} onSignal={signal} onForce={setForcing} />
-                                        </ContextMenu.Root>
-                                    ) : (
-                                        <div key={key}>{line}</div>
-                                    );
-                                })}
-                        </div>
-                    );
-                })}
+                <div className="px-2 py-1.5">{projects.map(projectBlock)}</div>
             </ScrollArea>
 
             <PromptDialog

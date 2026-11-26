@@ -1018,50 +1018,30 @@
         "nothingMatches": "No problem matches the filter"
     },
     "processes": {
-        "anotherProject": "another project",
-        "chart": "{{measure}} of this machine and of Ruimte",
-        "collapse": "Collapse {{name}}",
         "column": {
             "cpu": "CPU",
             "disk": "Disk",
-            "memory": "Memory",
-            "node": "Node"
+            "memory": "Memory"
         },
         "diskFree": "{{size}} free.",
-        "diskHeadline": "Read {{read}}, write {{write}}",
         "diskTooltip": "Total for the processes Ruimte can read.",
-        "expand": "Expand {{name}}",
         "force": {
             "confirm": "Force quit",
             "description": "Ends process {{pid}} at once, without saving or cleaning up. Files it was writing may be incomplete.",
             "title": "Force quit {{name}}?"
         },
         "interruptFailed": "Could not interrupt the turn",
-        "legend": {
-            "machine": "This machine"
-        },
         "measuring": "Measuring processes…",
         "memoryHeadline": "{{used}} of {{total}}",
-        "range": {
-            "coarse": "Last 24 hours",
-            "fine": "Last 10 minutes"
-        },
+        "ofRuimte": "of which Ruimte {{value}}",
         "resumeFailed": "Could not resume the agent",
-        "scope": {
-            "all": "All"
-        },
-        "scopeLabel": "Which processes",
+        "ruimteItself": "Ruimte itself",
         "signal": {
             "forceQuit": "Force quit…",
             "interrupt": "Interrupt",
             "terminate": "Terminate"
         },
         "signalFailed": "Could not stop {{name}}",
-        "sortBy": {
-            "cpu": "Sort by CPU",
-            "disk": "Sort by disk",
-            "memory": "Sort by memory"
-        },
         "theProcess": "The process",
         "unsupported": "Process monitoring is not available on this platform yet."
     },

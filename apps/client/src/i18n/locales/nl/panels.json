@@ -1018,50 +1018,30 @@
         "nothingMatches": "Geen probleem past bij het filter"
     },
     "processes": {
-        "anotherProject": "ander project",
-        "chart": "{{measure}} van deze machine en van Ruimte",
-        "collapse": "{{name}} inklappen",
         "column": {
             "cpu": "CPU",
             "disk": "Schijf",
-            "memory": "Geheugen",
-            "node": "Node"
+            "memory": "Geheugen"
         },
         "diskFree": "{{size}} vrij.",
-        "diskHeadline": "Lezen {{read}}, schrijven {{write}}",
         "diskTooltip": "Totaal voor de processen die Ruimte kan lezen.",
-        "expand": "{{name}} uitklappen",
         "force": {
             "confirm": "Geforceerd stoppen",
             "description": "Stopt proces {{pid}} meteen, zonder opslaan of opruimen. Bestanden waarin het schreef kunnen half af zijn.",
             "title": "{{name}} geforceerd stoppen?"
         },
         "interruptFailed": "Kon de turn niet onderbreken",
-        "legend": {
-            "machine": "Deze machine"
-        },
         "measuring": "Processen meten…",
         "memoryHeadline": "{{used}} van {{total}}",
-        "range": {
-            "coarse": "Laatste 24 uur",
-            "fine": "Laatste 10 minuten"
-        },
+        "ofRuimte": "waarvan Ruimte {{value}}",
         "resumeFailed": "Kon de agent niet hervatten",
-        "scope": {
-            "all": "Alles"
-        },
-        "scopeLabel": "Welke processen",
+        "ruimteItself": "Ruimte zelf",
         "signal": {
             "forceQuit": "Geforceerd stoppen…",
             "interrupt": "Onderbreken",
             "terminate": "Beëindigen"
         },
         "signalFailed": "Kon {{name}} niet stoppen",
-        "sortBy": {
-            "cpu": "Sorteren op CPU",
-            "disk": "Sorteren op schijf",
-            "memory": "Sorteren op geheugen"
-        },
         "theProcess": "Het proces",
         "unsupported": "Processen bekijken kan nog niet op dit platform."
     },

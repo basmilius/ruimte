@@ -735,6 +735,10 @@
         border-block: 1px solid var(--border);
         background: repeating-linear-gradient(135deg, transparent 0 6px, var(--editor-hatch) 6px 7px);
     }
+    /* The rest of the machine in a usage bar of the processes panel: what Ruimte measures but does not own. */
+    .usage-hatch {
+        background: repeating-linear-gradient(135deg, var(--text-faint) 0 2px, transparent 2px 4px);
+    }
     /* The mark over a plan step the active item in the header went to. A layer of its own, so a row
        with a background keeps it while the mark fades; with motion off it stays until the timer ends it. */
     .plan-step-revealed {
