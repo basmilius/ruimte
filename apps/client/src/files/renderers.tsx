@@ -18,6 +18,7 @@ import { MediaFile } from '@/files/MediaFile';
 import { ModelPreview } from '@/files/ModelPreview';
 import { PatchFileSlot } from '@/files/patch-file-lazy';
 import { PdfPreview } from '@/files/PdfPreview';
+import { SvgFile } from '@/files/SvgFile';
 import { TableFile } from '@/files/TableFile';
 import { UnsupportedFile } from '@/files/UnsupportedFile';
 import { isDelimitedName, isHtmlName, isMarkdownName, isPatchName } from '@/surface/panels/file-kind';
@@ -67,6 +68,9 @@ export function renderFile({ path, name, read }: FileRendererProps): React.JSX.E
         return render === undefined ? <CodeFile path={path} read={read} /> : render({ path, name, read });
     }
     if (read.kind === 'binary') {
+        if (read.mime === 'image/svg+xml') {
+            return <SvgFile path={path} name={name} read={read} />;
+        }
         const drawn = renderBinary(fileSource(path), name, read);
         if (drawn !== null) {
             return drawn;

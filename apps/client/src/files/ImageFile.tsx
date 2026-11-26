@@ -2,7 +2,7 @@ import { ButtonGroup, EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes } from '@adecore/ui/format';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { Fullscreen, ImageOff, Ratio } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileContextMenu, FileToolbar, FileToolbarToggle } from '@/files/FileToolbar';
 import { RevealButton } from '@/files/RevealButton';
@@ -15,7 +15,7 @@ type Zoom = 'fit' | 'full';
 
 /* An image from the daemon's own route, on a plain surface: a checkerboard would fight every icon
    drawn for a light background. */
-export function ImageFile({ source, name, read }: { source: FileSource; name: string; read: FsReadBinary }) {
+export function ImageFile({ source, name, read, toolbarExtra }: { source: FileSource; name: string; read: FsReadBinary; toolbarExtra?: ReactNode }) {
     const { t } = useTranslation('panels');
     const [zoom, setZoom] = useState<Zoom>('fit');
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -29,13 +29,14 @@ export function ImageFile({ source, name, read }: { source: FileSource; name: st
         <div className="flex min-h-0 min-w-0 grow flex-col">
             {drawable ? (
                 <FileToolbar>
+                    {toolbarExtra}
                     <ButtonGroup>
                         <FileToolbarToggle icon={Fullscreen} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
                         <FileToolbarToggle icon={Ratio} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
                     </ButtonGroup>
                 </FileToolbar>
             ) : (
-                <FileToolbar />
+                <FileToolbar>{toolbarExtra}</FileToolbar>
             )}
             <FileContextMenu className="flex min-h-0 grow flex-col bg-surface-sunken">
                 <ScrollArea axis="both" className="grow" viewportClassName="grid place-items-center p-4">
