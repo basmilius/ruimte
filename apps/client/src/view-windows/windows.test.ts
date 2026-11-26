@@ -12,8 +12,9 @@ import { startAuxWindow } from './aux-window';
 import { windowDragType } from './drag';
 import { startMainWindow } from './main-window';
 import type { WindowMessage } from './messages';
+import { usePendingViews } from './pending-views';
 import { readAuxViews, writeAuxViews } from './registry';
-import { moveToNewWindow } from './windows';
+import { endFollowing, moveToNewWindow, startFollowing } from './windows';
 
 const PROJECT = 'local:p1';
 
@@ -53,6 +54,7 @@ function memory(): Storage {
 interface FakeShell {
     alive: string[];
     opened: unknown[][];
+    drags: unknown[][];
     posted: { to: string; message: WindowMessage }[];
     bridge: Partial<DesktopBridge>;
     changed(): void;
@@ -73,6 +75,7 @@ function fakeShell(alive: string[]): FakeShell {
     const shell: FakeShell = {
         alive,
         opened: [],
+        drags: [],
         posted: [],
         bridge: {
             auxWindows: async () => [...shell.alive],
@@ -80,6 +83,11 @@ function fakeShell(alive: string[]): FakeShell {
             onAuxWindowClosed: listen(listeners.closed),
             onWindowMessage: listen(listeners.message),
             openWindow: (...args) => void shell.opened.push(args),
+            viewDrag: async (...args) => {
+                shell.drags.push(args);
+
+                return true;
+            },
             postToWindow: async (to, text) => {
                 shell.posted.push({ to, message: JSON.parse(text) as WindowMessage });
 
@@ -119,6 +127,7 @@ afterEach(() => {
     stop();
     stop = () => undefined;
     setAuxWindowId(undefined);
+    usePendingViews.getState().set([]);
     useProject.getState().setCurrent(null, 0, null);
     scope.window = before.window;
     scope.localStorage = before.localStorage;
@@ -188,6 +197,43 @@ describe('the window that has the project', () => {
         expect(shell.posted).toEqual([{ to: key, message: { type: 'give', items: [{ kind: 'view', id: 'b' }], place: null } }]);
     });
 
+    test('keeps a view while the window it is dragged into follows the pointer, and hands it over when the drag ends there', async () => {
+        const shell = fakeShell([]);
+        open(shell, ['a', 'b'], side('a', 'b'));
+        stop = startMainWindow();
+        await settle();
+        startFollowing(['b'], [{ kind: 'view', id: 'b' }]);
+        await settle();
+        const key = String(shell.drags[0]?.[1]);
+
+        expect(shell.drags).toEqual([['start', key, false]]);
+        expect(standing()).toEqual(['a', 'b']);
+
+        shell.message(key, { type: 'ready' });
+
+        expect(shell.posted).toEqual([{ to: key, message: { type: 'wait', items: [{ kind: 'view', id: 'b' }] } }]);
+
+        await endFollowing(true);
+
+        expect(shell.drags.at(-1)).toEqual(['end', key, true]);
+        expect(standing()).toEqual(['a']);
+        expect(shell.posted.at(-1)).toEqual({ to: key, message: { type: 'give', items: [{ kind: 'view', id: 'b' }], place: null } });
+    });
+
+    test('keeps a view whose drag ended anywhere else, and has the window that followed it closed', async () => {
+        const shell = fakeShell([]);
+        open(shell, ['a', 'b'], side('a', 'b'));
+        stop = startMainWindow();
+        await settle();
+        startFollowing(['b'], [{ kind: 'view', id: 'b' }]);
+        await settle();
+        await endFollowing(false);
+
+        expect(shell.drags.at(-1)).toEqual(['end', String(shell.drags[0]?.[1]), false]);
+        expect(standing()).toEqual(['a', 'b']);
+        expect(shell.posted).toEqual([]);
+    });
+
     test('puts a view an auxiliary window gave back in its grid, before the list of who has what says so', async () => {
         const shell = fakeShell(['w1']);
         writeAuxViews(auxWindowKey(PROJECT, 'w1'), ['b']);
@@ -242,6 +288,24 @@ describe('an auxiliary window', () => {
         expect(standing()).toEqual(['b']);
         expect(readAuxViews()).toEqual({ [own]: ['b'] });
         expect(closed).toBe(0);
+    });
+
+    test('stays through the drag that opened it, and knows which view is on its way', async () => {
+        const shell = fakeShell(['w1', 'w2']);
+        setAuxWindowId('w1');
+        open(shell, ['a', 'b'], { activeViewId: null, views: {}, emptyLayout: true });
+        let closed = 0;
+        stop = startAuxWindow({ close: () => (closed += 1) });
+        await settle();
+        shell.message(PROJECT, { type: 'wait', items: [{ kind: 'view', id: 'b' }] });
+        shell.message(auxWindowKey(PROJECT, 'w2'), { type: 'none' });
+
+        expect(closed).toBe(0);
+        expect(usePendingViews.getState().items).toEqual([{ kind: 'view', id: 'b' }]);
+
+        shell.message(PROJECT, { type: 'give', items: [{ kind: 'view', id: 'b' }], place: null });
+
+        expect(standing()).toEqual(['b']);
     });
 
     test('goes when no window has views for it', async () => {

@@ -146,7 +146,11 @@ export function CellToolbar({
                     // A tab in the back keeps its bar on its hidden body, so the top row holds the one in front.
                     container={hidden ? null : slot}
                     onDragStart={(event) => {
-                        writeViewDrag(event.dataTransfer, view.id, hosted);
+                        writeViewDrag(event.dataTransfer, view.id, hosted, {
+                            element: event.currentTarget,
+                            clientX: event.clientX,
+                            clientY: event.clientY
+                        });
                         event.dataTransfer.effectAllowed = 'move';
                         setDragging(view.id, hosted);
                     }}

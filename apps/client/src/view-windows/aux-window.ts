@@ -10,6 +10,7 @@ import { fireAndForget } from '@/transport-api/transport';
 import { leaveWorkspace } from '@/workspace/connections';
 import { AUX_COMMAND_RELAY } from './aux-commands';
 import { ownWindowKey, postToWindow, projectKey, readWindowMessage } from './messages';
+import { usePendingViews } from './pending-views';
 import { writeAuxViews } from './registry';
 import { answerWindow, isGranted, isOfProject, resetWindows, ungrant } from './windows';
 
@@ -120,8 +121,14 @@ export function startAuxWindow(overrides: Partial<AuxWindowDeps> = {}): () => vo
         shell?.onWindowMessage?.((from, text) => {
             const message = isOfProject(from, project) ? readWindowMessage(text) : null;
 
-            if (message?.type === 'give') {
+            if (message?.type === 'give' || message?.type === 'wait') {
                 expecting = true;
+            }
+
+            if (message?.type === 'wait') {
+                usePendingViews.getState().set(message.items);
+
+                return;
             }
 
             if (message === null || answerWindow(from, message)) {

@@ -13,7 +13,9 @@ import { useDocument } from '@/state/document';
 import { useDrawing } from '@/state/drawing';
 import { useFiles } from '@/state/files';
 import { isScratchProject, useProject } from '@/state/project';
+import { auxWindowId } from '@/state/window-target';
 import { isLooseView, type CellView } from '@/surface/cell-view';
+import { AuxPending } from '@/view-windows/AuxPending';
 
 function StandaloneView({ view }: { view: ProjectView }) {
     const kinds = viewKindRegistry.useAll();
@@ -107,6 +109,10 @@ export function ViewHost() {
     const projectId = useProject((s) => s.current?.projectId);
     const scratch = useProject((s) => isScratchProject(s.current));
     const closed = useDocument((s) => s.emptyLayout);
+    // An auxiliary window without a view waits for one or is about to close, and starts nothing of the project.
+    if (empty && auxWindowId() !== null) {
+        return <AuxPending />;
+    }
     return empty ? (
         <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>
             {scratch && !closed ? <ChatsStart key={projectId} /> : <ProjectStartScreen />}

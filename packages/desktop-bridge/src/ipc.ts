@@ -82,6 +82,7 @@ export const IPC_INVOKE = {
     'window:move-to-new': invoke<[at: WindowPoint | null], boolean>(),
     'window:close-if-others': invoke<[], boolean>(),
     'window:hold': invoke<[keys: string[]], string[]>(),
+    'window:view-drag': invoke<[phase: 'start' | 'end', key: string, keep: boolean], boolean>(),
     'window:aux-list': invoke<[project: string], string[]>(),
     'window:post': invoke<[to: string, message: string], boolean>(),
     'window:tab-drag': invoke<[phase: 'start' | 'end', key: string, grab: WindowPoint, whole: boolean, tabWidth: number | null], boolean>(),

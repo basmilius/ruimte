@@ -31,6 +31,8 @@ export interface WindowPlace {
 const MessageSchema = z.discriminatedUnion('type', [
     /* A new auxiliary window asks whoever opened it for its views. */
     z.object({ type: z.literal('ready') }),
+    /* The answer to `ready` while the drag that opened the window is still under way. The views come when it ends, unless something else takes them. */
+    z.object({ type: z.literal('wait'), items: z.array(ItemSchema).min(1) }),
     /* The answer to `ready` of a window that opened none. */
     z.object({ type: z.literal('none') }),
     /* The sender already let go of the views. Without a place they join the tabs of the receiver's focused cell. */

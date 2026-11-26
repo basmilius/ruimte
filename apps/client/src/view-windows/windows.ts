@@ -37,9 +37,21 @@ export function ungrant(ids: Iterable<string>): void {
     }
 }
 
+interface Following {
+    key: string;
+    ids: readonly string[];
+    items: WindowItem[];
+    /* The window is up and asked for its views, so they go to it directly when the drag ends. */
+    asked: boolean;
+}
+
+/* The auxiliary window that follows the pointer during the drag under way. */
+let following: Following | null = null;
+
 export function resetWindows(): void {
     pending.clear();
     granted.clear();
+    following = null;
 }
 
 /* The other window reads this window's record next, so it is written now and not on the save clock. */
@@ -84,6 +96,64 @@ export async function moveToNewWindow(ids: readonly string[], at?: WindowPoint):
     desktop()?.openWindow?.(key, undefined, at);
 
     return true;
+}
+
+export function isFollowing(): boolean {
+    return following !== null;
+}
+
+/*
+ * The drag left this window, so the auxiliary window the views would become opens and follows the
+ * pointer. The views stay here until the drag ends: a tab that left the page mid-drag would take the
+ * end of the drag with it.
+ */
+export function startFollowing(ids: readonly string[], items: WindowItem[]): void {
+    const project = projectKey();
+    const drag = desktop()?.viewDrag;
+
+    if (project === null || drag === undefined || following !== null) {
+        return;
+    }
+
+    const started: Following = { key: auxWindowKey(project, crypto.randomUUID()), ids, items, asked: false };
+    following = started;
+
+    void fireAndForget(
+        'viewDrag',
+        drag('start', started.key, false).then((opened) => {
+            if (!opened && following === started) {
+                following = null;
+            }
+        })
+    );
+}
+
+/* `keep` leaves the window where the drag ended and hands it the views. Otherwise something else took them, or nothing should, and the window closes. */
+export async function endFollowing(keep: boolean): Promise<void> {
+    const ended = following;
+    following = null;
+
+    if (ended === null) {
+        return;
+    }
+
+    const taken = keep ? itemsOf(ended.ids) : null;
+    const moves = taken !== null && taken.items.length > 0;
+    await fireAndForget('viewDrag', desktop()?.viewDrag?.('end', ended.key, moves));
+
+    if (taken === null || !moves) {
+        return;
+    }
+
+    await flushProject();
+    letGo(taken.items.map(idOf));
+    keepLocal();
+
+    if (ended.asked) {
+        tellWindow(ended.key, { type: 'give', items: taken.items, place: null });
+    } else {
+        pending.set(ended.key, taken.items);
+    }
 }
 
 export async function moveToMainWindow(ids: readonly string[]): Promise<boolean> {
@@ -157,6 +227,13 @@ function showHere(viewId: string): void {
 export function answerWindow(from: string, message: WindowMessage): boolean {
     switch (message.type) {
         case 'ready': {
+            if (following?.key === from) {
+                following.asked = true;
+                tellWindow(from, { type: 'wait', items: following.items });
+
+                return true;
+            }
+
             const items = pending.get(from);
             pending.delete(from);
             tellWindow(from, items === undefined ? { type: 'none' } : { type: 'give', items, place: null });

@@ -1,3 +1,4 @@
+import { isOpenableView } from '@ruimte/contracts';
 import { cellAt, cellViewIds, locateView } from '@/layout/split';
 import { useDocument } from '@/state/document';
 import { placeTab, useFiles, type Tab } from '@/state/files';
@@ -20,8 +21,13 @@ export function itemsOf(ids: readonly string[]): TakenItems {
     const held: Tab[] = [];
 
     for (const id of ids) {
-        if (views.some((view) => view.id === id)) {
-            items.push({ kind: 'view', id });
+        const view = views.find((candidate) => candidate.id === id);
+
+        if (view !== undefined) {
+            // A separator or a heading of the sidebar is a view too, and stands in no cell of any window.
+            if (isOpenableView(view)) {
+                items.push({ kind: 'view', id });
+            }
 
             continue;
         }

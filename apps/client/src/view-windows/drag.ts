@@ -8,8 +8,8 @@ import type { TabDragKind } from '@/surface/tab-drags';
 import { dragging } from '@/surface/view-drag';
 import { fireAndForget } from '@/transport-api/transport';
 import { cellIdsOf, idOf, itemsOf } from './items';
-import { canMoveViews, ItemSchema, ownWindowKey, projectKey } from './messages';
-import { isWholeWindow, moveToNewWindow, takeFromWindow } from './windows';
+import { canMoveViews, ItemSchema, ownWindowKey, projectKey, type WindowItem } from './messages';
+import { endFollowing, isFollowing, isWholeWindow, moveToNewWindow, startFollowing, takeFromWindow } from './windows';
 
 const WINDOW_DRAG_PREFIX = 'application/x-ruimte-window-views-';
 
@@ -26,7 +26,7 @@ export function windowDragType(project: string): string {
 const PayloadSchema = z.object({ from: z.string().min(1), items: z.array(ItemSchema).min(1) });
 
 /* The views of the drag that started in this window, until it ends. */
-let outgoing: string[] | null = null;
+let outgoing: { ids: string[]; items: WindowItem[] } | null = null;
 
 /* A view another window has is that window's to drag, also when its row in this window's sidebar is what moves. */
 function isOurs(viewId: string): boolean {
@@ -55,7 +55,7 @@ export function carryToWindows(transfer: DataTransfer, viewId: string, whole: bo
     }
 
     transfer.setData(windowDragType(project), JSON.stringify({ from, items: taken.items }));
-    outgoing = taken.items.map(idOf);
+    outgoing = { ids: taken.items.map(idOf), items: taken.items };
 }
 
 function carriesWindowDrag(transfer: Pick<DataTransfer, 'types'>): boolean {
@@ -107,26 +107,50 @@ function isOutside(event: Pick<DragEvent, 'screenX' | 'screenY'>, host: Pick<Win
     );
 }
 
-/* A drag that ends outside this window, taken by nothing, becomes a window of its own there. A drop another window took has the effect `move`. */
+/* All the views of an auxiliary window in a new one is the same window somewhere else. */
+function staysHere(ids: readonly string[]): boolean {
+    return auxWindowId() !== null && isWholeWindow(ids);
+}
+
+/*
+ * A drag that leaves this window gets the auxiliary window its views would become, which follows
+ * the pointer. A drag that ends outside every window, taken by nothing, leaves that window there
+ * with the views. A drop another window took has the effect `move`.
+ */
 export function watchDragOut(host: Window = window): () => void {
+    const onLeave = (event: DragEvent): void => {
+        // Without a related target the drag left the page and did not move on to another element of it.
+        if (outgoing === null || event.relatedTarget !== null || isFollowing() || staysHere(outgoing.ids)) {
+            return;
+        }
+
+        startFollowing(outgoing.ids, outgoing.items);
+    };
+
     const onEnd = (event: DragEvent): void => {
-        const ids = outgoing;
+        const moved = outgoing;
         outgoing = null;
 
-        if (ids === null || event.dataTransfer?.dropEffect !== 'none' || !isOutside(event, host)) {
+        if (moved === null) {
             return;
         }
 
-        // All the views of an auxiliary window in a new one is the same window somewhere else.
-        if (auxWindowId() !== null && isWholeWindow(ids)) {
-            return;
-        }
+        const dropped = event.dataTransfer?.dropEffect === 'none' && isOutside(event, host) && !staysHere(moved.ids);
 
-        void fireAndForget('moveToNewWindow', moveToNewWindow(ids, { x: event.screenX - GRAB.x, y: event.screenY - GRAB.y }));
+        if (isFollowing()) {
+            void fireAndForget('endFollowing', endFollowing(dropped));
+        } else if (dropped) {
+            // A shell that cannot follow the pointer, or a drag that ended before its window opened.
+            void fireAndForget('moveToNewWindow', moveToNewWindow(moved.ids, { x: event.screenX - GRAB.x, y: event.screenY - GRAB.y }));
+        }
     };
 
     // In the capture phase, since a source may stop the event before it reaches the window.
+    host.addEventListener('dragleave', onLeave, true);
     host.addEventListener('dragend', onEnd, true);
 
-    return () => host.removeEventListener('dragend', onEnd, true);
+    return () => {
+        host.removeEventListener('dragleave', onLeave, true);
+        host.removeEventListener('dragend', onEnd, true);
+    };
 }

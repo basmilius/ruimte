@@ -4,6 +4,7 @@ import { splitAuxWindowKey } from '@ruimte/desktop-bridge';
 import { auxIdsOf, isWindowKey, isWindowMessage, isWindowState, isWindowView, tabStripOf, windowPointOf } from '../app-windows';
 import { electron } from '../electron';
 import { createTabDrag } from '../tab-drag';
+import { createViewDrag } from '../view-drag';
 import type { DesktopIpc } from './ipc';
 
 const { screen } = electron;
@@ -134,6 +135,45 @@ export function installWindows(ipc: DesktopIpc, options: WindowChannelOptions): 
             window.once('closed', () => tabStrips.delete(window.id));
         }
         tabStrips.set(window.id, strip);
+    });
+
+    const projectOf = (key: string | null): string | null => (key === null ? null : (splitAuxWindowKey(key)?.project ?? key));
+
+    const viewDrag = createViewDrag<Electron.BrowserWindow>({
+        open: (key, at) => {
+            // Without the focus, which stays with the window the drag came from until the drag ends.
+            openingInactive = true;
+            try {
+                return windows.open(key, at);
+            } finally {
+                openingInactive = false;
+            }
+        },
+        windowAt: (point, except) => windows.windowAt(point, except),
+        takes: (window, key) => projectOf(windows.keyOf(window)) === projectOf(key),
+        cursor: () => screen.getCursorScreenPoint(),
+        every: (tick) => {
+            const timer = setInterval(tick, 16);
+            return () => clearInterval(timer);
+        }
+    });
+
+    // The page a view is dragged out of says when the drag left its window and how it ended.
+    ipc.handle('window:view-drag', (event, phase: unknown, key: unknown, keep: unknown) => {
+        const window = ipc.senderWindow(event);
+        if (window === null) {
+            return false;
+        }
+        if (phase === 'end') {
+            viewDrag.end(keep === true);
+            return true;
+        }
+        // Only for a new auxiliary window of the project the asking window shows.
+        const own = projectOf(windows.keyOf(window));
+        if (phase !== 'start' || !isWindowKey(key) || own === null || splitAuxWindowKey(key)?.project !== own || windows.holderOf(key) !== null) {
+            return false;
+        }
+        return viewDrag.start(key);
     });
 
     // The page that holds the press says when a tab leaves its window and when the press lets go.

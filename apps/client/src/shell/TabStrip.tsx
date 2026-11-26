@@ -66,7 +66,8 @@ function TabShell({ id, label, hint, glyph, detail, unsavedLabel, pinned = false
     const onDragStart = (event: React.DragEvent<HTMLButtonElement>): void => {
         // The bar is a drag handle of its own, whose payload would take the place of this one.
         event.stopPropagation();
-        writeViewDrag(event.dataTransfer, id);
+        const tab = event.currentTarget.closest<HTMLElement>('[data-tab-id]') ?? event.currentTarget;
+        writeViewDrag(event.dataTransfer, id, false, { element: tab, clientX: event.clientX, clientY: event.clientY });
         onDragData?.(event.dataTransfer);
         event.dataTransfer.effectAllowed = onDragData === undefined ? 'move' : 'copyMove';
         // The drop indicator in another cell is as wide as this tab is.

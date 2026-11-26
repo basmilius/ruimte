@@ -199,6 +199,9 @@ export interface DesktopBridge {
     onTabDragOver?(listener: (key: string, x: number) => void): () => void;
     /* Where this page draws its tab strip, which a tab dragged out of another window drops into; null without one. */
     setTabStrip?(rect: { x: number; y: number; width: number; height: number } | null): void;
+    /* A view dragged out of this window left it (`start`): the auxiliary window with this key opens at once and follows
+       the pointer. `end` when the drag is over, where `keep` says the window stays because nothing else took the view. */
+    viewDrag?(phase: 'start' | 'end', key: string, keep: boolean): Promise<boolean>;
     /* The ids of the auxiliary windows open on a project (`endpointKey`). `auxWindowKey` makes the key `openWindow` raises one by. */
     auxWindows?(project: string): Promise<string[]>;
     /* An auxiliary window of any project opened or went. */

@@ -105,6 +105,7 @@ const bridge = {
     onReleaseProject: on('window:release-project'),
     onTabDragOver: on('window:tab-drag-over'),
     setTabStrip: (rect) => send('window:tab-strip', rect),
+    viewDrag: (phase, key, keep) => invoke('window:view-drag', phase, key, keep),
     auxWindows: (project) => invoke('window:aux-list', project),
     onAuxWindows: on('window:aux-changed'),
     onAuxWindowClosed: on('window:aux-closed'),
