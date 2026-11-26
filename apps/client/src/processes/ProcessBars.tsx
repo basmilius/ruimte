@@ -9,12 +9,9 @@ import { barOf, type Bar } from './bars';
 import { diskOf, formatBytes, formatPercent, formatRate } from './format';
 import type { OutlineProject, Totals } from './outline';
 
-const SWATCH = 'size-2 shrink-0 rounded-xs';
+/* As wide as the logos beside it. */
+const SWATCH = 'size-3 shrink-0 rounded-xs';
 const SEGMENT = 'h-full min-w-0.5 transition-opacity hover:opacity-70';
-
-function Swatch({ color }: { color: string | null }) {
-    return color === null ? <span className={clsx(SWATCH, 'bg-text-faint')} /> : <span className={SWATCH} style={{ backgroundColor: color }} />;
-}
 
 function UsageBar({
     label,
@@ -130,9 +127,8 @@ export function ProcessBars({
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
                 {projects.map((project) => (
                     <span key={keyOf(project)} className="flex min-w-0 items-center gap-1.5">
-                        <Swatch color={project.summary?.color ?? null} />
                         {project.summary === null ? (
-                            <RuimteMark size={12} />
+                            <RuimteMark size={12} className="text-text-faint" />
                         ) : (
                             <ProjectGlyph
                                 projectId={project.summary.projectId}
@@ -141,6 +137,7 @@ export function ProcessBars({
                                 color={project.summary.color}
                                 size={12}
                                 scratch={project.summary.scratch === true}
+                                mono
                             />
                         )}
                         <span className="truncate">{nameOf(keyOf(project))}</span>
