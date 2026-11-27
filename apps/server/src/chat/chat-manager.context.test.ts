@@ -60,6 +60,27 @@ test('the system prompt names visuals while the machine has them on, and never t
     expect(claude.started[1]!.argv.some((arg) => arg.startsWith('--add-dir='))).toBe(false);
 });
 
+test('a chat gets the same folders with visual replies on and off', async () => {
+    const visuals = new VisualStore(home, attachments);
+    let visualReplies = true;
+    manager = await remake(manager, { visuals, visualReplies: () => visualReplies });
+    await open(manager, 'chat-folders');
+    await manager.core.send('chat-folders', 'first');
+    await recorder.untilIdle();
+    visualReplies = false;
+    await manager.core.send('chat-folders', 'second');
+    await recorder.until(() => recorder.info?.usage.turns === 2 && recorder.idle);
+    expect(claude.started).toHaveLength(1);
+
+    const off = new ChatRecorder();
+    manager.core.subscribe('c2', off.sink());
+    await manager.core.create({ chatId: 'chat-off', cwd: home });
+    manager.core.attach('chat-off', 'c2');
+    await manager.core.send('chat-off', 'first');
+    await off.until(() => off.ofKind('assistant').length === 1 && off.info?.activeTurnId === null);
+    expect(claude.started[1]!.argv.filter((arg) => arg.startsWith('--add-dir='))).toEqual([`--add-dir=${visuals.workspacePath('chat-off')}`]);
+});
+
 test('a hidden agent hears nothing about visuals, and an agent on a canvas at the same depth does', async () => {
     const visuals = new VisualStore(home, attachments);
     manager = await remake(manager, { visuals, visualReplies: () => true, depthOf: () => 1, standalone: (id) => id === 'chat-hidden' });

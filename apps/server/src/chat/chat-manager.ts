@@ -460,9 +460,10 @@ export class ChatManager {
         // Claude Code reads a skill's instructions outside the chat's folder only from a folder handed to it.
         const skills = this.facts.skillsFolder();
         const handed = skills === null ? [] : [skills];
-        if (!this.visuals || !this.facts.visualReplies()) {
+        if (!this.visuals) {
             return handed;
         }
+        // Handed with visual replies off too: other folders mean a new process, and a machine setting must not ask for one.
         const path = this.visuals.workspacePath(chatId);
         // Claude validates --add-dir at startup, including the first turn after a chat was cleared.
         mkdirSync(path, { recursive: true, mode: 0o700 });
