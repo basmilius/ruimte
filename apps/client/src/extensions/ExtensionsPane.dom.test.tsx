@@ -71,6 +71,22 @@ describe('the list of extensions', () => {
         expect(places).toEqual([...places].sort((left, right) => left - right));
     });
 
+    test('lists the test extensions by name, whatever order the machine linked them in', async () => {
+        const tests = [installed('dev.trackline', 'Trackline', true), installed('dev.beacon', 'Beacon', true), installed('dev.lintel', 'Lintel', true)];
+
+        useInstalledExtensions.setState({
+            installed: tests,
+            provenance: { 'dev.trackline': 'development', 'dev.beacon': 'development', 'dev.lintel': 'development' }
+        });
+        await mounted.render(<ExtensionsPane />);
+        await until(() => mounted.host.textContent?.includes('Trackline') ?? false);
+
+        const nav = mounted.host.querySelector('nav')?.textContent ?? '';
+        const places = ['Beacon', 'Lintel', 'Trackline'].map((word) => nav.indexOf(word));
+
+        expect(places).toEqual([...places].sort((left, right) => left - right));
+    });
+
     test('has no group of test extensions on a machine that names none', async () => {
         useInstalledExtensions.setState({ provenance: { 'acme.dev': 'dev-link', 'poc.probe': 'dev-link' } });
         await mounted.render(<ExtensionsPane />);

@@ -462,7 +462,10 @@ export function ExtensionsPane() {
     const builtIns = useContributions((state) => state.builtIns);
     const [selected, setSelected] = useState(BROWSE);
     const provenance = useInstalledExtensions((state) => state.provenance);
-    const testing = installed.filter((entry) => entry.dev && provenance?.[entry.manifest.id] === 'development');
+    // The checkout links them in the order its folders list, which reads as no order at all.
+    const testing = installed
+        .filter((entry) => entry.dev && provenance?.[entry.manifest.id] === 'development')
+        .sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
     const developing = installed.filter((entry) => entry.dev && !testing.includes(entry));
     const fromStore = installed.filter((entry) => !entry.dev);
 
