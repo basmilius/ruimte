@@ -28,6 +28,13 @@ describe('namedAccount', () => {
         expect(await namedAccount(callWith(named), 'codex', 'p1', 'codex_work', null)).toBe('codex_work');
     });
 
+    test('takes the account of a model a person tagged on it', async () => {
+        const onModel = [turn('t1', 'user'), user('u1', 'Review with @model:codex:codex_work/gpt-5.', 't1')];
+
+        expect(await namedAccount(callWith(onModel), 'codex', 'p1', 'codex_work', null)).toBe('codex_work');
+        await expect(namedAccount(callWith(onModel), 'claude', 'p1', 'codex_work', null)).rejects.toMatchObject({ code: 'account-other-cli' });
+    });
+
     test('refuses an account only an agent turn spelled, or one no message spelled', async () => {
         const fromAgent = [turn('t1', 'agent'), user('u1', '@account:codex/codex_work', 't1')];
 

@@ -119,16 +119,30 @@ describe('an @ in the composer', () => {
         expect(sent.mentions ?? []).toEqual([]);
     });
 
-    test('offers Accounts above Files by the name a person gave the account, and Enter sends its token as text', async () => {
+    test('offers Accounts below its models and above Files by the name a person gave the account, and Enter sends its token as text', async () => {
         await open('chat-tag-account', {}, TWO_ACCOUNTS);
         await type('Start one on @wo');
-        await until(() => option('Work') !== null && option('options.ts') !== null);
-        expect(labels()).toEqual(['Accounts', 'Files']);
+        await until(() => option('Work / Opus 5.5') !== null && option('options.ts') !== null);
+        expect(labels()).toEqual(['Models', 'Accounts', 'Files']);
+        await pressKey(composer()!.contentDOM, 'ArrowDown');
+        await pressKey(composer()!.contentDOM, 'ArrowDown');
         await pressKey(composer()!.contentDOM, 'Enter');
         expect(composer()!.state.doc.toString()).toBe('Start one on @account:claude/claude_work ');
         await pressKey(composer()!.contentDOM, 'Enter');
         await until(() => machine.requests('chat.send').length === 1);
         expect(machine.requests('chat.send')[0]!.text).toBe('Start one on @account:claude/claude_work');
+    });
+
+    test('offers a model on each account by the account name too, and Enter sends the model on that account', async () => {
+        await open('chat-tag-model-account', {}, TWO_ACCOUNTS);
+        await type('Review on @wo/op');
+        await until(() => option('Work / Opus 5.5') !== null);
+        expect(option('Personal / Opus 5.5')).toBeNull();
+        await pressKey(composer()!.contentDOM, 'Enter');
+        expect(composer()!.state.doc.toString()).toBe('Review on @model:claude:claude_work/claude-opus-5-5 ');
+        await pressKey(composer()!.contentDOM, 'Enter');
+        await until(() => machine.requests('chat.send').length === 1);
+        expect(machine.requests('chat.send')[0]!.text).toBe('Review on @model:claude:claude_work/claude-opus-5-5');
     });
 
     test('leaves out an account the project turned off', async () => {

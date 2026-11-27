@@ -319,7 +319,7 @@
                     },
                     "account": {
                         "type": "string",
-                        "description": "An account from a person's @account:<cli>/<id>"
+                        "description": "An account from a person's @account:<cli>/<id> or @model:<cli>:<id>/<model>"
                     },
                     "branch": {
                         "type": "string"

@@ -40,7 +40,7 @@ const ACCOUNT_INPUT = z
     .string({ error: 'account needs the id of an account' })
     .min(1, 'account needs the id of an account')
     .optional()
-    .describe("An account from a person's @account:<cli>/<id>");
+    .describe("An account from a person's @account:<cli>/<id> or @model:<cli>:<id>/<model>");
 
 /* Every field says its own sentence, so a role that is missing one reads the same as a role that
    filled it with the wrong thing; zod's default would name a type where the agent needs the field. */
@@ -76,7 +76,7 @@ const ROLES_LINES: readonly string[] = [
     `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     "roles\tmodel\toptional\tThe model id for a chat role, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
     "roles\teffort\toptional\tThe reasoning effort for a chat role, one its model offers; omitted keeps the person's last pick when the model offers it, else the model's default. Refused for terminals",
-    "roles\taccount\toptional\tThe id of an account a person named in this chat as @account:<cli>/<id>, for the role's provider; omitted inherits yours",
+    "roles\taccount\toptional\tThe id of an account a person named in this chat as @account:<cli>/<id> or @model:<cli>:<id>/<model>, for the role's provider; omitted inherits yours",
     ...shippedProviders()
         .filter((provider) => provider.capabilities.chat)
         .flatMap(modelLines),
