@@ -74,6 +74,7 @@ describe('the list of extensions', () => {
     test('lists the test extensions by name, whatever order the machine linked them in', async () => {
         const tests = [installed('dev.trackline', 'Trackline', true), installed('dev.beacon', 'Beacon', true), installed('dev.lintel', 'Lintel', true)];
 
+        windowWithBridge.ruimteDesktop = { extensions: { list: async () => tests } };
         useInstalledExtensions.setState({
             installed: tests,
             provenance: { 'dev.trackline': 'development', 'dev.beacon': 'development', 'dev.lintel': 'development' }
