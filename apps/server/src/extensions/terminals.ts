@@ -74,7 +74,7 @@ export interface ExtensionTerminalOpen {
 }
 
 interface TerminalOpenerDeps {
-    projects: Pick<ProjectHost, 'mutate' | 'showView'>;
+    projects: Pick<ProjectHost, 'mutate'>;
     terminals: ExtensionTerminals;
     folderOf(projectId: string): string | null;
     worktreePaths(folder: string): Promise<string[]>;
@@ -131,7 +131,7 @@ export function extensionTerminalOpener(deps: TerminalOpenerDeps) {
 
         check();
 
-        const made = await deps.projects.mutate<{ nodeId: string; ownView: boolean }>(open.projectId, (content) => {
+        const made = await deps.projects.mutate<{ nodeId: string }>(open.projectId, (content) => {
             check();
 
             const canvas = canvasFor(content, open);
@@ -153,7 +153,7 @@ export function extensionTerminalOpener(deps: TerminalOpenerDeps) {
 
                 deps.terminals.put(nodeId, record);
 
-                return { content: { ...content, views: [...content.views, view] }, result: { nodeId, ownView: true } };
+                return { content: { ...content, views: [...content.views, view] }, result: { nodeId } };
             }
 
             if (canvas.nodes.length >= MAX_CANVAS_NODES) {
@@ -172,18 +172,13 @@ export function extensionTerminalOpener(deps: TerminalOpenerDeps) {
 
             deps.terminals.put(nodeId, record);
 
-            return { content: withView(content, { ...canvas, nodes: [...canvas.nodes, node] }), result: { nodeId, ownView: false } };
+            return { content: withView(content, { ...canvas, nodes: [...canvas.nodes, node] }), result: { nodeId } };
         });
 
         try {
             await deps.start(made.nodeId, cwd ?? folder);
         } catch (e) {
             throw new ExtensionRefusal('failed', `The terminal ${made.nodeId} is there, but it did not start: ${e instanceof Error ? e.message : String(e)}`);
-        }
-
-        // A view of its own a person asked for comes to the front, as one they made in the sidebar does.
-        if (made.ownView && open.picked === true) {
-            deps.projects.showView(open.projectId, made.nodeId, extensionId);
         }
 
         return { nodeId: made.nodeId };

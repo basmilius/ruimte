@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act } from 'react';
+import { useDocument } from '@/state/document';
 import { clickOn, mount, until, type Mounted } from '../../testing/dom';
 import { FakeMachine } from '../../testing/fake-machine';
-import { openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
+import { FAKE_PROJECT, openFakeWorkspace, type FakeWorkspace } from '../../testing/fake-workspace';
 import { emptyCanvas } from '../../testing/project-fixtures';
 
 const MAIN = emptyCanvas();
@@ -71,6 +72,25 @@ describe('a terminal profile of an extension', () => {
 
         expect(asked).toMatchObject({ id: 'dev.harbor', profile: 'service-shell', picked: true });
         expect(asked?.viewId).toBeUndefined();
+    });
+
+    test('brings the view it made to the front, as the person picked it and no agent did', async () => {
+        await openNewViewMenu();
+        await until(() => menuItem('Harbor shell') !== null);
+        await clickOn(menuItem('Harbor shell'));
+        await until(() => machine.requests('extension.terminalOpen').length === 1);
+
+        const made = { kind: 'terminal' as const, id: 'terminal-made', name: 'Harbor shell', node: {} };
+
+        await act(async () => {
+            machine.emit('project.changed', {
+                projectId: FAKE_PROJECT.projectId,
+                document: { version: 3, rev: 2, name: FAKE_PROJECT.name, color: FAKE_PROJECT.color, views: [MAIN, made] }
+            });
+        });
+        await until(() => useDocument.getState().activeViewId === made.id);
+
+        expect(document.body.textContent).not.toContain('where you were working');
     });
 
     test('tells the person why it did not open', async () => {

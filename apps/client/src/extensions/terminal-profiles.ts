@@ -5,6 +5,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import type { Point } from '@/canvas-model/math';
 import { namedIcon } from '@/extensions/host/named-icon';
 import { extensionRequest } from '@/extensions/machine-request';
+import { showViewOnceThere } from '@/project/show-view-once';
 import { useProject } from '@/state/project';
 import { useToasts } from '@/state/toasts';
 import { machineTransport } from '@/transport';
@@ -77,20 +78,30 @@ export function useTerminalProfiles(): TerminalProfiles {
                 return;
             }
 
+            const viewId = place?.viewId ?? null;
+
             extensionRequest(machineTransport(endpointId), 'extension.terminalOpen', {
                 id: profile.extension,
                 projectId,
                 profile: profile.id,
                 picked: true,
                 title: profile.title,
-                ...(place === undefined || place.viewId === null ? {} : { viewId: place.viewId, at: place.at })
-            }).catch((e: unknown) => {
-                useToasts.getState().show({
-                    kind: 'error',
-                    title: i18next.t('canvas:canvasMenu.profileFailed', { name: profile.title }),
-                    description: e instanceof Error ? e.message : String(e)
-                });
-            });
+                ...(place === undefined || viewId === null ? {} : { viewId, at: place.at })
+            }).then(
+                ({ nodeId }) => {
+                    // A view of its own the person picked here comes to the front here, as a new chat does.
+                    if (viewId === null) {
+                        showViewOnceThere(nodeId);
+                    }
+                },
+                (e: unknown) => {
+                    useToasts.getState().show({
+                        kind: 'error',
+                        title: i18next.t('canvas:canvasMenu.profileFailed', { name: profile.title }),
+                        description: e instanceof Error ? e.message : String(e)
+                    });
+                }
+            );
         }
     };
 }
