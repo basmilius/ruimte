@@ -131,7 +131,7 @@ describe('ruimte join', () => {
         const forbidden = harness(() => new Response('Forbidden', { status: 403 }));
 
         expect(await forbidden.run()).toBe(1);
-        expect(forbidden.err[0]).toContain('set RUIMTE_HOME');
+        expect(forbidden.err[0]).toContain('Set RUIMTE_HOME');
 
         const older = harness(() => new Response('Not found', { status: 404 }));
 
