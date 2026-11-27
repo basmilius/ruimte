@@ -72,10 +72,14 @@ function inheritedAccount(call: AgentCall, kind: AgentKind, projectId: string): 
     return account !== undefined && call.host.starts.accountsOff?.(projectId, kind).includes(account) ? undefined : account;
 }
 
-// The composer's `@account:<cli>/<id>`, with the id as `ProviderAccountIdSchema` spells it, so punctuation after it is no part of it.
-const ACCOUNT_TOKEN = /(?<=^|[\s([{"'“‘])@account:([a-z0-9][a-z0-9-]*)\/([a-z][a-z0-9_-]{0,63})(?![a-z0-9_-])/g;
+/*
+ * The composer's `@account:<cli>/<id>`, and the account of its `@model:<cli>:<id>/<model>`, with the id as
+ * `ProviderAccountIdSchema` spells it, so punctuation after it is no part of it.
+ */
+const ACCOUNT_TOKEN =
+    /(?<=^|[\s([{"'“‘])@(?:account:([a-z0-9][a-z0-9-]*)\/([a-z][a-z0-9_-]{0,63})(?![a-z0-9_-])|model:([a-z0-9][a-z0-9-]*):([a-z][a-z0-9_-]{0,63})\/)/g;
 
-/* The CLIs a person named this account for with `@account:<cli>/<id>`, in the messages of their own turns of the calling chat. */
+/* The CLIs a person named this account for with either token, in the messages of their own turns of the calling chat. */
 async function accountNamedFor(call: AgentCall, account: string): Promise<Set<string>> {
     const items = (await call.host.chatThreads?.items(call.caller)) ?? [];
     const agentTurns = new Set(items.flatMap((item) => (item.kind === 'turn' && item.origin === 'agent' ? [item.id] : [])));
@@ -87,8 +91,8 @@ async function accountNamedFor(call: AgentCall, account: string): Promise<Set<st
         }
 
         for (const found of item.text.matchAll(ACCOUNT_TOKEN)) {
-            if (found[2] === account) {
-                clis.add(found[1]!);
+            if ((found[2] ?? found[4]) === account) {
+                clis.add((found[1] ?? found[3])!);
             }
         }
     }

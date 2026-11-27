@@ -100,7 +100,7 @@ struct TerminalScreen: View {
             Button("Clear scrollback", role: .destructive) { Task { await model.clear() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This clears the shared terminal scrollback on every device.")
+            Text("This clears the terminal scrollback on every device.")
         }
         .onAppear { AppUsage.screen(.screenTerminal) }
     }
@@ -286,7 +286,7 @@ final class RemoteTerminalView: TerminalView {
         guard let controller = responder as? UIViewController else { return }
         let alert = UIAlertController(
             title: String(localized: "Paste \(text.count) characters?"),
-            message: String(localized: "The text will be sent to the running terminal."),
+            message: String(localized: "This text goes to the running terminal."),
             preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         alert.addAction(

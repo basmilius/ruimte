@@ -10,6 +10,7 @@ import {
     groupMembers,
     placeBeside,
     placeFree,
+    spreadRects,
     placeInGroup,
     placeTeam,
     type Rect
@@ -182,7 +183,7 @@ describe('arrangeRects', () => {
 
     test('one node stays exactly where it is, in every layout', () => {
         for (const layout of ARRANGE_LAYOUTS) {
-            expect(arrangeRects([rect(123, 456)], layout)).toEqual([rect(123, 456)]);
+            expect(layout === 'spread' ? spreadRects([rect(123, 456)]) : arrangeRects([rect(123, 456)], layout)).toEqual([rect(123, 456)]);
         }
         expect(arrangeRects([], 'grid')).toEqual([]);
     });

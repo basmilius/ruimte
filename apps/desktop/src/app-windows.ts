@@ -1,4 +1,6 @@
 import {
+    splitAuxWindowKey,
+    WINDOW_AUX_PARAM,
     WINDOW_DORMANT_PARAM,
     WINDOW_PROJECT_PARAM,
     WINDOW_START_PARAM,
@@ -10,8 +12,8 @@ import {
 /*
  * The address a window loads for its key. Without a key it opens on the start screen, except the
  * one window of a start without a session (`first`): that one loads the bare address, where the
- * page opens the project it remembers. A `dormant` window leaves its project closed until it has
- * the focus.
+ * page opens the project it remembers. A `dormant` window leaves its project closed until it is on
+ * screen or has the focus.
  */
 export function windowUrl(base: string, key: string | null, first: boolean, view: string | null = null, state: string | null = null, dormant = false): string {
     if (key === null && first && state === null) {
@@ -23,7 +25,12 @@ export function windowUrl(base: string, key: string | null, first: boolean, view
             url.searchParams.set(WINDOW_START_PARAM, '1');
         }
     } else {
-        url.searchParams.set(WINDOW_PROJECT_PARAM, key);
+        // The page splits a key at its first colon, which the key of an auxiliary window would not survive.
+        const aux = splitAuxWindowKey(key);
+        url.searchParams.set(WINDOW_PROJECT_PARAM, aux?.project ?? key);
+        if (aux !== null) {
+            url.searchParams.set(WINDOW_AUX_PARAM, aux.id);
+        }
         if (view !== null) {
             url.searchParams.set(WINDOW_VIEW_PARAM, view);
         }
@@ -69,6 +76,22 @@ export function windowPointOf(value: unknown): { x: number; y: number } | undefi
 /* A key a page may ask for: the page's own, never read here. */
 export function isWindowKey(value: unknown): value is string {
     return typeof value === 'string' && value !== '' && value.length <= 512;
+}
+
+/* What one window posts to another, which the shell hands on unread. */
+export function isWindowMessage(value: unknown): value is string {
+    return typeof value === 'string' && value !== '' && value.length <= 262_144;
+}
+
+export function auxIdsOf(keys: Iterable<string | null>, project: string): string[] {
+    const ids: string[] = [];
+    for (const key of keys) {
+        const aux = key === null ? null : splitAuxWindowKey(key);
+        if (aux !== null && aux.project === project) {
+            ids.push(aux.id);
+        }
+    }
+    return ids;
 }
 
 /* A view a page asks a window to show, as opaque to the shell as a key. */

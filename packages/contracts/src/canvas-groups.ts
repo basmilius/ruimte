@@ -1,4 +1,4 @@
-import { groupMemberIds, spellsOutMembers, withMemberIds, type GroupItem, type NodeRect } from './node-defaults.ts';
+import { GROUP_HEADER, GROUP_PADDING, groupMemberIds, groupRect, spellsOutMembers, withMemberIds, type GroupItem, type NodeRect } from './node-defaults.ts';
 import type { ProjectCanvasView, ProjectNode } from './project.ts';
 
 /* Every id the named groups hold, through the groups inside them. A cycle a hand-edited file holds ends at the first repeat. */
@@ -81,7 +81,18 @@ export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'
     const excluded = new Set([id, ...heldIds(canvas.nodes, items, [id]), ...hiddenIds(canvas.nodes, items)]);
     const target = groupUnder(canvas.nodes, { x: node.x + node.w / 2, y: node.y + node.h / 2 }, excluded);
 
-    return canvas.nodes.map((candidate) => {
+    return inGroup(canvas.nodes, id, target?.id ?? null, excluded);
+}
+
+/* The nodes with `id` written into the group `groupId` and out of every other open group that spells it out, wherever it stands. */
+export function joinGroup(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'>, id: string, groupId: string): ProjectNode[] {
+    const items = [...canvas.nodes, ...canvas.texts];
+
+    return inGroup(canvas.nodes, id, groupId, new Set([id, ...heldIds(canvas.nodes, items, [id]), ...hiddenIds(canvas.nodes, items)]));
+}
+
+function inGroup(nodes: readonly ProjectNode[], id: string, groupId: string | null, excluded: ReadonlySet<string>): ProjectNode[] {
+    return nodes.map((candidate) => {
         if (candidate.kind !== 'group' || candidate.collapsed === true || !spellsOutMembers(candidate)) {
             return candidate;
         }
@@ -89,7 +100,7 @@ export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'
         const members = candidate.memberIds ?? [];
         const holds = members.includes(id);
 
-        if (candidate.id === target?.id) {
+        if (candidate.id === groupId) {
             return holds ? candidate : withMemberIds(candidate, [...members, id]);
         }
 
@@ -100,6 +111,100 @@ export function joinGroupUnder(canvas: Pick<ProjectCanvasView, 'nodes' | 'texts'
               )
             : candidate;
     });
+}
+
+/* The frame as it has to be to hold `member` with the room a group keeps around what it holds. */
+function frameAround(frame: NodeRect, member: NodeRect): NodeRect {
+    const left = Math.min(frame.x, member.x - GROUP_PADDING);
+    const top = Math.min(frame.y, member.y - GROUP_PADDING - GROUP_HEADER);
+    const right = Math.max(frame.x + frame.w, member.x + member.w + GROUP_PADDING);
+    const bottom = Math.max(frame.y + frame.h, member.y + member.h + GROUP_PADDING);
+
+    return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+/* While a group is collapsed its own height is the header, so the height it opens to is what changes. */
+function withFrame<Node extends ProjectNode>(group: Node, frame: NodeRect): Node {
+    const { h, ...rest } = frame;
+
+    return group.collapsed === true ? { ...group, ...rest, expandedHeight: h } : { ...group, ...frame };
+}
+
+/*
+ * The group each node stands in, by id. A node in nested frames is in both by geometry, and the
+ * smaller one is the one a person would say it is in.
+ */
+export function containerIds(nodes: readonly ProjectNode[], items: readonly GroupItem[] = nodes): Map<string, string> {
+    const containers = new Map<string, ProjectNode>();
+    const area = (group: ProjectNode): number => groupRect(group).w * groupRect(group).h;
+
+    for (const group of nodes) {
+        if (group.kind !== 'group') {
+            continue;
+        }
+
+        for (const member of groupMemberIds(group, items)) {
+            const current = containers.get(member);
+
+            if (current === undefined || area(group) < area(current)) {
+                containers.set(member, group);
+            }
+        }
+    }
+
+    return new Map([...containers].map(([id, group]) => [id, group.id]));
+}
+
+/*
+ * The nodes with every group around `ids` grown until it holds them, a group inside a group first. A
+ * frame grows on any side and never shrinks. `containers` names the group each node is in, read before
+ * the nodes changed, since a node that grew or moved may stand outside a frame that reads positions.
+ * Such a frame stays as it is where growing would take in or let go a node that is not one of `ids`.
+ */
+export function groupsGrownAround<Node extends ProjectNode>(
+    canvas: { readonly nodes: readonly Node[]; readonly texts: ProjectCanvasView['texts'] },
+    ids: readonly string[],
+    containers: ReadonlyMap<string, string>
+): Node[] {
+    const byId = new Map(canvas.nodes.map((node) => [node.id, node]));
+    const named = new Set(ids);
+
+    const othersHeld = (group: ProjectNode, chain: ReadonlySet<string>): string => {
+        const items = [...byId.values(), ...canvas.texts];
+
+        return groupMemberIds(group, items)
+            .filter((member) => !named.has(member) && !chain.has(member))
+            .join('\n');
+    };
+
+    for (const id of ids) {
+        // A cycle a hand-edited file holds ends at the first repeat.
+        const chain = new Set<string>([id]);
+        let memberId = id;
+
+        for (;;) {
+            const member = byId.get(memberId);
+            const group = byId.get(containers.get(memberId) ?? '');
+
+            if (member === undefined || group?.kind !== 'group' || chain.has(group.id)) {
+                break;
+            }
+
+            const frame = groupRect(group);
+            const around = frameAround(frame, member.kind === 'group' ? groupRect(member) : member);
+            const grows = around.x !== frame.x || around.y !== frame.y || around.w !== frame.w || around.h !== frame.h;
+            const grown = withFrame(group, around);
+
+            if (grows && (spellsOutMembers(group) || othersHeld(group, chain) === othersHeld(grown, chain))) {
+                byId.set(group.id, grown);
+            }
+
+            chain.add(group.id);
+            memberId = group.id;
+        }
+    }
+
+    return canvas.nodes.map((node) => byId.get(node.id) ?? node);
 }
 
 /** Finds frames emptied by a deletion, including their empty parent frames. */

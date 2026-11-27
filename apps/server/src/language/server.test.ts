@@ -394,7 +394,7 @@ describe('a language server of one kind in one project', () => {
         await settle();
         expect(server.state).toBe('crashed');
         expect(server.message).toBe(
-            `The typescript language server did not start: the typescript process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`
+            `The typescript language server did not start: the typescript process did not answer within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`
         );
         expect(spawner.processes[0].kills).toEqual(['SIGTERM']);
         expect(clock.pending).toBe(0);

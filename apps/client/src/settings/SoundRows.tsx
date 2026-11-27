@@ -1,20 +1,20 @@
-import { Select, Switch } from '@adecore/ui';
+import { Select } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { useTranslation } from 'react-i18next';
 import { addCustomSoundPack } from '@/attention/custom-sounds';
+import { useSoundPackItems } from '@/attention/sound-pack-items';
 import { SoundPackRows } from '@/attention/SoundPackRows';
 import { useSettings } from '@/state/settings';
-import { soundPackItems } from '@/state/sound-packs';
+import { isCustomPack } from '@/state/sounds';
 
 const NEW_PACK = 'new';
 
-/* The pack the notification sounds come from and which events make one. */
+/* The pack the notification sounds come from, and the files of a pack of a person's own. */
 export function SoundRows() {
     const { t } = useTranslation('settings');
     const pack = useSettings((s) => s.soundPack);
-    const events = useSettings((s) => s.soundEvents);
-    const custom = useSettings((s) => s.customSoundPacks);
     const update = useSettings((s) => s.update);
+    const packs = useSoundPackItems();
 
     return (
         <>
@@ -34,17 +34,11 @@ export function SoundRows() {
                                 update({ soundPack: value });
                             }
                         }}
-                        items={[...soundPackItems(custom, t), { value: NEW_PACK, label: t('agents.sounds.newPack') }]}
+                        items={[...packs, { value: NEW_PACK, label: t('agents.sounds.newPack') }]}
                     />
                 }
             />
-            <SoundPackRows
-                key={pack}
-                pack={pack}
-                eventControl={(event, label) => (
-                    <Switch checked={events[event]} onCheckedChange={(next) => update({ soundEvents: { ...events, [event]: next } })} label={label} />
-                )}
-            />
+            {isCustomPack(pack) && <SoundPackRows key={pack} pack={pack} />}
         </>
     );
 }

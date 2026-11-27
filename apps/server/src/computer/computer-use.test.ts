@@ -7,7 +7,7 @@ import { codeOf } from '../fs/test-boundary.ts';
 import type { SessionEvent } from '../wire.ts';
 import { APPROVAL_WAIT_MS, CARD_MS } from './approvals.ts';
 import { chatInfo, computerSetup, SHELL_APP, terminalStatus, TEXT_EDIT, until, type ComputerSetup } from './computer-test-helpers.ts';
-import { agentWords, findInstalledApp, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
+import { agentWords, findInstalledApp, mapLimited, resolveApp, SESSION_POLL_MS } from './computer-use.ts';
 import { ComputerUseStore } from './store.ts';
 
 // How long a call held by the person waits before it asks the helper again.
@@ -485,6 +485,23 @@ describe('naming an app', () => {
         expect(await findInstalledApp('Zoom', sources)).toEqual({ name: 'zoom.us', bundleId: 'us.zoom.xos' });
         expect(await findInstalledApp('zoom.us', sources)).toEqual({ name: 'zoom.us', bundleId: 'us.zoom.xos' });
         expect(await findInstalledApp('Missing', sources)).toBeNull();
+    });
+
+    test('reads the names of many bundles a few at a time, each answer in its place', async () => {
+        let running = 0;
+        let most = 0;
+        const answers = await mapLimited([1, 2, 3, 4, 5, 6, 7], 3, async (value) => {
+            running += 1;
+            most = Math.max(most, running);
+            await Promise.resolve();
+            running -= 1;
+
+            return value * 10;
+        });
+
+        expect(answers).toEqual([10, 20, 30, 40, 50, 60, 70]);
+        expect(most).toBe(3);
+        expect(await mapLimited([], 3, async () => 1)).toEqual([]);
     });
 
     test('refuses an app that does not run, except for open, which finds it by bundle id or file name', async () => {

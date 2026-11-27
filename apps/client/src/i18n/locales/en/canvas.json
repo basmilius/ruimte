@@ -178,11 +178,11 @@
     },
     "drop": {
         "controlCharacter": {
-            "title": "That file name cannot be typed",
+            "title": "Ruimte cannot type that file name",
             "description": "The name contains a hidden character that could run a command, so Ruimte typed nothing."
         },
         "unquotable": {
-            "title": "That file name cannot be typed in this shell",
+            "title": "Ruimte cannot type that file name in this shell",
             "description": "This shell would read a character in the name as part of a command, so Ruimte typed nothing."
         },
         "noBridge": {

@@ -1,4 +1,4 @@
-import { WINDOW_DORMANT_PARAM, WINDOW_PROJECT_PARAM, WINDOW_START_PARAM, WINDOW_VIEW_PARAM } from '@ruimte/desktop-bridge';
+import { WINDOW_AUX_PARAM, WINDOW_DORMANT_PARAM, WINDOW_PROJECT_PARAM, WINDOW_START_PARAM, WINDOW_VIEW_PARAM } from '@ruimte/desktop-bridge';
 import { splitKey } from '@/state/keys';
 
 /*
@@ -6,7 +6,9 @@ import { splitKey } from '@/state/keys';
  * what a cold start opens, the project the last window had open. The desktop shell writes it for a
  * window it opens, and the page keeps it in step with what it shows, so a reload stays put.
  */
-export type WindowTarget = { kind: 'project'; endpointId: string; projectId: string; viewId?: string; dormant?: true } | { kind: 'start' } | { kind: 'last' };
+export type WindowTarget =
+    /* `aux` is the id of an auxiliary window, which shows some views of the project beside the window that has it. */
+    { kind: 'project'; endpointId: string; projectId: string; viewId?: string; dormant?: true; aux?: string } | { kind: 'start' } | { kind: 'last' };
 
 export function readWindowTarget(search: string): WindowTarget {
     const query = new URLSearchParams(search);
@@ -16,7 +18,15 @@ export function readWindowTarget(search: string): WindowTarget {
         if (endpointId !== '' && id !== '') {
             const viewId = query.get(WINDOW_VIEW_PARAM);
             const dormant = query.has(WINDOW_DORMANT_PARAM);
-            return { kind: 'project', endpointId, projectId: id, ...(viewId ? { viewId } : {}), ...(dormant ? { dormant: true } : {}) };
+            const aux = query.get(WINDOW_AUX_PARAM);
+            return {
+                kind: 'project',
+                endpointId,
+                projectId: id,
+                ...(viewId ? { viewId } : {}),
+                ...(dormant ? { dormant: true } : {}),
+                ...(aux ? { aux } : {})
+            };
         }
     }
     return query.has(WINDOW_START_PARAM) ? { kind: 'start' } : { kind: 'last' };
@@ -25,6 +35,22 @@ export function readWindowTarget(search: string): WindowTarget {
 /* The target of this page, and a bare address where there is no page to ask, as in a test. */
 export function pageWindowTarget(): WindowTarget {
     return typeof location === 'undefined' ? { kind: 'last' } : readWindowTarget(location.search);
+}
+
+let pageAux: string | null | undefined;
+
+/* Null for a window that has projects. Read once, since a page never changes from one into the other. */
+export function auxWindowId(): string | null {
+    if (pageAux === undefined) {
+        const target = pageWindowTarget();
+        pageAux = target.kind === 'project' ? (target.aux ?? null) : null;
+    }
+    return pageAux;
+}
+
+/* For a test, which has no address. Undefined reads the address again. */
+export function setAuxWindowId(id: string | null | undefined): void {
+    pageAux = id;
 }
 
 /* The query for a window showing a project (its `endpointKey`) or the start screen (null), keeping whatever else it carried.

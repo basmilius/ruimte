@@ -14,13 +14,13 @@ export async function runStatus(options: StatusOptions): Promise<number> {
     const { fetcher, out, err } = commandIo(options);
     const secret = await homeSecret(options);
     if (secret === null) {
-        err(`No daemon has started with ${options.home} as its home. ${startFirst(options.port)}`);
+        err(`No Ruimte machine has started with ${options.home} as its home. ${startFirst(options.port)}`);
         return 1;
     }
     const answer = await readMachineStatus(options.port, secret, fetcher, options.check);
     if ('problem' in answer) {
         const problems = {
-            'not-running': `No daemon answers on port ${options.port}. ${startFirst(options.port)}`,
+            'not-running': `No Ruimte machine answers on port ${options.port}. ${startFirst(options.port)}`,
             'other-home': otherHome(options),
             'too-old': tooOld(options.port, 'status')
         };

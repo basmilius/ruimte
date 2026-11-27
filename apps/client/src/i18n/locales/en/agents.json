@@ -2,7 +2,7 @@
     "ending": {
         "alsoEnds_one": "Also ends the agent it opened. Its node and work so far stay on the canvas.",
         "alsoEnds_other": "Also ends the {{count}} agents it opened. Their nodes and work so far stay on the canvas.",
-        "stopsTask": "Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas.",
+        "stopsTask": "Ends the agent and cancels the task. The chat that gave it hears nothing. Its node stays on the canvas.",
         "stopsSubagents": "Stops the turn and marks the chat's own sub-agents as stopped.",
         "clears": "Stops any running turn and deletes the conversation, attachments and plans. The chat stays."
     },

@@ -91,6 +91,8 @@ export interface CanvasState extends CameraSlice {
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size, or the id of a resizable card. Transient. */
     resizing: string | null;
+    /* The nodes a resize changes and the group each node stood in when the handle went down, for the frames that grow on release. Transient. */
+    resizeHomes: { ids: readonly string[]; containers: ReadonlyMap<string, string> } | null;
     /*
      * The cards drawn beside a node, by an id no node has. Transient. One is a stop when moving with the
      * keys: it is then `navigationId` with nothing selected, since nothing moves or removes it, and a
@@ -138,7 +140,10 @@ export interface CanvasState extends CameraSlice {
     moveSelected(dx: number, dy: number, first?: boolean): void;
     settleMove(): void;
     resizeNode(id: string, rect: Rect): void;
-    setResizing(id: string | null): void;
+    /* Several nodes at once, as one change. */
+    resizeNodes(rects: Readonly<Record<string, Rect>>): void;
+    /* `also` names the other nodes the same handle resizes. */
+    setResizing(id: string | null, also?: readonly string[]): void;
     setDerivedCard(id: string, card: DerivedFrame | null): void;
     /* A card that went for good hands the keys on to `next`, another card or a node, or to nothing when that is gone too. */
     leaveDerivedCard(id: string, next: string): void;
@@ -267,6 +272,7 @@ export function createCanvasStore(): StoreApi<CanvasState> {
             editingTextId: null,
             locks: { pan: false, zoom: false, move: false, resize: false },
             resizing: null,
+            resizeHomes: null,
             derivedCards: {},
             gesturing: false,
             panning: false,

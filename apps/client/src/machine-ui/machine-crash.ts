@@ -1,3 +1,4 @@
+import { LONG_MS } from '@adecore/ui';
 import i18next from 'i18next';
 import type { DaemonCrash } from '@/desktop/bridge';
 import type { Toast } from '@/state/toasts';
@@ -12,6 +13,6 @@ export function machineCrashToast(previous: DaemonCrash | null, next: DaemonCras
         kind: 'error',
         title: i18next.t('shell:machineCrash.title'),
         description: i18next.t(next.restarting ? 'shell:machineCrash.restarting' : 'shell:machineCrash.gaveUp'),
-        persist: !next.restarting
+        ...(next.restarting ? { lifetime: LONG_MS } : { persist: true })
     };
 }

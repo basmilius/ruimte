@@ -25,3 +25,6 @@ export const MAX_TERMINAL_READ_LINES = 200;
 
 /* Nodes, lines or flags one call changes at once: a loop of single calls writes the project and redraws every client once per item. */
 export const MAX_PER_CALL = 100;
+
+// The widest room a layout leaves between two nodes, the longest side a node itself may have.
+export const LAYOUT_GAP_MAX = 4000;

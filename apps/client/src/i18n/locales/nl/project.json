@@ -47,7 +47,7 @@
     "moveChat": {
         "titleMake": "Project maken",
         "titleMove": "Verplaatsen naar {{project}}",
-        "failedToRender": "Het verplaatsvenster kon niet worden getoond",
+        "failedToRender": "Kon het verplaatsvenster niet tonen",
         "project": "Project",
         "chooseProject": "Kies een project",
         "newProject": "Nieuw project",

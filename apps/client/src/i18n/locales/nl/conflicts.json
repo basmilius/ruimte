@@ -48,7 +48,7 @@
         "none": "Geen conflicten.",
         "pick": "Kies een bestand om op te lossen."
     },
-    "loading": "Bestand wordt gelezen…",
+    "loading": "Het bestand lezen…",
     "nav": {
         "next": "Volgend conflict",
         "previous": "Vorig conflict"

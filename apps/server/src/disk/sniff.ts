@@ -53,6 +53,24 @@ function uint32(bytes: Uint8Array, offset: number, littleEndian: boolean): numbe
 }
 
 /*
+ * Whether the tracks in the head are all sound. An encoder often writes a generic brand such as `isom`
+ * into an `.m4a`, so the handler of each track says it instead: four bytes, twelve past each `hdlr`.
+ * A `moov` box past the head leaves this false, and the file a video, as before.
+ */
+function onlySound(bytes: Uint8Array): boolean {
+    const text = latin1(bytes);
+    let sound = false;
+    for (let at = text.indexOf('hdlr'); at !== -1; at = text.indexOf('hdlr', at + 4)) {
+        const handler = text.slice(at + 12, at + 16);
+        if (handler === 'vide') {
+            return false;
+        }
+        sound ||= handler === 'soun';
+    }
+    return sound;
+}
+
+/*
  * The picture an `ftyp` box names, if any. A picture often names the generic HEIF brand first and
  * the brand of its codec further on, so the compatible brands count as much as the major one.
  */
@@ -161,7 +179,7 @@ export function sniffMime(bytes: Uint8Array, size = bytes.length): string | null
             return image;
         }
         const brand = latin1(bytes.subarray(8, 12));
-        if (AUDIO_BRANDS.has(brand)) {
+        if (AUDIO_BRANDS.has(brand) || onlySound(bytes)) {
             return 'audio/mp4';
         }
         return brand === 'qt  ' ? 'video/quicktime' : 'video/mp4';

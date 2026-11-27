@@ -1,6 +1,6 @@
 # Speech to Text
 
-Local dictation on Nemotron streaming (`controller.ts`, `helper.ts`, `editor.ts`). The shell owns downloads, enablement and the helper's sixty-second idle timeout (`packages/desktop-bridge/src/speech.ts`).
+Local dictation on Apple Speech (`controller.ts`, `helper.ts`, `editor.ts`, the helper in `apps/speech-bridge`). The shell owns enablement and the helper's sixty-second idle timeout (`packages/desktop-bridge/src/speech.ts`).
 
 - One microphone listener at a time, shared with Voice Control (`audio/ownership.ts`).
 - A run owns one target and session ID; cancelling, unmounting, a replaced draft or stale IPC never inserts elsewhere.
@@ -14,6 +14,6 @@ Local dictation on Nemotron streaming (`controller.ts`, `helper.ts`, `editor.ts`
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- Speech to Text is optional and off by default. Enabling downloads one verified local streaming model and never opens the microphone. Audio is never uploaded or saved.
+- Speech to Text is optional, off by default and macOS only. It runs on Apple Speech, which keeps its language models in macOS, so Ruimte downloads and stores none (November 25, 2026, replacing the Nemotron model). Enabling never opens the microphone. Audio is never uploaded or saved.
 - Voice Control is the separate cloud feature. Both share the microphone and language settings and never record together.
 - Dictation previews text and inserts only after stopping. A terminal gets an editable draft; only an explicit paste writes sanitized text, without Enter. Agents cannot start dictation.

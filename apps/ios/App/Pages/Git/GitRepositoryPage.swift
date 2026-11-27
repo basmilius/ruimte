@@ -49,7 +49,7 @@ struct GitRepositoryPage: View {
                     }
                     if checkout.status?.live == false {
                         Label(
-                            String(localized: "Too large to watch. Pull to refresh it."), lucideIcon: "refresh-cw",
+                            String(localized: "Too large to keep up to date. Pull to refresh it."), lucideIcon: "refresh-cw",
                             iconSize: 14
                         )
                         .font(.caption).foregroundStyle(MobileStyle.muted)

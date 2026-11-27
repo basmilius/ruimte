@@ -247,7 +247,7 @@
                 "unavailable": "Not available: {{reason}}",
                 "model": {
                     "label": "Model",
-                    "description": "Automatic uses the cheapest model of the first available provider: Claude, Codex, Grok, then Antigravity. Code is sent to the selected provider."
+                    "description": "Automatic uses the cheapest model of the first available provider: Claude, Codex, Grok, then Antigravity. The selected provider receives your code."
                 },
                 "automatic": "Automatic",
                 "choose": "Choose a model",
@@ -616,7 +616,7 @@
         },
         "notifications": {
             "label": "Notifications",
-            "description": "Sounds, quiet hours and break reminders."
+            "description": "Events, sounds, quiet hours and break reminders."
         },
         "keyboard": {
             "label": "Keyboard",
@@ -1261,7 +1261,7 @@
             "description": "Writes new chat titles, commit messages and conflict proposals on this machine. Automatic leaves the choice to Ruimte. Editor AI has its own model.",
             "automatic": "Automatic",
             "choose": "Choose",
-            "footer": "Writes short texts on this machine. Without a model, the cheapest one is used, at the CLI's default reasoning.",
+            "footer": "Writes short texts on this machine. Without a model, Ruimte uses the cheapest one, at its default reasoning.",
             "loading": "Loading the CLIs on this machine…",
             "update": "Update this machine to choose a text model.",
             "unavailable": "This CLI, model or account is not available on this machine. Choose another or Automatic.",
@@ -1286,14 +1286,14 @@
         },
         "quietHours": {
             "label": "Quiet hours",
-            "description": "No alert on this computer in these hours. Agents keep working, and what still waits is announced when the hours end.",
+            "description": "No notifications during these hours. What still waits shows up when they end.",
             "days": {
                 "label": "Days",
                 "description": "A night belongs to the day it starts on."
             },
             "times": {
                 "label": "Hours",
-                "description": "On this computer's clock. An end before the start runs into the next day.",
+                "description": "An end before the start runs into the next day.",
                 "from": "Quiet from",
                 "to": "to",
                 "until": "Quiet until"
@@ -1301,7 +1301,7 @@
         },
         "breakReminder": {
             "label": "Break reminder",
-            "description": "Suggests a break after a stretch of work at this computer. Five minutes away counts as a break.",
+            "description": "Suggests a break after a stretch of work. Five minutes away counts as one.",
             "stretch": {
                 "label": "Remind me after",
                 "description": "Of work without a break."
@@ -1311,42 +1311,54 @@
             "label": "Notify through {{title}}",
             "description": "Also sends what your phone would get, when an agent needs you, finishes or reaches a usage limit. It waits while you are at this computer."
         },
+        "notify": {
+            "title": "Notify me about",
+            "preview": "Preview: {{event}}",
+            "sample": "Example chat",
+            "sampleAlert": "The deploy is live."
+        },
+        "rest": {
+            "title": "Rest"
+        },
         "working": {
             "title": "Keep awake",
             "description": "When this computer sleeps, every agent pauses."
         },
         "sounds": {
+            "title": "Sound",
+            "none": "No sound",
             "pack": {
                 "label": "Sound pack",
-                "description": "Every pack plays the same five sounds in a voice of its own. A project can take another pack in its settings."
+                "description": "How your notifications sound."
             },
             "packs": {
-                "bar": "Bar",
-                "glass": "Glass",
-                "wood": "Wood",
-                "string": "String",
-                "air": "Air",
-                "grand": "Grand",
-                "felt": "Felt",
-                "nylon": "Nylon",
-                "steel": "Steel",
-                "duo": "Duo"
+                "marimba-low": "Marimba Low",
+                "marimba": "Marimba",
+                "kalimba-low": "Kalimba Low",
+                "kalimba": "Kalimba",
+                "log": "Log",
+                "vibes": "Vibes",
+                "tine": "Tine",
+                "music-box": "Music Box",
+                "string": "String"
             },
             "newPack": "New pack",
             "newPackName": "My pack",
             "events": {
-                "question": "A question or approval waits",
-                "alert": "An alert someone asked for",
-                "limit": "A usage limit is hit",
-                "error": "A session stops with an error",
-                "finished": "A turn finishes"
+                "question": "Questions and approvals",
+                "alert": "Alerts from agents",
+                "limit": "Usage limits",
+                "error": "Errors",
+                "finished": "Finished turns"
             },
             "play": "Play the sound for: {{event}}",
+            "playPack": "Play {{pack}}",
             "custom": {
+                "noFile": "No file, sounds as in {{pack}}",
+                "noSound": "No file, no sound",
                 "name": "Name of the pack",
                 "choose": "Choose file",
                 "chooseFor": "Choose the file for: {{event}}",
-                "noFile": "No file, sounds as in {{pack}}",
                 "off": "Off in this pack",
                 "turnOff": "Turn off in this pack: {{event}}",
                 "turnOn": "Turn on in this pack: {{event}}",
@@ -1401,7 +1413,7 @@
         },
         "integrations": {
             "title": "Agent status in terminals",
-            "description": "Shows whether an agent in a terminal is working, done or waiting for you. Ruimte adds a few lines to its settings, which also apply outside Ruimte.",
+            "description": "Shows whether an agent in a terminal is working, done or waiting for you. Ruimte adds a few lines to the agent's settings. They also apply outside Ruimte.",
             "dialog": {
                 "title": "Let Ruimte change CLI settings?",
                 "description": "Ruimte adds a few settings to your coding tools. They apply everywhere on this computer, also outside Ruimte.",
@@ -1561,7 +1573,7 @@
             "configured": "Configured",
             "notConfigured": "Not configured",
             "persistent": "Encrypted in this computer's keychain and never shown again.",
-            "session": "Encryption unavailable; the key is kept until Ruimte quits.",
+            "session": "This computer cannot encrypt the key, so Ruimte keeps it only until it quits.",
             "missing": "Required for GPT-Live. Never stored in a project.",
             "machineKeyLeft": "This machine still holds the key for Voice. Ruimte removes it as soon as the machine runs, or remove it again.",
             "replacePlaceholder": "New key",
@@ -1589,8 +1601,8 @@
             "description": "Changes apply from the next conversation.",
             "microphone": {
                 "label": "Microphone",
-                "description": "Input used for dictation and Voice Control.",
-                "unavailableDescription": "Could not list microphones; using system default.",
+                "description": "For dictation and Voice Control.",
+                "unavailableDescription": "Could not list microphones. Ruimte uses the system default.",
                 "selectLabel": "Microphone"
             },
             "language": {
@@ -1629,7 +1641,7 @@
         "allow": "Allow computer use",
         "failed": "Could not load Computer use",
         "machine": {
-            "notConnected": "Not connected. Change this from the machine's dialog under Account, or while a project on it is open.",
+            "notConnected": "Not connected. Change this from the machine's details under Account, or while a project on it is open.",
             "checking": "Checking…",
             "unsupported": "Not available on this machine's system yet.",
             "unavailable": "Not on this machine. It comes with the Ruimte desktop app.",
@@ -1904,7 +1916,7 @@
             "title": "Not opened on this device",
             "label": "Open it to change its name, icon and connection",
             "canOpen": "It connects through your account.",
-            "noBroker": "This machine is not connected through your account yet, so it can only be reached on its own network."
+            "noBroker": "This machine is not connected through your account yet, so you reach it only on its own network."
         },
         "identity": {
             "title": "Name and icon",
@@ -1927,7 +1939,7 @@
             "registrationFailure": "Could not update this machine on your account: {{reason}}",
             "addAgain": {
                 "label": "Add to account again",
-                "description": "Removed from your account; it will not rejoin on its own.",
+                "description": "Removed from your account. It does not rejoin on its own.",
                 "action": "Add"
             },
             "onYours": "On your account",
@@ -2185,7 +2197,7 @@
     },
     "providers": {
         "nanogpt": {
-            "description": "Chat with the models your NanoGPT subscription includes. Requests go only to the subscription API, never to pay as you go.",
+            "description": "Chat with the models your NanoGPT subscription includes. Requests use only your subscription, never pay as you go.",
             "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
             "key": "API key",
             "keyDescription": "A subscription API key from nano-gpt.com.",
@@ -2327,14 +2339,14 @@
         "storeSoon": "The store opens soon",
         "storeSoonBody": "Until then, install an extension someone shared with you from Install from disk.",
         "fromDisk": "Install from disk",
-        "fromDiskBody": "Choose a .rex file someone shared with you. You see what it asks for before it is installed.",
+        "fromDiskBody": "Choose a .rex file someone shared with you. You see what it asks for before you install it.",
         "chooseFile": "Choose file…",
         "reviewed": "reviewed {{date}}",
         "asksTo": "This extension asks to",
         "trust": "Extensions run inside Ruimte and can do what you can, on all your machines. Install only what you trust.",
         "install": "Install",
         "back": "Back",
-        "notOnMachine": "{{name}} is on this computer, but its part for the machine takes that machine's owner.",
+        "notOnMachine": "{{name}} is on this computer, but only that machine's owner can install its part for the machine.",
         "machineFailed": "{{name}} is on this computer, but its part for the machine could not be installed",
         "machineKept": "{{name}} changed on this computer, but its part on the machine stayed as it was",
         "installFailed": "{{name}} could not be installed",
@@ -2351,10 +2363,10 @@
         "remove": "Remove",
         "desktopOnly": "Extensions work in the desktop app.",
         "frameDesktopOnly": "This part of the extension opens only in the desktop app.",
-        "safeMode": "Safe mode: no extensions are loaded.",
+        "safeMode": "Safe mode is on, so no extensions load.",
         "permissions": "Asks to",
         "noPermissions": "Asks for nothing extra.",
-        "removeDescription": "Takes it and what it stored off this computer.",
+        "removeDescription": "Removes it and what it stored from this computer.",
         "groupDevelopment": "In development",
         "groupTest": "Test extensions",
         "testExtension": "Test extension",

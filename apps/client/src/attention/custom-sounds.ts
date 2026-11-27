@@ -152,7 +152,7 @@ export function setCustomSoundOff(id: string, event: SoundEvent, off: boolean): 
 export async function removeCustomSoundPack(id: string): Promise<void> {
     const settings = useSettings.getState();
     const projects = Object.entries(settings.projectSounds).reduce(
-        (kept, [key, sounds]) => (sounds.pack === id ? withProjectSounds(kept, key, { silent: sounds.silent }) : kept),
+        (kept, [key, sounds]) => (sounds.pack === id ? withProjectSounds(kept, key, {}) : kept),
         settings.projectSounds
     );
 

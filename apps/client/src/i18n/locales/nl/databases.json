@@ -9,10 +9,10 @@
         "unsubmitted": "Niet-ingediende wijzigingen",
         "gone": "Deze verbinding hoort niet meer bij het project.",
         "close": "Tab sluiten",
-        "failed": "Deze tab kon niet worden getoond",
+        "failed": "Kon deze tab niet tonen",
         "discard": {
             "title": "Wijzigingen in {{table}} weggooien?",
-            "description": "Deze wijzigingen zijn nooit ingediend.",
+            "description": "Je hebt deze wijzigingen nooit ingediend.",
             "confirm": "Weggooien en sluiten"
         }
     },
@@ -26,7 +26,7 @@
         "asFile": "Alleen het bestand",
         "untitled": "Naamloze verbinding",
         "failed": "Kon de console niet maken",
-        "failedToDraw": "Deze console kon niet worden getoond",
+        "failedToDraw": "Kon deze console niet tonen",
         "taken": "Elke consolenaam voor {{name}} is al in gebruik.",
         "moveFailed": "Kon de console niet naar die verbinding verplaatsen",
         "rename": {
@@ -40,7 +40,7 @@
         "reading": "Verbindingen lezen…",
         "failed": "Kon verbindingen niet lezen: {{reason}}",
         "emptyTitle": "Nog geen verbindingen",
-        "empty": "Verbind met MySQL of SQLite om tabellen te bekijken en queries te draaien naast je code. Agents kunnen er ook in zoeken.",
+        "empty": "Verbind met MySQL of SQLite om tabellen te bekijken en queries te draaien naast je code. Agents kunnen ook queries draaien.",
         "add": "Verbinding toevoegen",
         "containers": "Draaiende databasecontainers",
         "addContainer": "{{name}} toevoegen",
@@ -53,11 +53,11 @@
     },
     "dialog": {
         "title": "Databaseverbindingen",
-        "description": "Waarvoor elke verbinding gebruikt mag worden.",
+        "description": "Wie elke verbinding mag gebruiken.",
         "share": {
             "label": "Delen met team",
-            "description": "Bewaart de verbinding bij het project voor iedereen die eraan werkt. Het wachtwoord wordt nooit gedeeld.",
-            "outside": "Het databasebestand staat buiten de projectmap, dus de verbinding kan niet worden gedeeld."
+            "description": "Bewaart de verbinding bij het project voor iedereen die eraan werkt. Ruimte deelt het wachtwoord nooit.",
+            "outside": "Het databasebestand staat buiten de projectmap, dus je kunt de verbinding niet delen."
         },
         "agents": {
             "label": "Agents",
@@ -113,6 +113,6 @@
         "refresh": "Schema opnieuw lezen",
         "bindFailed": "Kon de verbinding niet opslaan",
         "refreshFailed": "Kon het schema niet lezen",
-        "failedToDraw": "De keuze van de SQL-verbinding kon niet worden getoond"
+        "failedToDraw": "Kon de keuze van de SQL-verbinding niet tonen"
     }
 }

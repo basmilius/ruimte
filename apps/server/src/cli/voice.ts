@@ -43,7 +43,7 @@ export async function runVoice(options: VoiceCliOptions): Promise<number> {
         err(`The key was not saved: ${e instanceof Error ? e.message : 'it could not be written'}.`);
         return 1;
     }
-    out(`The Voice key is saved in ${options.home}. The daemon uses it from its next Voice session.`);
+    out(`The Voice key is saved in ${options.home}. The machine uses it from its next Voice session.`);
     return 0;
 }
 

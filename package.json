@@ -13,24 +13,24 @@
       "extensions/dev/*"
     ],
     "catalog": {
-      "@adecore/agent-contracts": "0.71.1",
-      "@adecore/agents": "0.71.1",
-      "@adecore/agents-react": "0.71.1",
-      "@adecore/charts": "0.71.1",
-      "@adecore/database": "0.71.1",
-      "@adecore/diagram": "0.71.1",
-      "@adecore/drawing": "0.71.1",
-      "@adecore/editor": "0.71.1",
-      "@adecore/editor-react": "0.71.1",
-      "@adecore/intelligent-ui": "0.71.1",
-      "@adecore/lsp": "0.71.1",
-      "@adecore/merge": "0.71.1",
-      "@adecore/plan": "0.71.1",
-      "@adecore/service": "0.71.1",
-      "@adecore/shell": "0.71.1",
-      "@adecore/terminal": "0.71.1",
-      "@adecore/ui": "0.71.1",
-      "@adecore/utils": "0.71.1"
+      "@adecore/agent-contracts": "0.75.1",
+      "@adecore/agents": "0.75.1",
+      "@adecore/agents-react": "0.75.1",
+      "@adecore/charts": "0.75.1",
+      "@adecore/database": "0.75.1",
+      "@adecore/diagram": "0.75.1",
+      "@adecore/drawing": "0.75.1",
+      "@adecore/editor": "0.75.1",
+      "@adecore/editor-react": "0.75.1",
+      "@adecore/intelligent-ui": "0.75.1",
+      "@adecore/lsp": "0.75.1",
+      "@adecore/merge": "0.75.1",
+      "@adecore/plan": "0.75.1",
+      "@adecore/service": "0.75.1",
+      "@adecore/shell": "0.75.1",
+      "@adecore/terminal": "0.75.1",
+      "@adecore/ui": "0.75.1",
+      "@adecore/utils": "0.75.1"
     }
   },
   "scripts": {
@@ -70,12 +70,12 @@
     "@adecore/diagram": "catalog:",
     "@adecore/drawing": "catalog:",
     "@adecore/ui": "catalog:",
-    "@types/bun": "^1.4.4",
-    "oxfmt": "^0.78.0",
-    "oxlint": "^1.93.0",
-    "oxlint-tsgolint": "^7.0.2007",
+    "@types/bun": "^1.4.5",
+    "oxfmt": "^0.80.0",
+    "oxlint": "^1.95.0",
+    "oxlint-tsgolint": "^7.0.2008",
     "typescript": "^7.0.2",
-    "oxc-parser": "^0.158.0"
+    "oxc-parser": "^0.160.0"
   },
   "trustedDependencies": [
     "electron"

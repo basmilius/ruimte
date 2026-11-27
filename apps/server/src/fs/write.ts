@@ -27,6 +27,35 @@ export interface WriteBoundary {
     registeredWorktrees?: (folder: string) => Promise<string[]>;
 }
 
+/*
+ * The two worktree lists of a boundary from one listing per folder. A boundary serves one request, which
+ * may ask more than once (a create checks before and after it makes its folders). `realRoots` still holds
+ * the lists against each other and against the real paths on every call.
+ */
+export function worktreeListsOnce(
+    list: (folder: string) => Promise<{ listed: string[]; made: string[] }>
+): Pick<WriteBoundary, 'worktreesOf' | 'registeredWorktrees'> {
+    const lists = new Map<string, Promise<{ listed: string[]; made: string[] }>>();
+    const listOf = (folder: string): Promise<{ listed: string[]; made: string[] }> => {
+        const known = lists.get(folder);
+
+        if (known !== undefined) {
+            return known;
+        }
+
+        // Outside a repository there are no worktrees, as there were none before.
+        const listing = list(folder).catch(() => ({ listed: [], made: [] }));
+        lists.set(folder, listing);
+
+        return listing;
+    };
+
+    return {
+        worktreesOf: async (folder) => (await listOf(folder)).listed,
+        registeredWorktrees: async (folder) => (await listOf(folder)).made
+    };
+}
+
 /* The boundary as real paths, so neither `..` nor a symlinked folder decides what is inside. */
 export async function realRoots(boundary: WriteBoundary): Promise<string[]> {
     const folders = await Promise.all(boundary.folders.map(realOrNull));

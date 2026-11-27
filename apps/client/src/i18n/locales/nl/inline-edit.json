@@ -16,7 +16,7 @@
         "done": "Klaar · {{duration}}",
         "failed": "Mislukt",
         "noChange": "Geen wijziging voorgesteld",
-        "stale": "De selectie is gewijzigd, dus dit kan niet worden toegepast. Open als chat om verder te gaan.",
+        "stale": "De selectie is gewijzigd, dus je kunt dit niet toepassen. Open als chat om verder te gaan.",
         "readOnly": "Dit bestand is alleen-lezen.",
         "followUp": "Vraag om een andere wijziging…",
         "send": "Versturen",

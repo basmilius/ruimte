@@ -40,6 +40,7 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
                 maximizedId: null,
                 editingTextId: null,
                 resizing: null,
+                resizeHomes: null,
                 navigationId: null,
                 gapMove: null,
                 panning: false,
@@ -100,6 +101,7 @@ export function createCanvasContentSlice(set: CanvasSet, get: CanvasGet): Pick<C
                               bodyFocusId: lost(s.bodyFocusId) ? null : s.bodyFocusId,
                               editingTextId: lost(s.editingTextId) ? null : s.editingTextId,
                               resizing: lost(s.resizing) ? null : s.resizing,
+                              resizeHomes: lost(s.resizing) ? null : s.resizeHomes,
                               linkDraft: lost(s.linkDraft?.from) ? null : s.linkDraft
                           })
                 };

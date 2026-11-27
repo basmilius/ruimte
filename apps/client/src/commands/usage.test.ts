@@ -18,7 +18,7 @@ const CLOSED: PanelState = { open: false, kind: 'files' };
 const SETTINGS_CLOSED = { open: false, section: 'appearance' as const, target: null, searchAt: 0 };
 
 // Rows the address book's ingest does not know yet: an older worker rejects a day that counts a name it lacks, so they count nothing until `USAGE_DESKTOP_COMMANDS` gains the name after the worker is deployed.
-const UNCOUNTED_ROWS = ['git-compare-branches'];
+const UNCOUNTED_ROWS = ['git-compare-branches', 'view-window-new', 'view-window-main'];
 
 describe('commandUsageName', () => {
     test('names every row of the command table, and the list holds no row the table lost', () => {

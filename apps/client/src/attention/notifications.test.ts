@@ -21,16 +21,23 @@ afterEach(() => {
     jest.useRealTimers();
 });
 
-/* A window without focus whose notifications land in `shown`; the returned function puts the globals back. */
-function fakeNotifications(shown: { title: string; options: NotificationOptions }[]): () => void {
+/*
+ * A window without focus whose notifications land in `shown`, and the body of each one closed in `closed`;
+ * the returned function puts the globals back.
+ */
+function fakeNotifications(shown: { title: string; options: NotificationOptions }[], closed: (string | undefined)[] = []): () => void {
     const originals = new Map(['window', 'document', 'Notification'].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
     class FakeNotification {
         static permission = 'granted';
         onclick: (() => void) | null = null;
+        private readonly body: string | undefined;
         constructor(title: string, options: NotificationOptions) {
+            this.body = options.body;
             shown.push({ title, options });
         }
-        close(): void {}
+        close(): void {
+            closed.push(this.body);
+        }
     }
     Object.defineProperty(globalThis, 'window', {
         configurable: true,
@@ -62,7 +69,7 @@ function setStatus(key: string, status: AgentStatus): void {
     useSessions.getState().setAgent(key, { kind: 'codex', status, live: true, agentSessionId: 'cli', transcriptPath: null, updatedAt: 1 });
 }
 
-test('completed turns only leave an unread mark; needs-you and requested alerts notify', () => {
+test('completed turns only leave an unread mark; needs-you and requested alerts notify', async () => {
     const shown: { title: string; options: NotificationOptions }[] = [];
     const restore = fakeNotifications(shown);
     const endpointId = currentEndpointId();
@@ -84,6 +91,7 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
         jest.advanceTimersByTime(1_000);
         expect(shown).toHaveLength(1);
         notifyRequested(endpointId, { projectId: 'project', viewId: 'agent', nodeId: 'agent', title: 'Build', body: 'The build is ready.' });
+        await settled();
         expect(shown).toHaveLength(2);
         expect(shown[1]).toMatchObject({ title: 'Build', options: { body: 'The build is ready.', silent: true } });
     } finally {
@@ -98,7 +106,8 @@ test('completed turns only leave an unread mark; needs-you and requested alerts 
 
 test.each(['chat', 'terminal'] as const)('%s requests settle into one notification, then later requests update it quietly', async (kind) => {
     const shown: { title: string; options: NotificationOptions }[] = [];
-    const restore = fakeNotifications(shown);
+    const closed: (string | undefined)[] = [];
+    const restore = fakeNotifications(shown, closed);
     const key = endpointKey(currentEndpointId(), 'agent');
     const request = (id: string, command: string): ChatRequestSummary => ({
         requestId: id,
@@ -134,12 +143,12 @@ test.each(['chat', 'terminal'] as const)('%s requests settle into one notificati
         });
     };
 
-    const events = useSettings.getState().soundEvents;
+    const pack = useSettings.getState().soundPack;
     const played: string[] = [];
     const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/'))), now: () => 0 });
     let stopNotifications = () => {};
     try {
-        useSettings.setState({ soundEvents: { ...events, question: true } });
+        useSettings.setState({ soundPack: 'marimba-low' });
         useDocument.getState().load({ version: 3, rev: 1, name: 'Project', color: '#000', views: [{ kind, id: 'agent', name: 'Build', node: {} }] }, null);
         stopNotifications = startAgentNotifications();
         wait([request('first', 'bun test')]);
@@ -147,29 +156,30 @@ test.each(['chat', 'terminal'] as const)('%s requests settle into one notificati
         wait([request('first', 'bun test')]);
         wait([request('first', 'bun test'), request('second', 'bun run check')]);
         // The sound is the one the wait began with, whatever a person changes while it settles.
-        useSettings.setState({ soundEvents: { ...events, question: false } });
+        useSettings.setState({ soundPack: 'none' });
         expect(shown).toEqual([]);
         jest.advanceTimersByTime(599);
         expect(shown).toEqual([]);
         jest.advanceTimersByTime(1);
-        expect(shown).toEqual([
-            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: true }) }
-        ]);
+        expect(shown).toEqual([{ title: 'Build', options: { body: 'Wants to run: bun test (+1 more)', silent: true } }]);
+        expect(closed).toEqual([]);
         await settled();
-        expect(played).toEqual(['/sounds/bar/rise.wav']);
+        expect(played).toEqual(['/sounds/marimba-low/rise.wav']);
 
         jest.advanceTimersByTime(10_000);
         wait([request('first', 'bun test'), request('second', 'bun run check'), request('third', 'bun run build')]);
+        // A notification that reused a tag would be taken away on macOS, so the one before it is closed instead.
         expect(shown).toEqual([
-            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+1 more)', tag: 'ruimte-agent', silent: true }) },
-            { title: 'Build', options: expect.objectContaining({ body: 'Wants to run: bun test (+2 more)', tag: 'ruimte-agent', silent: true }) }
+            { title: 'Build', options: { body: 'Wants to run: bun test (+1 more)', silent: true } },
+            { title: 'Build', options: { body: 'Wants to run: bun test (+2 more)', silent: true } }
         ]);
+        expect(closed).toEqual(['Wants to run: bun test (+1 more)']);
         await settled();
         expect(played).toHaveLength(1);
     } finally {
         stopNotifications();
         restoreSound();
-        useSettings.setState({ soundEvents: events });
+        useSettings.setState({ soundPack: pack });
         useChats.getState().forget(key);
         useSessions.getState().forget(key);
         useDocument.getState().load(null, null);
@@ -236,7 +246,7 @@ test('a snooze that runs out announces the wait again, one a person ended does n
     }
 });
 
-test('a wait in quiet hours raises nothing, and the end of the hours announces it', () => {
+test('a wait in quiet hours raises nothing, and the end of the hours announces it', async () => {
     const shown: { title: string; options: NotificationOptions }[] = [];
     const restore = fakeNotifications(shown);
     const endpointId = currentEndpointId();
@@ -255,13 +265,14 @@ test('a wait in quiet hours raises nothing, and the end of the hours announces i
         expect(shown).toEqual([]);
 
         notifyRequested(endpointId, { projectId: 'project', viewId: 'agent', nodeId: 'agent', title: 'Build', body: 'Asked for.' });
+        await settled();
         expect(shown).toHaveLength(1);
 
         now = new Date(2026, 10, 4, 13, 0).getTime();
         jest.advanceTimersByTime(30 * 60_000);
         jest.advanceTimersByTime(1_000);
         expect(shown).toHaveLength(2);
-        expect(shown[1]).toMatchObject({ title: 'Build', options: { tag: 'ruimte-agent' } });
+        expect(shown[1]).toEqual({ title: 'Build', options: { body: 'Needs you', silent: true } });
     } finally {
         stopNotifications();
         useSettings.setState({
@@ -376,6 +387,7 @@ function soundStage(views: { kind: 'chat' | 'terminal'; id: string }[]): {
     const project = useProject.getState();
     const restoreSound = setSoundPorts({ play: async (url) => void played.push(url.slice(url.lastIndexOf('/sounds/') + 8)), now: () => clock.now });
 
+    useSettings.setState({ soundPack: 'marimba-low' });
     useProject.setState({ current: { projectId: 'atlas' } as never, currentEndpointId: currentEndpointId() });
     useDocument.getState().load(
         {
@@ -397,7 +409,7 @@ function soundStage(views: { kind: 'chat' | 'terminal'; id: string }[]): {
         stop: () => {
             stopNotifications();
             restoreSound();
-            useSettings.setState({ soundPack: before.soundPack, soundEvents: before.soundEvents, projectSounds: before.projectSounds });
+            useSettings.setState({ soundPack: before.soundPack, notifyEvents: before.notifyEvents, projectSounds: before.projectSounds });
             useProject.setState({ current: project.current, currentEndpointId: project.currentEndpointId });
 
             for (const view of views) {
@@ -423,7 +435,7 @@ test('a turn that stops is announced with its own line and sound, and a usage li
     const key = (id: string): string => endpointKey(currentEndpointId(), id);
 
     try {
-        useSettings.setState({ soundEvents: EVERY_EVENT });
+        useSettings.setState({ notifyEvents: EVERY_EVENT });
         setStatus(key('build'), 'running');
         setStatus(key('build'), 'idle');
         setStatus(key('lint'), 'running');
@@ -432,50 +444,74 @@ test('a turn that stops is announced with its own line and sound, and a usage li
         useChats.getState().status(key('review'), chatInfoOf('review', { status: 'idle', limit: { kind: 'usage' } }));
 
         expect(stage.shown).toEqual([
-            { title: 'build', options: { body: 'Finished', tag: 'ruimte-stopped-build', silent: true } },
-            { title: 'lint', options: { body: 'Stopped with an error', tag: 'ruimte-stopped-lint', silent: true } },
-            { title: 'review', options: { body: 'Stopped on a usage limit', tag: 'ruimte-stopped-review', silent: true } }
+            { title: 'build', options: { body: 'Finished', silent: true } },
+            { title: 'lint', options: { body: 'Stopped with an error', silent: true } },
+            { title: 'review', options: { body: 'Stopped on a usage limit', silent: true } }
         ]);
         await settled();
-        expect(stage.played).toEqual(['bar/trio.wav', 'bar/knock.wav', 'bar/fall.wav']);
+        expect(stage.played).toEqual(['marimba-low/trio.wav', 'marimba-low/knock.wav', 'marimba-low/fall.wav']);
     } finally {
         stage.stop();
     }
 });
 
-test('a turn that stops raises nothing while its event has no sound', async () => {
+test('an event that is off raises nothing: a turn that stops, a wait and an alert', async () => {
     const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
-    const key = endpointKey(currentEndpointId(), 'build');
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, 'build');
 
     try {
-        useSettings.setState({ soundEvents: { ...EVERY_EVENT, finished: false } });
+        useSettings.setState({ notifyEvents: { ...EVERY_EVENT, finished: false, question: false, alert: false } });
         setStatus(key, 'running');
         setStatus(key, 'idle');
-        expect(stage.shown).toEqual([]);
+        setStatus(key, 'needs-you');
+        jest.advanceTimersByTime(1_000);
+        notifyRequested(endpointId, { projectId: 'atlas', viewId: 'view', nodeId: 'node', title: 'Deploy', body: 'It is live.' });
         await settled();
+        expect(stage.shown).toEqual([]);
         expect(stage.played).toEqual([]);
     } finally {
         stage.stop();
     }
 });
 
-test('a project sounds in its own pack, and a silent project raises nothing for a turn that stops', async () => {
+test('the pack that plays nothing leaves every notification without a sound', async () => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const endpointId = currentEndpointId();
+    const key = endpointKey(endpointId, 'build');
+
+    try {
+        useSettings.setState({ notifyEvents: EVERY_EVENT, soundPack: 'none' });
+        setStatus(key, 'running');
+        setStatus(key, 'idle');
+        setStatus(key, 'needs-you');
+        jest.advanceTimersByTime(1_000);
+        notifyRequested(endpointId, { projectId: 'atlas', viewId: 'view', nodeId: 'node', title: 'Deploy', body: 'It is live.' });
+        await settled();
+        expect(stage.shown.map(({ options }) => options.body)).toEqual(['Finished', 'Needs you', 'It is live.']);
+        expect(stage.played).toEqual([]);
+    } finally {
+        stage.stop();
+    }
+});
+
+test('a project sounds in its own pack, and one that plays nothing still raises its notification', async () => {
     const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
     const key = endpointKey(currentEndpointId(), 'build');
     const project = endpointKey(currentEndpointId(), 'atlas');
 
     try {
-        useSettings.setState({ soundEvents: EVERY_EVENT, projectSounds: { [project]: { pack: 'glass' } } });
+        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [project]: { pack: 'kalimba' } } });
         setStatus(key, 'running');
         setStatus(key, 'idle');
         await settled();
-        expect(stage.played).toEqual(['glass/trio.wav']);
+        expect(stage.played).toEqual(['kalimba/trio.wav']);
 
-        useSettings.setState({ projectSounds: { [project]: { silent: true, pack: 'glass' } } });
+        useSettings.setState({ projectSounds: { [project]: { pack: 'none' } } });
         stage.clock.now = 5_000;
         setStatus(key, 'running');
         setStatus(key, 'idle');
-        expect(stage.shown).toHaveLength(1);
+        expect(stage.shown).toHaveLength(2);
         await settled();
         expect(stage.played).toHaveLength(1);
     } finally {
@@ -491,7 +527,7 @@ test('two turns that finish within a second sound once, and each still gets its 
     const key = (id: string): string => endpointKey(currentEndpointId(), id);
 
     try {
-        useSettings.setState({ soundEvents: EVERY_EVENT });
+        useSettings.setState({ notifyEvents: EVERY_EVENT });
         setStatus(key('build'), 'running');
         setStatus(key('lint'), 'running');
         setStatus(key('build'), 'idle');
@@ -499,7 +535,7 @@ test('two turns that finish within a second sound once, and each still gets its 
         setStatus(key('lint'), 'idle');
         expect(stage.shown).toHaveLength(2);
         await settled();
-        expect(stage.played).toEqual(['bar/trio.wav']);
+        expect(stage.played).toEqual(['marimba-low/trio.wav']);
     } finally {
         stage.stop();
     }
@@ -512,7 +548,7 @@ test.each(['in sight', 'snoozed', 'quiet hours'] as const)('a turn that stops pl
     const before = useSettings.getState();
 
     try {
-        useSettings.setState({ soundEvents: EVERY_EVENT });
+        useSettings.setState({ notifyEvents: EVERY_EVENT });
         setStatus(key, 'running');
 
         switch (why) {
@@ -556,11 +592,44 @@ test('an alert someone asked for sounds in the pack of its own project', async (
     });
 
     try {
-        useSettings.setState({ soundEvents: EVERY_EVENT, projectSounds: { [endpointKey(endpointId, 'other')]: { pack: 'grand' } } });
+        useSettings.setState({ notifyEvents: EVERY_EVENT, projectSounds: { [endpointKey(endpointId, 'other')]: { pack: 'vibes' } } });
         notifyRequested(endpointId, { projectId: 'other', viewId: 'view', nodeId: 'node', title: 'Deploy', body: 'It is live.' });
         await settled();
-        expect(stage.played).toEqual(['grand/chime.wav']);
-        expect(claimed).toEqual([`ruimte-requested-${endpointId}-node`]);
+        expect(stage.played).toEqual(['vibes/chime.wav']);
+        expect(claimed).toEqual([`ruimte-requested-${endpointId}-node-It is live.`]);
+    } finally {
+        restoreSound();
+        stage.stop();
+    }
+});
+
+test('every alert of a node gets a notification of its own, and one another window claimed raises nothing here', async () => {
+    const stage = soundStage([{ kind: 'terminal', id: 'build' }]);
+    const endpointId = currentEndpointId();
+    const claims = [true, true, false];
+    const restoreSound = setSoundPorts({
+        play: async (url) => void stage.played.push(url.slice(url.lastIndexOf('/sounds/') + 8)),
+        now: () => stage.clock.now,
+        claim: async () => claims.shift() ?? false
+    });
+    const alert = (body: string): void => notifyRequested(endpointId, { projectId: 'atlas', viewId: 'view', nodeId: 'node', title: 'Deploy', body });
+
+    try {
+        useSettings.setState({ notifyEvents: EVERY_EVENT });
+        alert('Migrations ran.');
+        await settled();
+        stage.clock.now = 5_000;
+        alert('It is live.');
+        await settled();
+        stage.clock.now = 10_000;
+        alert('Claimed by another window.');
+        await settled();
+
+        expect(stage.shown).toEqual([
+            { title: 'Deploy', options: { body: 'Migrations ran.', silent: true } },
+            { title: 'Deploy', options: { body: 'It is live.', silent: true } }
+        ]);
+        expect(stage.played).toEqual(['marimba-low/chime.wav', 'marimba-low/chime.wav']);
     } finally {
         restoreSound();
         stage.stop();

@@ -49,7 +49,7 @@ import { useKeyOf } from '@/surface/shortcut-overrides';
  */
 export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
     const { t } = useTranslation(['shell', 'common', 'canvas', 'drawing']);
-    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
+    const dictationEnabled = useDictation((state) => state.speech?.enabled === true);
     /* The canvas under this dock. It is drawn in the focused cell only, which is the canvas the
        actions behind adding a node and fitting are sent to. */
     const canvasStore = useCanvasStore();

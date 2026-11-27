@@ -46,11 +46,11 @@ describe('refusals', () => {
         expect(missing.lines).toEqual([
             'refused\tmissing-flag\tA browser node needs url',
             'kind\tbrowser\turl (required)\tcalled "Browser" without title',
-            'kind\tevery kind\ttitle, view, beside'
+            'kind\tevery kind\ttitle, view, beside, side, x, y, w, h'
         ]);
         expect((await fx.invoke('node_new', { kind: 'note', url: 'https://example.com' })).lines.slice(1)).toEqual([
             'kind\tnote\ttext\tcalled "Note" without title',
-            'kind\tevery kind\ttitle, view, beside'
+            'kind\tevery kind\ttitle, view, beside, side, x, y, w, h'
         ]);
         expect((await fx.invoke('node_new', { kind: 'note', beside: 'nope' })).lines).toEqual([
             'refused\tunknown-node\tnope is not a node on main',
@@ -148,8 +148,8 @@ describe('scoping', () => {
         const { status, lines } = await fx.invoke('node_list', {});
         expect(status).toBe(200);
         expect(lines).toEqual([
-            'term-1\tterminal\tshell\t0\t0\t560\t360\t\t-\t-',
-            'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\t-\t-',
+            'term-1\tterminal\tshell\t0\t0\t560\t360\t\t-\t-\t-',
+            'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t\t-\t-\t-',
             'self\tterm-1',
             'revision\t1'
         ]);
@@ -158,8 +158,8 @@ describe('scoping', () => {
     test('a node a person snoozed says until when, in UTC', async () => {
         fx.snoozed['term-1'] = Date.UTC(2026, 9, 13, 15, 30);
         const { lines } = await fx.invoke('node_list', {});
-        expect(lines[0]).toBe('term-1\tterminal\tshell\t0\t0\t560\t360\t\t-\t2026-10-13T15:30:00.000Z');
-        expect(lines[1]).toEndWith('\t-\t-');
+        expect(lines[0]).toBe('term-1\tterminal\tshell\t0\t0\t560\t360\t\t-\t2026-10-13T15:30:00.000Z\t-');
+        expect(lines[1]).toEndWith('\t-\t-\t-');
     });
 
     test('view picks another canvas, where the caller is nobody', async () => {
@@ -624,7 +624,12 @@ describe('reaching another open project', () => {
         await mkdir(fresh);
         const real = await realpath(fresh);
         const asked: SessionEvent[] = [];
-        fx.store.subscribe('client-2', (event) => asked.push(event));
+        // Only what the tool asks: a summary of an earlier write may still reach the client while this runs.
+        fx.store.subscribe('client-2', (event) => {
+            if (event.event === 'project.askOpen') {
+                asked.push(event);
+            }
+        });
 
         expect((await fx.invoke('project_open', { folder: fresh }, 'chat', reaching())).lines).toEqual([
             `asked\t${real}`,

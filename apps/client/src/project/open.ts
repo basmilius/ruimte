@@ -288,11 +288,23 @@ export async function deleteProject(endpointId: string, projectId: string, remov
     await fireAndForget('listProjects', listProjects(endpointId));
 }
 
-function untilFocused(): Promise<void> {
-    if (document.hasFocus()) {
+function untilSeen(): Promise<void> {
+    const seen = () => document.hasFocus() || document.visibilityState === 'visible';
+    if (seen()) {
         return Promise.resolve();
     }
-    return new Promise((resolve) => window.addEventListener('focus', () => resolve(), { once: true }));
+    return new Promise((resolve) => {
+        const wake = () => {
+            if (!seen()) {
+                return;
+            }
+            window.removeEventListener('focus', wake);
+            document.removeEventListener('visibilitychange', wake);
+            resolve();
+        };
+        window.addEventListener('focus', wake);
+        document.addEventListener('visibilitychange', wake);
+    });
 }
 
 /*
@@ -309,7 +321,7 @@ export async function bootWindow(
     open: (endpointId: string, projectId: string) => Promise<SwitchOutcome> = openProject,
     local = hasLocalMachine(),
     target: WindowTarget = pageWindowTarget(),
-    focused: () => Promise<void> = untilFocused,
+    seen: () => Promise<void> = untilSeen,
     leave: () => Promise<boolean> = () => desktop()?.closeWindowIfOthers?.() ?? Promise.resolve(false)
 ): Promise<SwitchOutcome | null> {
     const wanted = target.kind === 'project' ? target : target.kind === 'last' ? readLastProject(storage) : null;
@@ -323,10 +335,10 @@ export async function bootWindow(
         if (!known) {
             return null;
         }
-        // Every window of the last session comes back, but only the ones a person goes to start their terminals and agents.
+        // Every window of the last session comes back, but only the ones on screen start their terminals and agents.
         if (target.kind === 'project' && target.dormant === true) {
             useWindow.getState().setDormant({ endpointId: wanted.endpointId, projectId: wanted.projectId });
-            await focused();
+            await seen();
             useWindow.getState().setDormant(null);
         }
         const outcome = await open(wanted.endpointId, wanted.projectId);

@@ -178,7 +178,7 @@ describe('settings in groups', () => {
 
             expect(page.host.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false');
             expect(useToasts.getState().toasts.map((toast) => [toast.title, toast.description])).toContainEqual([
-                'Trackline could not keep what it stores',
+                'Trackline could not save its data',
                 'Only mine'
             ]);
         } finally {

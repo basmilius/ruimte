@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { GROUP_PADDING } from '@ruimte/contracts';
 import { carriedByGroups, createCanvasStore, patchSnapshot, type CanvasNode } from './canvas';
 import { hiddenIn, snapshotOf } from './canvas-model';
 
@@ -134,6 +135,45 @@ describe('what grouping, adding and resizing do to the groups', () => {
         store.getState().undo();
 
         expect(store.getState().nodes.frame!.memberIds).toBeUndefined();
+    });
+
+    test('a group grows around a member that was resized, and one undo puts both back', () => {
+        const store = storeWith(group('frame', 0, 0, 400, 300, { memberIds: ['inside'] }), node('inside', 32, 72));
+
+        store.getState().setResizing('inside');
+        store.getState().resizeNode('inside', { x: 32, y: 72, w: 600, h: 100 });
+        store.getState().setResizing(null);
+
+        expect(store.getState().nodes.frame).toMatchObject({ x: 0, y: 0, w: 32 + 600 + GROUP_PADDING, h: 300 });
+
+        store.getState().undo();
+
+        expect([store.getState().nodes.frame!.w, store.getState().nodes.inside!.w]).toEqual([400, 200]);
+    });
+
+    test('several nodes resized by one handle are one change, and their group grows around all of them', () => {
+        const store = storeWith(group('frame', 0, 0, 504, 204, { memberIds: ['a', 'b'] }), node('a', 32, 72), node('b', 272, 72), node('outside', 2000, 0));
+
+        store.getState().setResizing('a', ['b']);
+        store.getState().resizeNodes({ a: { x: 32, y: 72, w: 300, h: 100 }, b: { x: 372, y: 72, w: 300, h: 100 } });
+        store.getState().resizeNodes({ a: { x: 32, y: 72, w: 400, h: 100 }, b: { x: 472, y: 72, w: 400, h: 100 } });
+        store.getState().setResizing(null);
+
+        expect(store.getState().nodes.frame!.w).toBe(472 + 400 + GROUP_PADDING);
+        expect(store.getState().nodes.outside).toMatchObject({ x: 2000, w: 200 });
+
+        store.getState().undo();
+
+        expect(store.getState().nodes).toMatchObject({ a: { x: 32, w: 200 }, b: { x: 272, w: 200 }, frame: { w: 504 } });
+    });
+
+    test('a locked resize changes none of several nodes', () => {
+        const store = storeWith(node('a', 0, 0), node('b', 240, 0));
+
+        store.getState().toggleLock('resize');
+        store.getState().resizeNodes({ a: { x: 0, y: 0, w: 400, h: 100 }, b: { x: 440, y: 0, w: 400, h: 100 } });
+
+        expect([store.getState().nodes.a!.w, store.getState().nodes.b!.x]).toEqual([200, 240]);
     });
 });
 

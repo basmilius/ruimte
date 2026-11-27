@@ -84,8 +84,20 @@ interface NodeMenuProps {
     createAt?: () => Point;
 }
 
-/* A closed canvas is read from the document; only an action that needs its editor opens it. */
+/*
+ * The popup mounts what it holds only while it is open, so the many hooks of the menu run for the
+ * one node a person right-clicked and not for every node and sidebar row that could be.
+ */
 export function NodeMenuPopup(props: NodeMenuProps) {
+    return (
+        <ContextMenu.Popup {...(props.finalFocus === undefined ? {} : { finalFocus: props.finalFocus })}>
+            <NodeMenuBody {...props} />
+        </ContextMenu.Popup>
+    );
+}
+
+/* A closed canvas is read from the document; only an action that needs its editor opens it. */
+function NodeMenuBody(props: NodeMenuProps) {
     const live = useCanvas((s) => s.nodes[props.id]);
     const stored = useViewNodes((views, nodesOf) => {
         const view = views.find((view) => view.id === props.viewId);
@@ -101,7 +113,7 @@ export function NodeMenuPopup(props: NodeMenuProps) {
 
 const NO_WORKFLOWS: readonly WorkflowCandidate[] = [];
 
-function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, finalFocus, createAt }: NodeMenuProps & { node: CanvasNode | undefined }) {
+function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, createAt }: NodeMenuProps & { node: CanvasNode | undefined }) {
     const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
@@ -140,7 +152,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     );
 
     if (!node) {
-        return snooze ? <ContextMenu.Popup>{snooze}</ContextMenu.Popup> : null;
+        return snooze ?? null;
     }
 
     const canvas = () => {
@@ -156,7 +168,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
         void deleteSelectionAsking(store, workspaceTransport);
     };
     if (node.kind === 'unknown') {
-        return <UnknownNodeMenuPopup onZoom={zoomTo} onDelete={remove} />;
+        return <UnknownNodeMenuItems onZoom={zoomTo} onDelete={remove} />;
     }
     const kind = node.kind;
     // The same CLI session can continue in the other kind of node, next to this one.
@@ -248,7 +260,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
     const conversation = isChat && (offersFork || bookmarked || Boolean(chatSession));
 
     return (
-        <ContextMenu.Popup {...(finalFocus === undefined ? {} : { finalFocus })}>
+        <>
             {snooze}
             {/* A collapsed group is only its header, with no room to put a node in. */}
             {createAt && node.kind === 'group' && !node.collapsed && (
@@ -443,7 +455,7 @@ function NodeMenuContent({ id, viewId: targetViewId, node, onRename, snooze, fin
             <ContextMenu.Item className="text-status-error" onClick={remove}>
                 <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
             </ContextMenu.Item>
-        </ContextMenu.Popup>
+        </>
     );
 }
 
@@ -489,10 +501,10 @@ function AccentSubmenu({ picked, onPick }: { picked: string | undefined; onPick(
 }
 
 /* A node of a kind a newer Ruimte made: this version can find it and remove it, and nothing more. */
-function UnknownNodeMenuPopup({ onZoom, onDelete }: { onZoom(): void; onDelete(): void }) {
+function UnknownNodeMenuItems({ onZoom, onDelete }: { onZoom(): void; onDelete(): void }) {
     const { t } = useTranslation('canvas');
     return (
-        <ContextMenu.Popup>
+        <>
             <ContextMenu.Item onClick={onZoom}>
                 <Icon icon={Crosshair} size={14} /> {t('node.zoomTo')}
             </ContextMenu.Item>
@@ -500,6 +512,6 @@ function UnknownNodeMenuPopup({ onZoom, onDelete }: { onZoom(): void; onDelete()
             <ContextMenu.Item className="text-status-error" onClick={onDelete}>
                 <Icon icon={Trash} size={14} /> {t('common:action.delete')} <Kbd shortcut={CANVAS_SHORTCUTS.deleteSelection} />
             </ContextMenu.Item>
-        </ContextMenu.Popup>
+        </>
     );
 }

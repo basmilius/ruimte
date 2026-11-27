@@ -75,6 +75,11 @@ export const cases: WriteCases = {
             source: { value: 'sketch', actors: ['agent'] },
             cwd: { value: 'apps/client', actors: ['person', 'agent'] },
             beside: { value: 'chat-1', actors: ['agent'] },
+            side: { value: 'left', actors: ['agent'] },
+            x: { value: 120, actors: ['agent'] },
+            y: { value: -40, actors: ['agent'] },
+            w: { value: 480, actors: ['agent'] },
+            h: { value: 320, actors: ['agent'] },
             device: { value: 'sim-1', actors: ['agent'] },
             resume: { value: 'session-1', actors: ['person'] },
             color: { value: 'teal', actors: ['agent'] },
@@ -97,6 +102,7 @@ export const cases: WriteCases = {
             'more nodes than one call adds': { viewId: 'board', nodes: Array.from({ length: MAX_PER_CALL + 1 }, () => manyNote) },
             'a kind no action makes': { viewId: 'board', nodes: [{ ...manyNote, kind: 'unknown' }] },
             'a color off the set': { viewId: 'board', nodes: [{ ...manyNote, color: '#ff0000' }] },
+            'a side it has not': { viewId: 'board', nodes: [{ ...manyNote, side: 'under' }] },
             'a node without its fields': { viewId: 'board', nodes: [{ kind: 'note' }] }
         }
     },
@@ -186,7 +192,25 @@ export const cases: WriteCases = {
         refused: {
             'a layout it has not': { viewId: 'board', nodeIds: ['chat-1'], layout: 'circle', columns: null },
             'no columns at all': { viewId: 'board', nodeIds: ['chat-1'], layout: 'grid', columns: 0 },
-            'nothing to arrange': { viewId: 'board', nodeIds: [], layout: 'row', columns: null }
+            'nothing to arrange': { viewId: 'board', nodeIds: [], layout: 'row', columns: null },
+            'a gap below nothing': { viewId: 'board', nodeIds: ['chat-1'], layout: 'row', columns: null, gap: -1 },
+            'a side it has not': { viewId: 'board', nodeIds: ['chat-1'], layout: 'row', columns: null, side: 'under' }
+        }
+    },
+    'node.layout': {
+        actors: ['person', 'agent'],
+        input: {
+            viewId: 'board',
+            nodes: [
+                { nodeId: 'chat-1', x: 0, y: 0, w: 480, h: 320 },
+                { nodeId: 'chat-2', side: 'below', beside: 'chat-1', gap: 80 }
+            ]
+        },
+        refused: {
+            'no nodes at all': { viewId: 'board', nodes: [] },
+            'more nodes than one call places': { viewId: 'board', nodes: Array.from({ length: MAX_PER_CALL + 1 }, () => ({ nodeId: 'chat-1', w: 480 })) },
+            'a row without a node': { viewId: 'board', nodes: [{ w: 480 }] },
+            'a side it has not': { viewId: 'board', nodes: [{ nodeId: 'chat-1', side: 'under' }] }
         }
     },
     'link.create': {

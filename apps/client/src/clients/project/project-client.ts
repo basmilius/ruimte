@@ -19,10 +19,11 @@ import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { stripOf } from '@/state/panel-state';
 import { browserStorage } from '@/state/stored-json';
 import { useToasts } from '@/state/toasts';
+import { auxWindowId } from '@/state/window-target';
 import { fireAndForget, orNull } from '@/transport-api/transport';
 import { forgetClosedProject, rememberClosedProject } from '../../state/closed-projects';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../../transport-api/transport';
-import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
+import { localIdOf, overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { readDeletedViews, writeDeletedViews } from './deleted-views';
 import { restoreDesignFolders } from './design-folder-refusal';
 import { projectIconAppearance } from './icon-appearance';
@@ -122,6 +123,8 @@ interface ProjectClientOptions {
     saveDelayMs?: number;
     localDelayMs?: number;
     storage?: LastProjectStorage;
+    /* An auxiliary window keeps its grid on this client only, so the machine's copy stays the one of the window that has the project. Null is that window. */
+    aux?: string | null;
     /* Which daemon the client is talking to; what it remembers about a project is that daemon's. */
     endpointId?: () => string;
     drawings?: DrawingsAccess;
@@ -178,6 +181,7 @@ export class ProjectClient {
     private readonly panels: PanelsPort;
     private readonly sink: ProjectSink;
     private readonly storage: LastProjectStorage | null;
+    private readonly aux: string | null;
     private readonly endpointId: () => string;
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
@@ -225,6 +229,7 @@ export class ProjectClient {
         this.panels = panels;
         this.sink = sink;
         this.storage = options.storage ?? browserStorage();
+        this.aux = options.aux === undefined ? auxWindowId() : options.aux;
         this.endpointId = options.endpointId ?? (() => LOCAL_ENDPOINT_ID);
         this.saveDelayMs = options.saveDelayMs ?? 400;
         this.localDelayMs = options.localDelayMs ?? 1000;
@@ -494,7 +499,11 @@ export class ProjectClient {
             forgetClosedProject(this.endpointId(), result.summary.projectId, this.storage);
             this.setBase(draft?.base ?? result.document);
             this.locallyDrafted = draft !== null;
-            const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
+            const local = overlayLocal(
+                result.local,
+                readClientLocal(this.storage, this.endpointId(), localIdOf(result.summary.projectId, this.aux)),
+                this.aux !== null
+            );
             this.onLoad(result.summary);
             this.opened = true;
             this.documents.getState().load(draft?.document ?? result.document, local, stripOf(local.panels));
@@ -606,6 +615,15 @@ export class ProjectClient {
         }, this.localDelayMs);
     }
 
+    /* Writes the grid now, without the save clock, for a caller whose next step has another window read it. */
+    keepLocal(): void {
+        if (this.localTimer) {
+            clearTimeout(this.localTimer);
+            this.localTimer = null;
+        }
+        this.saveLocal();
+    }
+
     /* Writes what is pending now, so a project that is on its way out takes its own state with it. */
     private flushLocal(): void {
         if (!this.localTimer) {
@@ -623,8 +641,8 @@ export class ProjectClient {
         }
         const local = withoutSessionLayout(this.localOfScreen(), this.panels.sessionIds(), openableViewIds(this.documents.getState().views));
         // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
-        writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
-        if (this.transport.status === 'open') {
+        writeClientLocal(this.storage, this.endpointId(), localIdOf(current.projectId, this.aux), local);
+        if (this.aux === null && this.transport.status === 'open') {
             void fireAndForget(
                 'project.save-local',
                 this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) })

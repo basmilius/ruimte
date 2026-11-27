@@ -1,8 +1,8 @@
-import { groupFrame, spellsOutMembers, withMemberIds, type ProjectCanvasLine } from '@ruimte/contracts';
+import { containerIds, groupFrame, groupsGrownAround, spellsOutMembers, withMemberIds, type ProjectCanvasLine } from '@ruimte/contracts';
 import { parentGroupOf } from '@/canvas-model/editable-gaps';
 import { snapLine } from '@/canvas-model/line-geometry';
 import { snapToGrid, unionOf, type Point } from '@/canvas-model/math';
-import type { CanvasState } from '@/state/canvas';
+import type { CanvasNode, CanvasState } from '@/state/canvas';
 import {
     boundsOfElement,
     carriedByGroups,
@@ -37,6 +37,13 @@ function movedSelection(
     return next;
 }
 
+/* The nodes with every group around `ids` grown until it holds them; the same record when no frame had to grow. */
+function grownAround(state: Pick<CanvasState, 'nodes' | 'texts'>, ids: readonly string[], containers: ReadonlyMap<string, string>): Record<string, CanvasNode> {
+    const grown = groupsGrownAround({ nodes: Object.values(state.nodes), texts: Object.values(state.texts) }, ids, containers);
+
+    return grown.every((node) => state.nodes[node.id] === node) ? state.nodes : Object.fromEntries(grown.map((node) => [node.id, node]));
+}
+
 export function createCanvasGestureSlice(
     set: CanvasSet,
     get: CanvasGet
@@ -45,6 +52,7 @@ export function createCanvasGestureSlice(
     | 'moveSelected'
     | 'settleMove'
     | 'resizeNode'
+    | 'resizeNodes'
     | 'setResizing'
     | 'setDerivedCard'
     | 'leaveDerivedCard'
@@ -91,10 +99,22 @@ export function createCanvasGestureSlice(
             }
             set({ nodes: { ...nodes, [id]: { ...nodes[id], ...rect } } });
         },
-        setResizing(id) {
+        resizeNodes(rects) {
+            const { nodes, locks } = get();
+            if (locks.resize) {
+                return;
+            }
+            const resized = Object.entries(rects).flatMap(([id, rect]) => (nodes[id] === undefined ? [] : [[id, { ...nodes[id], ...rect }] as const]));
+            set({ nodes: { ...nodes, ...Object.fromEntries(resized) } });
+        },
+        setResizing(id, also = []) {
             set((s) => {
                 if (id === null) {
-                    return { resizing: null, ...(s.resizing === null ? {} : { nodes: withoutMembersOutside(s, s.resizing) }) };
+                    if (s.resizing === null) {
+                        return { resizing: null, resizeHomes: null };
+                    }
+                    const grown = s.resizeHomes === null ? s.nodes : grownAround(s, [...s.resizeHomes.ids], s.resizeHomes.containers);
+                    return { resizing: null, resizeHomes: null, nodes: withoutMembersOutside({ ...s, nodes: grown }, s.resizing) };
                 }
                 if (s.resizing !== null || s.nodes[id] === undefined) {
                     return { resizing: id };
@@ -102,7 +122,16 @@ export function createCanvasGestureSlice(
                 // The handle goes down before the first resize, so this is where the old size is remembered, and what a group holds before it is resized.
                 const group = s.nodes[id];
                 const members = group.kind === 'group' && !spellsOutMembers(group) ? membersOf(group, s.nodes, s.texts, s.lines) : null;
-                return { resizing: id, ...(members === null ? {} : { nodes: { ...s.nodes, [id]: withMemberIds(group, members) } }), ...remember(s) };
+                return {
+                    resizing: id,
+                    // Which group each node is in is read now: a frame that reads positions may no longer hold a node that grew.
+                    resizeHomes: {
+                        ids: [id, ...also],
+                        containers: containerIds(Object.values(s.nodes), [...Object.values(s.nodes), ...Object.values(s.texts)])
+                    },
+                    ...(members === null ? {} : { nodes: { ...s.nodes, [id]: withMemberIds(group, members) } }),
+                    ...remember(s)
+                };
             });
         },
         setDerivedCard(id, card) {

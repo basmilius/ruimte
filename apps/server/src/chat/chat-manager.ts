@@ -29,6 +29,7 @@ import {
     VISUAL_RESUME_NOTE
 } from '../context/context-note.ts';
 import { RUIMTE_UI_FENCE } from '../context/ui-fence.ts';
+import { realOrNull } from '../disk/real-path.ts';
 import { errorText } from '../error-text.ts';
 import { passedOverNote, type ProjectAccountChooser } from '../projects/project-accounts.ts';
 import { attachedReferences, type Reference } from '../projects/references.ts';
@@ -41,6 +42,7 @@ import { AgentImages } from './agent-images.ts';
 import { continueOnWake, continuedInForkNote } from './continue-on.ts';
 import { ChatError } from './errors.ts';
 import { InlineEditNotes } from './inline-edit.ts';
+import { fileTranscript } from './move-chat.ts';
 
 export type { InterruptedRun } from '@adecore/agents/chat';
 
@@ -103,6 +105,8 @@ export interface ChatFacts {
     peerChat(chatId: string): boolean;
     // Refuses a directory this chat may not start in, asked every time a chat is loaded.
     checkCwd(chatId: string, cwd: string): Promise<void>;
+    // The folder of the project that places the chat; null for one no project this machine knows places.
+    projectFolder(chatId: string): string | null;
     // Whether the client holds the project the chat is in; a UI block reads and links only for one that does.
     holdsProject(chatId: string, clientId: string): Promise<boolean>;
     // The account a new chat in a project takes, or null where its project says nothing about the CLI.
@@ -243,6 +247,7 @@ export class ChatManager {
                 referencesFor: (chatId) => this.referencesFor(chatId),
                 envFor: (chatId, base) => this.envFor(chatId, base),
                 admit: (chatId, cwd) => facts.checkCwd(chatId, cwd),
+                fallbackFolder: (chatId, info) => this.fallbackFolderOf(chatId, info),
                 admitUi: (chatId, clientId) => this.requireHeldProject(chatId, clientId),
                 opening: (payload) => ({ ...payload, ...facts.openingAgent(payload.chatId) }),
                 runtimeModeFor: (chatId, mode) => this.runtimeModeFor(chatId, mode),
@@ -458,9 +463,10 @@ export class ChatManager {
         // Claude Code reads a skill's instructions outside the chat's folder only from a folder handed to it.
         const skills = this.facts.skillsFolder();
         const handed = skills === null ? [] : [skills];
-        if (!this.visuals || !this.facts.visualReplies()) {
+        if (!this.visuals) {
             return handed;
         }
+        // Handed with visual replies off too: other folders mean a new process, and a machine setting must not ask for one.
         const path = this.visuals.workspacePath(chatId);
         // Claude validates --add-dir at startup, including the first turn after a chat was cleared.
         mkdirSync(path, { recursive: true, mode: 0o700 });
@@ -489,6 +495,23 @@ export class ChatManager {
             () => this.facts.design(chatId)?.folder ?? null
         );
         return this.facts.inlineChat(chatId) ? new InlineEditNotes(notes) : notes;
+    }
+
+    /*
+     * A chat whose folder is gone, such as a removed worktree, continues in its project folder at its next start, by Bas's
+     * choice (November 25, 2026). Its Claude transcript goes along, so the CLI resumes the conversation there.
+     */
+    private async fallbackFolderOf(chatId: string, info: ChatInfo): Promise<{ cwd: string; during: () => Promise<void> } | null> {
+        const folder = this.facts.projectFolder(chatId);
+        if (folder === null || (await realOrNull(info.cwd)) !== null) {
+            return null;
+        }
+        return {
+            cwd: folder,
+            during: async () => {
+                await fileTranscript(this.core, info, folder);
+            }
+        };
     }
 
     private referencesFor(chatId: string): ChatReferences {

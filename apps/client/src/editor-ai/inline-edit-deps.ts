@@ -70,7 +70,7 @@ export function inlineEditDeps(endpointId: string): InlineEditDeps {
         saveRecord: (record) => saveInlineEdit(endpointId, record),
         forgetRecord: (path, chatId) => forgetInlineEdit(endpointId, path, chatId),
         notify: (toast) => {
-            useToasts.getState().show({ ...toast, persist: toast.kind === 'success', ...(toast.action === undefined ? {} : { action: toast.action }) });
+            useToasts.getState().show(toast);
         }
     };
 }

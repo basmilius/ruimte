@@ -1,5 +1,16 @@
 import { ARRANGE_LAYOUTS } from '@ruimte/actions';
-import { arrangeRects, GROUP_HEADER, GROUP_PADDING, gridColumns, groupMemberIds, groupRect, PLACEMENT_GAP, type ProjectNode } from '@ruimte/contracts';
+import {
+    arrangeRects,
+    containerIds,
+    GROUP_HEADER,
+    GROUP_PADDING,
+    gridColumns,
+    groupMemberIds,
+    groupRect,
+    PLACEMENT_GAP,
+    spreadRects,
+    type ProjectNode
+} from '@ruimte/contracts';
 
 export interface Rect {
     x: number;
@@ -48,7 +59,7 @@ export function placeFree(existing: readonly Rect[], size: { w: number; h: numbe
 }
 
 // The layouts are the catalog's, since `node.arrange` takes one as input; the arithmetic lives in contracts for the client's group arrange.
-export { ARRANGE_LAYOUTS, arrangeRects, gridColumns, PLACEMENT_GAP };
+export { ARRANGE_LAYOUTS, arrangeRects, gridColumns, PLACEMENT_GAP, spreadRects };
 export type ArrangeLayout = (typeof ARRANGE_LAYOUTS)[number];
 
 /* What placing inside a group needs to know about it, so a frame that is not a node yet also fits. */
@@ -60,24 +71,19 @@ export function groupMembers(group: ProjectNode, nodes: readonly ProjectNode[]):
     return nodes.filter((node) => ids.has(node.id));
 }
 
-/*
- * The group each node stands in, by node id. A node in nested frames is in both by geometry, and the
- * smaller one is the one a person would say it is in.
- */
+/* The group each node stands in, by node id, the smaller one for a node in nested frames (`containerIds`). */
 export function containersOf(nodes: readonly ProjectNode[]): Map<string, ProjectNode> {
+    const byId = new Map(nodes.map((node) => [node.id, node]));
     const containers = new Map<string, ProjectNode>();
-    const area = (group: ProjectNode): number => {
-        const rect = groupRect(group);
-        return rect.w * rect.h;
-    };
-    for (const group of nodes.filter((node) => node.kind === 'group')) {
-        for (const member of groupMembers(group, nodes)) {
-            const current = containers.get(member.id);
-            if (!current || area(group) < area(current)) {
-                containers.set(member.id, group);
-            }
+
+    for (const [id, groupId] of containerIds(nodes)) {
+        const group = byId.get(groupId);
+
+        if (group !== undefined) {
+            containers.set(id, group);
         }
     }
+
     return containers;
 }
 

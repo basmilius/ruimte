@@ -209,7 +209,7 @@ export class CustomLanguageServers {
         if (this.resolve(input.command.trim()) === null) {
             throw new CustomServerError(
                 LANGUAGE_ERROR_CODES.invalidServer,
-                `${input.command.trim()} is not an executable on this machine. Give an absolute path, or a command that is on the PATH of the daemon.`
+                `${input.command.trim()} is not an executable on this machine. Give an absolute path, or a command that is on the PATH Ruimte runs with.`
             );
         }
     }

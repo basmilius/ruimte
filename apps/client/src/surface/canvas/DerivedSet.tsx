@@ -2,8 +2,9 @@ import clsx from 'clsx';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { QUIET_EDGE_LINE } from '@/canvas-model/accents';
 import type { CardResize } from '@/canvas-model/derived-frame';
-import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas-model/math';
-import { useCanvas, useCanvasCamera, type CanvasState } from '@/state/canvas';
+import type { Rect } from '@/canvas-model/math';
+import { useCanvas, useCanvasCamera } from '@/state/canvas';
+import { nearViewport } from '@/state/node-in-view';
 import { routeEdge, type Obstacle } from '@/surface/canvas/edge-route';
 import { cardHolds, derivedCardId } from '@/surface/canvas/node-body';
 
@@ -111,14 +112,10 @@ export function DerivedSet({
     );
 }
 
-/* A card further than a viewport past every edge is left out, the way the canvas leaves out a far node (`farNodeKey`), unless it is `live`. */
-function nearView(s: CanvasState, rect: Rect): boolean {
-    return !isMeasured(s.viewport) || intersects(rect, visibleRect(s.camera, s.viewport, Math.max(s.viewport.w, s.viewport.h)));
-}
-
 function Card({ owner, z, card }: { owner: string; z: number; card: DerivedCard }) {
     const { x, y, w, h } = card.rect;
-    const near = useCanvasCamera((s) => nearView(s, { x, y, w, h }));
+    // A card further than a viewport past every edge is left out, the way the canvas leaves out a far node (`farNodeKey`), unless it is `live`.
+    const near = useCanvasCamera((s) => nearViewport(s, { x, y, w, h }));
     const setDerivedCard = useCanvas((s) => s.setDerivedCard);
     const { resize } = card;
     // An id no node has, so a press on its handle or a step of the keys can never be read as one on a node.

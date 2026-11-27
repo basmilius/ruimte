@@ -14,5 +14,25 @@ export const WINDOW_VIEW_PARAM = 'view';
 /* What the page keeps of itself across a reload and a quit (`setWindowState`), opaque to the shell. */
 export const WINDOW_STATE_PARAM = 'state';
 
+/* The id of an auxiliary window, which shows some views of a project beside the window that has it. */
+export const WINDOW_AUX_PARAM = 'aux';
+
+/* The unit separator, which no project key and no id contains. */
+const AUX_KEY_MARK = '\u001f';
+
+/* A key of its own, so the project's key stays with the window that has the project. */
+export function auxWindowKey(project: string, id: string): string {
+    return `${project}${AUX_KEY_MARK}${id}`;
+}
+
+/* Null for the key of a project. */
+export function splitAuxWindowKey(key: string): { project: string; id: string } | null {
+    const at = key.lastIndexOf(AUX_KEY_MARK);
+    if (at <= 0 || at === key.length - 1) {
+        return null;
+    }
+    return { project: key.slice(0, at), id: key.slice(at + 1) };
+}
+
 /* A window the shell brought back from the last session, which opens its project only once it has the focus. */
 export const WINDOW_DORMANT_PARAM = 'dormant';

@@ -251,7 +251,7 @@ final class MachinePageTests: XCTestCase {
         )
         XCTAssertEqual(
             EndpointUpdate.restartQuestion(update: nil, work: MachineWork(terminals: 0, agents: 0), machine: "Studio"),
-            "The update downloads, installs and Ruimte restarts on Studio. Nothing that runs there ends.")
+            "The update downloads and installs, then Ruimte restarts on Studio. Nothing that runs there ends.")
 
         await endpoint.confirmInstall()
         XCTAssertEqual(machine.sent.last?.1["confirm"], .bool(true))

@@ -1,7 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { symlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, NODE_ACCENT_NAMES, NODE_SIZE, type ProjectCanvasView, type ProjectEdge } from '@ruimte/contracts';
+import {
+    CANVAS_GRID,
+    GROUP_HEADER,
+    GROUP_PADDING,
+    NODE_ACCENT_NAMES,
+    NODE_SIZE,
+    NODE_SIZE_MAX,
+    NODE_SIZE_MIN,
+    type ProjectCanvasView,
+    type ProjectEdge
+} from '@ruimte/contracts';
 import { MAX_TITLE_LENGTH, NEW_NODE } from '../canvas/host.ts';
 import { MAX_CANVAS_NODES } from '../canvas/nodes.ts';
 import { PLACEMENT_GAP } from '../canvas/placement.ts';
@@ -158,6 +168,43 @@ describe('node new', () => {
             'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so the new node has nothing there to stand beside'
         );
         expect((await fx.invoke('node_new', { kind: 'note', beside: 'ghost' })).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+    });
+
+    test('x, y, w and h put a node on the grid at that corner and size', async () => {
+        const id = await madeId(fx.invoke('node_new', { kind: 'note', x: 3003, y: -2000, w: 500, h: 300 }));
+
+        expect(await fx.nodeOnDisk(id)).toMatchObject({ x: 3000, y: -2000, w: 504, h: 304 });
+        expect((await fx.invoke('node_new', { kind: 'note', x: 0 })).lines[0]).toBe('refused\tbad-arguments\tx and y go together; give both, or neither');
+        expect((await fx.invoke('node_new', { kind: 'note', x: 0, y: 0, beside: 'note-1' })).lines[0]).toStartWith(
+            'refused\tbad-arguments\tx and y place the node themselves'
+        );
+        expect((await fx.invoke('node_new', { kind: 'note', w: 100 })).lines[0]).toStartWith('refused\tsize-out-of-range\tw is 100');
+    });
+
+    test('side puts a node on that side of the caller, past what is in the way', async () => {
+        const xOf = async (side: string) => {
+            const node = (await fx.nodeOnDisk(await madeId(fx.invoke('node_new', { kind: 'note', side }))))!;
+
+            return [node.x, node.y];
+        };
+
+        expect(await xOf('left')).toEqual([-PLACEMENT_GAP - NODE_SIZE.note.w, 0]);
+        expect(await xOf('left')).toEqual([-2 * (PLACEMENT_GAP + NODE_SIZE.note.w), 0]);
+        expect(await xOf('above')).toEqual([0, -PLACEMENT_GAP - NODE_SIZE.note.h]);
+        // note-1 stands under the caller, so the new note goes on under it.
+        expect(await xOf('below')).toEqual([0, 601 + 240 + PLACEMENT_GAP]);
+    });
+
+    test('side with beside stands right there and joins the group beside is in, which grows on that side', async () => {
+        await fx.seed(box('frame', 1000, 1000, { kind: 'group', w: 400, h: 400, memberIds: ['inside'] }), box('inside', 1032, 1072));
+        const id = await madeId(fx.invoke('node_new', { kind: 'note', side: 'left', beside: 'inside' }));
+        const left = 1032 - PLACEMENT_GAP - NODE_SIZE.note.w;
+
+        expect(await fx.nodeOnDisk(id)).toMatchObject({ x: left, y: 1072 });
+        expect(await fx.nodeOnDisk('frame')).toMatchObject({ x: left - GROUP_PADDING, w: 1400 - left + GROUP_PADDING, memberIds: ['inside', id] });
+        expect((await fx.invoke('node_new', { kind: 'note', side: 'left', view: 'main' }, 'chat')).lines[0]).toStartWith(
+            'refused\tbeside-required\tside is a side of you without beside'
+        );
     });
 
     test('beside wins over the row beside the caller, wherever the anchor sits', async () => {
@@ -392,12 +439,10 @@ describe('node group', () => {
 
     test('a refusal over an id never offers the frame this tool refuses a line later', async () => {
         await fx.seed(box('a', 400, 400), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
-        for (const tool of ['node_group', 'node_arrange']) {
-            const { lines } = await fx.invoke(tool, { nodes: 'a,ghost' });
-            expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
-            expect(lines.slice(1)).not.toContain('node\tframe\tgroup\tframe');
-            expect(lines.slice(1)).toContain('node\ta\tnote\ta');
-        }
+        const { lines } = await fx.invoke('node_group', { nodes: 'a,ghost' });
+        expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect(lines.slice(1)).not.toContain('node\tframe\tgroup\tframe');
+        expect(lines.slice(1)).toContain('node\ta\tnote\ta');
     });
 
     test('refuses nodes that do not stand in the same place already', async () => {
@@ -513,14 +558,14 @@ describe('node group', () => {
         expect(lines.at(-1)).toBe(`edges\t1\t${edges[1]!.id}`);
         // The new frame stands in the old one, whose own line says nothing about what is inside it.
         const row = (await fx.invoke('node_list', {})).lines.find((line) => line.startsWith(`${inner}\t`))!;
-        expect(row.split('\t').at(-3)).toBe(outer);
+        expect(row.split('\t')[7]).toBe(outer);
     });
 });
 
 describe('node arrange', () => {
     test('lays the nodes out from the corner they already occupied and prints where each one went', async () => {
         await fx.seed(box('a', 1000, 1000), box('b', 4000, 2000), box('c', 2000, 3000));
-        expect((await fx.invoke('node_list', {})).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t\t-\t-');
+        expect((await fx.invoke('node_list', {})).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t\t-\t-\t-');
 
         const { status, lines } = await fx.invoke('node_arrange', { nodes: 'a,b,c' });
         expect(status).toBe(200);
@@ -562,12 +607,53 @@ describe('node arrange', () => {
         expect(gaps).toEqual([PLACEMENT_GAP, PLACEMENT_GAP]);
     });
 
-    test('a group carries what stands in it, so it is not something to arrange', async () => {
-        await fx.seed(box('a', 0, 0), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
-        const { status, lines } = await fx.invoke('node_arrange', { nodes: 'a,frame' });
-        expect(status).toBe(422);
-        expect(lines[0]).toStartWith('refused\tnot-arrangeable\tframe is a group and carries whatever stands inside it');
-        expect(await fx.nodeOnDisk('a')).toMatchObject({ x: 0, y: 0 });
+    test('a group is laid out as one block and takes along what stands in it', async () => {
+        await fx.seed(box('a', 0, 0), box('frame', 300, 300, { kind: 'group', w: 800, h: 800, memberIds: ['inside'] }), box('inside', 400, 400));
+
+        expect((await fx.invoke('node_arrange', { nodes: 'a,frame', layout: 'row' })).lines).toEqual(['a\t0\t0', `frame\t${200 + PLACEMENT_GAP}\t0`]);
+        expect(await fx.nodeOnDisk('inside')).toMatchObject({ x: 400 - 60, y: 400 - 300 });
+        expect((await fx.nodeOnDisk('frame'))!.memberIds).toEqual(['inside']);
+
+        const both = await fx.invoke('node_arrange', { nodes: 'frame,inside' });
+        expect(both.lines[0]).toStartWith('refused\tinside-named-group\tframe is a group and moves with everything inside it');
+    });
+
+    test('gap is the room between the nodes and align where each stands in its cell', async () => {
+        await fx.seed(box('a', 0, 0), box('b', 500, 500, { h: 300 }));
+
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', layout: 'row', gap: 80, align: 'end' })).lines).toEqual(['a\t0\t200', 'b\t280\t0']);
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', gap: -1 })).lines[0]).toBe('refused\tbad-arguments\tgap is 0 or more');
+    });
+
+    test('beside and side put the block beside a node, and beside you without beside', async () => {
+        await fx.seed(box('a', 3000, 3000), box('b', 4000, 4000));
+
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', layout: 'row', beside: 'note-1', side: 'below' })).lines).toEqual([
+            `a\t0\t${601 + 240 + PLACEMENT_GAP}`,
+            `b\t240\t${601 + 240 + PLACEMENT_GAP}`
+        ]);
+        // Left of the caller, which stands at 0, the block of two ends one gap before it.
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', layout: 'row', side: 'left' })).lines).toEqual([
+            `a\t${-PLACEMENT_GAP - 440}\t0`,
+            `b\t${-PLACEMENT_GAP - 200}\t0`
+        ]);
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', beside: 'a' })).lines[0]).toStartWith(
+            'refused\tbad-arguments\ta is one of the nodes this call moves'
+        );
+    });
+
+    test('spread only moves apart the nodes that stand too close', async () => {
+        await fx.seed(box('a', 2000, 2000), box('b', 2100, 2010), box('c', 5000, 5000));
+
+        // Down is the shorter way out from under a, so b goes down.
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b,c', layout: 'spread' })).lines).toEqual([
+            'a\t2000\t2000',
+            `b\t2100\t${2000 + 100 + PLACEMENT_GAP}`,
+            'c\t5000\t5000'
+        ]);
+        expect((await fx.invoke('node_arrange', { nodes: 'a,b', layout: 'spread', align: 'end' })).lines[0]).toBe(
+            'refused\tflag-not-for-layout\talign does not go with spread, which only moves apart the nodes that stand too close'
+        );
     });
 
     test('a node it moves leaves the group it stood in and joins the one it lands in, as a drop does', async () => {
@@ -599,6 +685,147 @@ describe('node arrange', () => {
         expect((await fx.invoke('node_arrange', { nodes: 'ghost' })).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
         expect((await fx.invoke('node_arrange', { nodes: 'note-1', dry_run: true })).lines[0]).toBe('refused\tbad-arguments\tnode_arrange takes no dry_run');
         expect((await fx.invoke('node_arrange', {})).lines[0]).toBe('refused\tbad-arguments\tnodes needs one or more node ids, separated by commas');
+    });
+});
+
+describe('node layout', () => {
+    test('gives several nodes one size in one write and leaves their corners and the other side alone', async () => {
+        await fx.seed(box('a', 1000, 1000), box('b', 2000, 1000));
+        const rev = (await fx.onDisk()).rev;
+
+        expect((await fx.invoke('node_layout', { nodes: 'a,b', w: 500 })).lines).toEqual(['a\t1000\t1000\t504\t100', 'b\t2000\t1000\t504\t100']);
+        expect((await fx.onDisk()).rev).toBe(rev + 1);
+        expect(await fx.nodeOnDisk('b')).toMatchObject({ x: 2000, y: 1000, w: 504, h: 100 });
+    });
+
+    test('a side outside what a person can drag a frame to is refused with the range, and nothing is written', async () => {
+        await fx.seed(box('a', 1000, 1000));
+
+        expect((await fx.invoke('node_layout', { nodes: 'a,note-1', w: 100 })).lines).toEqual([
+            `refused\tsize-out-of-range\ta: w is 100; a node is ${NODE_SIZE_MIN.w} to ${NODE_SIZE_MAX} wide`,
+            `w\t${NODE_SIZE_MIN.w} to ${NODE_SIZE_MAX}`,
+            `h\t${NODE_SIZE_MIN.h} to ${NODE_SIZE_MAX}`
+        ]);
+        expect(await fx.nodeOnDisk('a')).toMatchObject({ w: 200, h: 100 });
+    });
+
+    test('the group around a node that grew grows with it', async () => {
+        await fx.seed(box('frame', 0, 0, { kind: 'group', w: 400, h: 300, memberIds: ['a'] }), box('a', 32, 72));
+        await fx.invoke('node_layout', { nodes: 'a', w: 800, h: 400 });
+
+        expect(await fx.nodeOnDisk('frame')).toMatchObject({ x: 0, y: 0, w: 32 + 800 + GROUP_PADDING, h: 72 + 400 + GROUP_PADDING });
+    });
+
+    test('json gives each node a corner on the grid, a size, or both', async () => {
+        await fx.seed(box('a', 1000, 1000), box('b', 2000, 1000));
+        const json = JSON.stringify([
+            { id: 'a', x: 3003, y: -2000, w: 480, h: 320 },
+            { id: 'b', h: 240 }
+        ]);
+
+        expect((await fx.invoke('node_layout', { json })).lines).toEqual(['a\t3000\t-2000\t480\t320', 'b\t2000\t1000\t200\t240']);
+    });
+
+    test('a side puts a node beside another one, and a later row may stand beside an earlier one', async () => {
+        await fx.seed(box('a', 1000, 1000), box('b', 2000, 1000), box('c', 3000, 1000));
+        const json = JSON.stringify([
+            { id: 'a', x: 0, y: 2000 },
+            { id: 'b', side: 'below', beside: 'a', gap: 80 },
+            { id: 'c', side: 'left', beside: 'b' }
+        ]);
+
+        expect((await fx.invoke('node_layout', { json })).lines).toEqual([
+            'a\t0\t2000\t200\t100',
+            'b\t0\t2180\t200\t100',
+            `c\t${-PLACEMENT_GAP - 200}\t2180\t200\t100`
+        ]);
+    });
+
+    test('a side without beside is a side of the caller, past what is in the way', async () => {
+        await fx.seed(box('a', 1000, 1000), box('b', 2000, 1000));
+        await fx.invoke('node_layout', { json: JSON.stringify([{ id: 'a', side: 'left' }]) });
+        await fx.invoke('node_layout', { json: JSON.stringify([{ id: 'b', side: 'left' }]) });
+
+        expect([(await fx.nodeOnDisk('a'))!.x, (await fx.nodeOnDisk('b'))!.x]).toEqual([-PLACEMENT_GAP - 200, -2 * (PLACEMENT_GAP + 200)]);
+        expect((await fx.invoke('node_layout', { json: JSON.stringify([{ id: 'a', side: 'left' }]), view: 'main' }, 'chat')).lines[0]).toStartWith(
+            'refused\tbeside-required\ta: side is a side of you without beside, and you are no node on main'
+        );
+    });
+
+    test('a group moves with what it holds, and a node moved out of its group leaves it for the one it lands in', async () => {
+        await fx.seed(
+            box('frame', 0, 2000, { kind: 'group', w: 600, h: 600, memberIds: ['a', 'b'] }),
+            box('far', 5000, 2000, { kind: 'group', w: 1000, h: 1000, memberIds: [], membersListed: true }),
+            box('a', 100, 2100),
+            box('b', 100, 2300)
+        );
+        const json = JSON.stringify([
+            { id: 'frame', x: 1000, y: 3000 },
+            { id: 'b', x: 5400, y: 2400 }
+        ]);
+        await fx.invoke('node_layout', { json });
+
+        expect(await fx.nodeOnDisk('a')).toMatchObject({ x: 1100, y: 3100 });
+        expect((await fx.nodeOnDisk('frame'))!.memberIds).toEqual(['a']);
+        expect((await fx.nodeOnDisk('far'))!.memberIds).toEqual(['b']);
+    });
+
+    test('a node put beside one in a group joins that group, which grows on that side', async () => {
+        await fx.seed(box('frame', 1000, 1000, { kind: 'group', w: 400, h: 300, memberIds: ['inside'] }), box('inside', 1032, 1072), box('a', 5000, 5000));
+        await fx.invoke('node_layout', { json: JSON.stringify([{ id: 'a', side: 'left', beside: 'inside' }]) });
+
+        expect(await fx.nodeOnDisk('a')).toMatchObject({ x: 1032 - PLACEMENT_GAP - 200, y: 1072 });
+        expect(await fx.nodeOnDisk('frame')).toMatchObject({ x: 1032 - PLACEMENT_GAP - 200 - GROUP_PADDING, y: 1000, memberIds: ['inside', 'a'] });
+    });
+
+    test('names the nodes that overlap afterwards, since nothing else moves', async () => {
+        await fx.seed(box('a', 1000, 1000), box('b', 2000, 1000));
+
+        expect((await fx.invoke('node_layout', { json: JSON.stringify([{ id: 'a', x: 2040, y: 1040 }]) })).lines).toEqual([
+            'a\t2040\t1040\t200\t100',
+            'overlap\ta\tb',
+            'see\tnode_arrange layout spread\tmoves apart the nodes that overlap'
+        ]);
+    });
+
+    test('a folded node keeps its header and takes a height as the one it opens to', async () => {
+        await fx.seed(box('a', 1000, 1000, { collapsed: true, h: 40, expandedHeight: 300 }));
+
+        expect((await fx.invoke('node_layout', { nodes: 'a', w: 480, h: 400 })).lines).toEqual(['a\t1000\t1000\t480\t400']);
+        expect(await fx.nodeOnDisk('a')).toMatchObject({ w: 480, h: 40, expandedHeight: 400 });
+        expect((await fx.invoke('node_list', {})).lines.find((line) => line.startsWith('a\t'))).toEndWith('\tfolded');
+    });
+
+    test('dry_run answers where everything would stand and writes nothing', async () => {
+        await fx.seed(box('a', 1000, 1000));
+        const rev = (await fx.onDisk()).rev;
+
+        expect((await fx.invoke('node_layout', { nodes: 'a', w: 480, dry_run: true })).lines).toEqual([
+            'a\t1000\t1000\t480\t100',
+            'dry-run\tnothing was written'
+        ]);
+        expect((await fx.onDisk()).rev).toBe(rev);
+    });
+
+    test('refuses a row that asks for nothing, for two places, or for half of one', async () => {
+        await fx.seed(box('a', 1000, 1000));
+        const refusal = async (rows: object[]) => (await fx.invoke('node_layout', { json: JSON.stringify(rows) })).lines[0];
+
+        expect(await refusal([{ id: 'a' }])).toBe('refused\tnothing-to-change\ta: Give x and y, a side, w or h');
+        expect(await refusal([{ id: 'a', x: 0 }])).toBe('refused\tbad-arguments\ta: x and y go together; give both, or neither and a side');
+        expect(await refusal([{ id: 'a', x: 0, y: 0, side: 'left' }])).toStartWith('refused\tbad-arguments\ta: x and y place the node themselves');
+        expect(await refusal([{ id: 'a', side: 'left', beside: 'a' }])).toStartWith('refused\tbad-arguments\ta: beside names the node itself');
+        expect(
+            await refusal([
+                { id: 'a', w: 480 },
+                { id: 'a', h: 320 }
+            ])
+        ).toStartWith('refused\tbad-arguments\ta is named twice');
+        expect(await refusal([{ id: 'ghost', w: 480 }])).toBe('refused\tunknown-node\tghost: ghost is not a node on main');
+        expect((await fx.invoke('node_layout', { nodes: 'a' })).lines[0]).toStartWith('refused\tbad-arguments\tnode_layout needs nodes with w or h, or json');
+        expect((await fx.invoke('node_layout', { nodes: 'a', json: '[]' })).lines[0]).toBe(
+            'refused\tbad-arguments\tjson carries every node with its own fields; leave out nodes'
+        );
     });
 });
 

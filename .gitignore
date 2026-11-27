@@ -18,6 +18,8 @@ apps/ios/DerivedData/
 apps/ios/Signing.xcconfig
 apps/computer-use/.build/
 apps/computer-use/.swiftpm/
+apps/speech-bridge/.build/
+apps/speech-bridge/.swiftpm/
 
 # The pinned Android screen server a development daemon fetches on first use.
 apps/server/.native/

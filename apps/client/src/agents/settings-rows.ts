@@ -2,6 +2,7 @@ import { closedLidOffered, keepAwakeAvailable } from '@/controllers/keep-awake';
 import { canTellIdle } from '@/desktop/bridge';
 import { settingsRow as row, type SettingsSearchRow } from '@/registry/settings-sections';
 import { hasLocalMachine, hasOpenedMachine } from '@/state/local-machine';
+import { SOUND_EVENTS } from '@/state/sounds';
 
 export const TERMINAL_AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
     {
@@ -15,6 +16,7 @@ export const TERMINAL_AGENT_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
 
 /* Drawn under General, Notifications; their words stay where they were. */
 export const NOTIFICATION_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
+    ...SOUND_EVENTS.map((event) => ({ id: `agents.notify.${event}`, section: 'agents', label: `settings:agents.sounds.events.${event}` })),
     row('agents.sounds.pack'),
     row('agents.quietHours'),
     row('agents.breakReminder', canTellIdle)

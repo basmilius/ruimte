@@ -44,7 +44,7 @@ const AGENT_PERMISSION_NOTE =
     'Leave `mode` out unless the person asks for another permission mode; a read-only or review assignment does not imply `supervised`.';
 
 /* The tokens the composer's `@` menu writes, which a model cannot tell from a path without being told. */
-const TAG_NOTE = '`@model:<cli>/<id>` sets `cli` and `model` of an agent you start, `@account:<cli>/<id>` its `account`.';
+const TAG_NOTE = '`@model:<cli>[:<account>]/<id>` sets `cli`, `model` and `account` of an agent you start, `@account:<cli>/<id>` its `account`.';
 
 /* What the tools open, with the reason not to: every agent leaves a node behind. */
 function opensAt(depth: number): string | null {

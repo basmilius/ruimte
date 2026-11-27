@@ -356,7 +356,7 @@
         "tooLong": "Inloggen duurde te lang. Log opnieuw in."
     },
     "protocol": {
-        "daemon-older": "Deze machine draait een oudere Ruimte. Werk Ruimte daar bij, of herstart hem om de update op te pikken.",
+        "daemon-older": "Deze machine draait een oudere Ruimte. Werk Ruimte daar bij, of herstart Ruimte daar om de update te laden.",
         "daemon-newer": "Deze machine draait een nieuwere Ruimte dan deze app. Werk deze app bij."
     },
     "broker": {
@@ -397,7 +397,7 @@
         "notProven": "{{label}} bewees zijn identiteit niet over de directe verbinding",
         "noKey": "Deze browser kan de key voor een directe verbinding niet maken",
         "needsPairedKey": "Een directe verbinding vraagt om een machine op je account, of om de Ruimte-app op deze machine",
-        "timedOut": "De directe verbinding kwam niet binnen {{seconds}} seconden op",
+        "timedOut": "De directe verbinding kwam niet tot stand binnen {{seconds}} seconden",
         "frameRefused": "Kon geen gegevens over de directe verbinding sturen: {{reason}}",
         "answerNotApplied": "Kon het antwoord van de machine niet gebruiken: {{reason}}",
         "refusedVerdict": "De machine weigerde de directe verbinding: {{reason}}",

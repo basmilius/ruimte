@@ -25,7 +25,7 @@ export function hostIdOf(view: CellView | null): string {
 
 export function useHasViewToolbar(view: CellView | null): boolean {
     const host = useNodeHost(hostIdOf(view));
-    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
+    const dictationEnabled = useDictation((state) => state.speech?.enabled === true);
     const forked = useIsFork(view);
     const planned = useHasPlans(chatIdOf(view));
     const ports = useSessionPortControl(view?.kind === 'terminal' ? view.id : '');

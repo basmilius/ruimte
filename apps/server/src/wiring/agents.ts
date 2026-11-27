@@ -395,6 +395,7 @@ export async function wireAgents({ runtime, identity, stores, providers, compute
             modeCeiling: bounds.modeCeiling,
             peerChat: (chatId) => untrusted.node(chatId),
             checkCwd: bounds.checkCwd,
+            projectFolder: folderOf,
             holdsProject: async (chatId, clientId) => {
                 const place = index().locate(chatId);
                 return place !== null && later.projects().store.holdsFolder(clientId, place.folder);

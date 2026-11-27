@@ -1,3 +1,4 @@
+import { LONG_MS } from '@adecore/ui';
 import { formatPercent } from '@adecore/ui/format';
 import { compareVersions, isVersion, type UpdateTrack } from '@ruimte/desktop-bridge';
 import i18next from 'i18next';
@@ -120,7 +121,7 @@ export function noteVersionChange(current: string, storage: Pick<Storage, 'getIt
             id: 'updated-version',
             title: i18next.t('state:update.updated.title', { version: current }),
             kind: 'success',
-            persist: true,
+            lifetime: LONG_MS,
             action: withNotes
                 ? {
                       label: i18next.t('state:update.updated.whatsNew'),

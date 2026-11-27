@@ -54,7 +54,7 @@ function untitled(kind: NodeNewKind): string {
 }
 
 /* The three fields no kind is without; a refusal about one kind would otherwise read as if they were gone. */
-export const EVERY_KIND_LINE = 'kind\tevery kind\ttitle, view, beside';
+export const EVERY_KIND_LINE = 'kind\tevery kind\ttitle, view, beside, side, x, y, w, h';
 
 /* The fields of one kind, as `guide` and a refusal about that kind print them, so both name the same fields. */
 export function kindLine(kind: NodeNewKind): string {

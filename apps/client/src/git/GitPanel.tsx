@@ -4,6 +4,7 @@ import i18next from 'i18next';
 import { Archive, ChevronsDownUp, ChevronsUpDown, Folder, GitBranch, GitMerge, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { ignoreRefusal, perform } from '@/action-port/perform';
 import { assumeStaged, useGitCheckouts, useProjectRepos, visibleRepos, withoutNestedCheckouts, type GitCheckoutRef } from '@/controllers/git-repos';
 import { useProjectNodes, useWorktrees, worktreeLists } from '@/controllers/worktrees';
@@ -26,7 +27,7 @@ import { useEndpointId } from '@/state/current-endpoint';
 import { useDocument } from '@/state/document';
 import { fileTabOf, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
-import { boundGroupsOf, gitPlace, gitTarget, gitTargets, type GitPick, type GitTarget } from '@/state/git-target';
+import { boundGroupsOf, gitPlace, gitTarget, gitTargets, type BoundGroup, type GitPick, type GitTarget } from '@/state/git-target';
 import { endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
@@ -60,6 +61,15 @@ type Dialog =
     | { kind: 'delete-file'; work: GitWork[] }
     | { kind: 'diverged'; cwd: string; action: GitActionKind; branch: string };
 
+/* The bound groups back from the flat list a shallow compare can hold still: a path, then its title. */
+function groupsOfKeys(keys: readonly string[]): BoundGroup[] {
+    const groups: BoundGroup[] = [];
+    for (let i = 0; i + 1 < keys.length; i += 2) {
+        groups.push({ path: keys[i]!, title: keys[i + 1]! });
+    }
+    return groups;
+}
+
 function filesOf(work: readonly GitWork[]): GitFile[] {
     return work.flatMap((step) => step.files);
 }
@@ -70,8 +80,6 @@ function filesOf(work: readonly GitWork[]): GitFile[] {
  */
 export function GitPanel() {
     const { t } = useTranslation('panels');
-    const nodes = useCanvas((s) => s.nodes);
-    const selection = useCanvas((s) => s.selection);
     const folder = useProject((s) => s.current?.folder ?? null);
     const scope = useGit((s) => s.scope);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
@@ -82,17 +90,26 @@ export function GitPanel() {
     const textModel = useServers((state) => state.byEndpoint[endpointId]?.textModel);
     const transport = useTransport();
     const worktrees = useWorktrees(transport, endpointId, folder, true);
-    const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
+    // Every frame of a drag hands the canvas new nodes; the panel hears only what it points at and the groups that bind a worktree.
+    const derived = useCanvas(useShallow((s) => gitTarget(s.nodes, s.selection, folder, worktrees)));
+    const groupKeys = useCanvas(useShallow((s) => boundGroupsOf(s.nodes).flatMap((group) => [group.path, group.title])));
+    const followed = useCanvas(
+        useShallow((s) => {
+            const node = derived.via === undefined ? undefined : s.nodes[derived.via];
+
+            return node === undefined ? null : { title: node.title, kind: node.kind };
+        })
+    );
     /* A worktree picked by hand, or the project folder pinned, outranks the selection until the
        selection points somewhere else of its own. A repository is not picked here but remembered,
        since it travels with the project's local file. */
     const [picked, setPicked] = useState<GitPick | null>(null);
     const projectNodes = useProjectNodes();
     const { repos, truncated: reposTruncated, reload: reloadRepos } = useProjectRepos(folder);
-    const targets = useMemo(() => gitTargets(boundGroupsOf(nodes), worktrees, folder, repos), [nodes, worktrees, folder, repos]);
+    const targets = useMemo(() => gitTargets(groupsOfKeys(groupKeys), worktrees, folder, repos), [groupKeys, worktrees, folder, repos]);
     /* The worktree the panel is in, if it is in one: that is the whole list then, the way it always was. */
     const { worktree, following } = gitPlace(derived, picked, targets);
-    const followedNode = following && derived.via !== undefined ? (nodes[derived.via] ?? null) : null;
+    const followedNode = following ? followed : null;
 
     const refs = useMemo<readonly GitCheckoutRef[]>(
         () =>

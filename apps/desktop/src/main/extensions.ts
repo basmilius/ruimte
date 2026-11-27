@@ -57,6 +57,10 @@ export class ClientExtensions {
     private readonly links = new Map<string, { folder: string; revision: number; manifest: ExtensionManifest; enabled: boolean }>();
     private readonly changes = new Serializer();
     private temporaryCounter = 0;
+    /* The index and the manifests of installed versions as the page's file requests read them, which come by the dozen per load. Only this class writes the index, and a version's folder is named by the hash of its pack. */
+    private readIndex: IndexEntry[] | null = null;
+    private indexWrites = 0;
+    private readonly installedManifests = new Map<string, ExtensionManifest>();
     // Every window shares these installations, also one in machine mode `none` or on another machine, so each hears of a change.
     private readonly onChanged: () => void;
 
@@ -118,6 +122,25 @@ export class ClientExtensions {
     private async writeIndex(entries: IndexEntry[]): Promise<void> {
         await mkdir(this.root, { recursive: true });
         await writeAtomic(join(this.root, 'index.json'), JSON.stringify(entries));
+        this.indexWrites += 1;
+        this.readIndex = null;
+        this.installedManifests.clear();
+    }
+
+    /* `index` for a file request. A failure is not kept, nor a read a write overtook, so the next request reads again. */
+    private async servedIndex(): Promise<IndexEntry[]> {
+        if (this.readIndex !== null) {
+            return this.readIndex;
+        }
+
+        const writes = this.indexWrites;
+        const entries = await this.index();
+
+        if (writes === this.indexWrites) {
+            this.readIndex = entries;
+        }
+
+        return entries;
     }
 
     private async manifestIn(folder: string): Promise<ExtensionManifest | null> {
@@ -276,21 +299,27 @@ export class ClientExtensions {
         });
     }
 
-    private async folderOf(id: string, version: string): Promise<{ folder: string; manifest: ExtensionManifest } | null> {
+    private async folderOf(id: string, version: string): Promise<{ folder: string; manifest: ExtensionManifest; dev: boolean } | null> {
         const link = this.links.get(id);
 
         if (link !== undefined && version === `dev-${link.revision}`) {
-            return { folder: link.folder, manifest: link.manifest };
+            return { folder: link.folder, manifest: link.manifest, dev: true };
         }
 
-        if (!(await this.index()).some((entry) => entry.id === id && entry.hash === version)) {
+        if (!(await this.servedIndex()).some((entry) => entry.id === id && entry.hash === version)) {
             return null;
         }
 
         const folder = join(this.root, id, version);
-        const manifest = await this.manifestIn(folder);
+        const manifest = this.installedManifests.get(folder) ?? (await this.manifestIn(folder));
 
-        return manifest === null ? null : { folder, manifest };
+        if (manifest === null) {
+            return null;
+        }
+
+        this.installedManifests.set(folder, manifest);
+
+        return { folder, manifest, dev: false };
     }
 
     /* A file of an extension, for the app scheme. An html file is a frame, with the policy its manifest allows. */
@@ -336,7 +365,8 @@ export class ClientExtensions {
             const headers: Record<string, string> = {
                 'content-type': EXTENSION_FILE_TYPES[extension.slice(1)] ?? 'application/octet-stream',
                 'x-content-type-options': 'nosniff',
-                'cache-control': 'no-cache',
+                // An installed version's files never change under its address, which holds the hash of its pack; a dev folder changes as it is worked on.
+                'cache-control': found.dev ? 'no-cache' : 'private, max-age=31536000, immutable',
                 'access-control-allow-origin': '*'
             };
 

@@ -281,7 +281,7 @@
     "apps/server/src/database/agent-access.test.ts": 16,
     "apps/server/src/sessions/first-prompt.test.ts": 16,
     "apps/server/src/tools/artifact-tools.test.ts": 16,
-    "apps/desktop/src/speech-model.test.ts": 15,
+    "apps/desktop/src/speech-setting.test.ts": 15,
     "apps/server/src/push/snoozes.test.ts": 15,
     "apps/server/src/usage/nanogpt-live.test.ts": 15,
     "apps/server/src/wiring/usage.test.ts": 15,

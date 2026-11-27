@@ -59,7 +59,7 @@ test("Editor AI shows the CLI's own Sonnet for an inline edit with no model chos
     const modelButtons = (): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')];
     await until(() => modelButtons().some((button) => button.textContent?.includes('Claude Sonnet 5.5')));
     expect(modelButtons().some((button) => button.textContent?.includes('Claude Haiku 5.5'))).toBe(false);
-    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Code is sent to the selected provider.');
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('The selected provider receives your code.');
 
     await act(async () => useSettings.setState({ aiInlineAgent: { provider: 'claude', model: 'claude-haiku-5-5' } }));
     await until(() => modelButtons().some((button) => button.textContent?.includes('Claude Haiku 5.5')));

@@ -48,14 +48,14 @@ import {
     quietDaysFrom
 } from '@/state/quiet-hours';
 import {
+    announcementsFrom,
     customSoundPacksFrom,
-    DEFAULT_SOUND_PACK,
+    DEFAULT_NOTIFY_EVENTS,
+    NO_SOUND_PACK,
     projectSoundsFrom,
-    soundEventsFrom,
-    soundPackFrom,
     type CustomSoundPack,
-    type ProjectSounds,
-    type SoundEvents
+    type NotifyEvents,
+    type ProjectSounds
 } from '@/state/sounds';
 import { storedJson, switchesFrom } from '@/state/stored-json';
 
@@ -282,11 +282,12 @@ export interface Settings {
     /* Whether the display stays on as well, which only `always` offers: while an agent works nobody
        needs to watch it. */
     keepAwakeDisplay: boolean;
-    /* The pack the notification sounds come from, one of the built-in ones or a person's own. */
+    /* The pack the notification sounds come from: a built-in one, a person's own, or the one that plays
+       nothing. That last one to start with, because a sound arrives in whatever the person walked away
+       to do, which may be a call. */
     soundPack: string;
-    /* Which events make a sound. All off, because a sound arrives in whatever the person walked away to
-       do, which may be a call. */
-    soundEvents: SoundEvents;
+    /* Which events raise a notification on this computer. */
+    notifyEvents: NotifyEvents;
     customSoundPacks: CustomSoundPack[];
     /* What a project does differently, by machine and project: another pack, or no sound at all. */
     projectSounds: Record<string, ProjectSounds>;
@@ -408,8 +409,8 @@ const DEFAULT_SETTINGS: Settings = {
     keepAwake: 'off',
     keepAwakeOnBattery: false,
     keepAwakeDisplay: false,
-    soundPack: DEFAULT_SOUND_PACK,
-    soundEvents: soundEventsFrom(null, false),
+    soundPack: NO_SOUND_PACK,
+    notifyEvents: { ...DEFAULT_NOTIFY_EVENTS },
     customSoundPacks: [],
     projectSounds: {},
     quietHoursOn: false,
@@ -533,9 +534,7 @@ export function settingsFrom(stored: Partial<Settings>): Settings {
                 ? stored.voiceInputDeviceId
                 : DEFAULT_SETTINGS.voiceInputDeviceId,
         voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
-        soundPack: soundPackFrom(stored.soundPack, customSoundPacks),
-        // The one switch there was before these covered the two alerts the desktop raised.
-        soundEvents: soundEventsFrom(stored.soundEvents, (stored as { agentsTurnSound?: unknown }).agentsTurnSound),
+        ...announcementsFrom(stored, customSoundPacks),
         customSoundPacks,
         projectSounds: projectSoundsFrom(stored.projectSounds, customSoundPacks),
         quietHoursOn: stored.quietHoursOn === true,

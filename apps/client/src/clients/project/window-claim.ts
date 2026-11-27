@@ -1,6 +1,7 @@
+import { auxWindowKey } from '@ruimte/desktop-bridge';
 import { desktop, type DesktopBridge } from '@/desktop/bridge';
 import { endpointKey } from '@/state/keys';
-import { windowSearch } from '@/state/window-target';
+import { auxWindowId, windowSearch } from '@/state/window-target';
 
 /* The address of this page, which a test stands in for. */
 export interface WindowAddress {
@@ -26,15 +27,18 @@ function pageAddress(): WindowAddress | null {
 export async function claimWindow(
     project: { endpointId: string; projectId: string } | null,
     shell: Pick<DesktopBridge, 'claimWindow'> | null = desktop(),
-    address: WindowAddress | null = pageAddress()
+    address: WindowAddress | null = pageAddress(),
+    aux: string | null = auxWindowId()
 ): Promise<boolean> {
     const claim = shell?.claimWindow;
     if (!claim) {
         return true;
     }
     const key = project === null ? null : endpointKey(project.endpointId, project.projectId);
+    // Under a key of its own, or the claim would take the project from the window that has it.
+    const claimed = key === null || aux === null ? key : auxWindowKey(key, aux);
     // A shell that does not answer is no reason to keep a person out of their project.
-    const granted = await claim(key).catch(() => true);
+    const granted = await claim(claimed).catch(() => true);
     if (granted && address !== null) {
         const search = windowSearch(address.search(), key);
         if (search !== address.search()) {

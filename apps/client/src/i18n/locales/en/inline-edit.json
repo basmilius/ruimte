@@ -16,7 +16,7 @@
         "done": "Done · {{duration}}",
         "failed": "Failed",
         "noChange": "No change proposed",
-        "stale": "The selection changed, so this cannot be applied. Open as chat to continue.",
+        "stale": "The selection changed, so you cannot apply this. Open as chat to continue.",
         "readOnly": "This file is read-only.",
         "followUp": "Ask for another change…",
         "send": "Send",

@@ -18,7 +18,7 @@ export function TerminalDictationButton(props: { terminalId: string | null }) {
 function Control({ terminalId }: { terminalId: string | null }) {
     const endpointId = useEndpointId();
     const target = useTerminalDictationTargets((state) => (terminalId ? state.targets.get(terminalTargetKey(endpointId, terminalId)) : undefined));
-    const enabled = useDictation((state) => state.model?.enabled === true);
+    const enabled = useDictation((state) => state.speech?.enabled === true);
     const phase = useDictation((state) => (target && state.targetId === target.id ? state.phase : 'idle'));
     const error = useDictation((state) => (target && state.targetId === target.id ? state.error : null));
     useEffect(observeSpeech, []);

@@ -49,13 +49,14 @@ const DRAWN_WHEN_NEAR: ReadonlySet<string> = new Set(['note', 'file', 'artifact'
  * when the set changes and not on every frame of the camera.
  */
 export function farNodeKey(s: CanvasState): string {
-    if (!isMeasured(s.viewport) || maximizedNodeOf(s) !== null) {
+    if (maximizedNodeOf(s) !== null || (!s.viewportHidden && !isMeasured(s.viewport))) {
         return '';
     }
-    const near = visibleRect(s.camera, s.viewport, Math.max(s.viewport.w, s.viewport.h));
+    // A hidden canvas has nothing near: drawing it all would only wake what nobody can see.
+    const near = s.viewportHidden ? null : visibleRect(s.camera, s.viewport, Math.max(s.viewport.w, s.viewport.h));
     const far: string[] = [];
     for (const node of Object.values(s.nodes)) {
-        if (DRAWN_WHEN_NEAR.has(node.kind) && !intersects(node, near) && !actedOn(s, node.id)) {
+        if (DRAWN_WHEN_NEAR.has(node.kind) && (near === null || !intersects(node, near)) && !actedOn(s, node.id)) {
             far.push(node.id);
         }
     }

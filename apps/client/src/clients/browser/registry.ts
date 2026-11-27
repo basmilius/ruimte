@@ -148,8 +148,11 @@ function isWheelSample(value: unknown): value is WheelSample {
     );
 }
 
-function historyOf(element: WebviewElement): SwipeHistory {
-    return { canGoBack: element.canGoBack(), canGoForward: element.canGoForward() };
+/* From the store, which every navigation event keeps current, so a wheel sample asks the guest nothing. */
+export function swipeHistoryOf(key: string): SwipeHistory {
+    const page = useBrowser.getState().byKey[key];
+
+    return { canGoBack: page?.canGoBack ?? false, canGoForward: page?.canGoForward ?? false };
 }
 
 /* Whether pages report their wheel at all, the setting on the one platform the gesture belongs to. */
@@ -516,7 +519,7 @@ class BrowserRegistry {
                     this.forward(key);
                 }
             } else if (message.channel === 'ruimte:wheel' && isWheelSample(payload)) {
-                this.feedSwipe(key, element, payload);
+                this.feedSwipe(key, payload);
             } else if (message.channel === 'ruimte:ground' && typeof payload === 'string') {
                 // A page is transparent where it paints nothing, so its own ground goes behind it.
                 element.style.backgroundColor = payload;
@@ -559,12 +562,12 @@ class BrowserRegistry {
         });
     }
 
-    private feedSwipe(key: string, element: WebviewElement, sample: WheelSample): void {
+    private feedSwipe(key: string, sample: WheelSample): void {
         // A sample that was already on its way when the setting went off.
         if (!swipesOn()) {
             return;
         }
-        const result = feedWheel(this.swipes.get(key) ?? IDLE_SWIPE, sample, historyOf(element), performance.now());
+        const result = feedWheel(this.swipes.get(key) ?? IDLE_SWIPE, sample, swipeHistoryOf(key), performance.now());
         this.applySwipe(key, result.state, result.outcome);
         clearTimeout(this.settleTimers.get(key));
         this.settleTimers.delete(key);
@@ -576,7 +579,7 @@ class BrowserRegistry {
             key,
             setTimeout(() => {
                 this.settleTimers.delete(key);
-                const settled = settleSwipe(this.swipes.get(key) ?? IDLE_SWIPE, historyOf(element), performance.now());
+                const settled = settleSwipe(this.swipes.get(key) ?? IDLE_SWIPE, swipeHistoryOf(key), performance.now());
                 this.applySwipe(key, settled.state, settled.outcome);
             }, SWIPE_GESTURE_GAP_MS)
         );

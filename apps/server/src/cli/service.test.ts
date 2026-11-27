@@ -178,7 +178,7 @@ describe('runServiceAction', () => {
     test('install over a newer binary leaves the running daemon to switch when idle', async () => {
         const { deps, out } = setup({ health: { version: '0.1.0', build: 'old' }, build: 'new' });
         await runServiceAction('install', MAC, deps);
-        expect(out).toContain('A daemon from an earlier install is still running; it switches to this one as soon as nothing is running on it.');
+        expect(out).toContain('The Ruimte of an earlier install is still running. It switches to this one as soon as nothing is running on it.');
     });
 
     test('install refuses to take over the service of the desktop app', async () => {

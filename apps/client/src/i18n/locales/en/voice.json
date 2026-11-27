@@ -43,7 +43,7 @@
     },
     "error": {
         "start": "GPT-Live could not start",
-        "session": "GPT-Live reported a session error",
+        "session": "GPT-Live stopped with an error",
         "noSession": "Could not start the microphone",
         "connectionLost": "Lost connection to GPT-Live"
     },
@@ -53,19 +53,9 @@
         "title": "Speech to text",
         "description": "Dictate into any text field. Recognition runs on this computer. Ruimte never uploads or saves audio.",
         "enable": "Enable Speech to text",
-        "downloadHint": "Downloads a 2.6 GB model on first use. No account or API key needed. Turning this off keeps the model.",
+        "hint": "Uses Apple Speech. macOS downloads a language's model the first time you dictate in it.",
         "desktopOnly": "Available in the desktop app.",
-        "unavailable": "Speech to text is missing from this install. Update the desktop app.",
-        "download": "Downloading speech model…",
-        "verifying": "Checking speech model…",
-        "progress": "{{received}} / {{total}} MB downloaded",
-        "cancelDownload": "Cancel download",
-        "retry": "Retry download",
-        "remove": "Remove model",
-        "model": {
-            "label": "Model",
-            "description": "{{size}} on this computer."
-        },
+        "unavailable": "Speech to text works only in the desktop app on macOS.",
         "start": "Start dictation",
         "stop": "Stop dictation",
         "cancel": "Discard dictation",
@@ -85,7 +75,7 @@
             "noBridge": "Speech to text needs the desktop app.",
             "overrun": "Speech recognition could not keep up with the microphone. Try again.",
             "recognition": "Speech recognition stopped with an error. Try again.",
-            "unknown": "Dictation stopped unexpectedly. Try again.",
+            "unknown": "Dictation stopped. Try again.",
             "targetChanged": "The text field changed. Dictate again."
         }
     },

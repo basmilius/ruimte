@@ -170,7 +170,7 @@
         "alignment": "Uitlijning",
         "color": "Tekstkleur",
         "defaultColor": "Standaard tekstkleur",
-        "resizeWidth": "Sleep om de breedte aan te passen. Dubbelklik om passend te maken."
+        "resizeWidth": "Sleep om de breedte aan te passen. Dubbelklik voor een passende breedte."
     },
     "delete": {
         "nodes_one": "{{count}} node",

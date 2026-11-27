@@ -20,6 +20,7 @@ interface ProjectListStore {
     /* One row of one machine, for a rename, an icon, or a project another client just opened there. */
     patchProject(endpointId: string, summary: ProjectSummary): void;
     forgetProjects(endpointId: string): void;
+    forgetProject(endpointId: string, projectId: string): void;
 }
 
 /*
@@ -44,5 +45,8 @@ export const useProjectList = create<ProjectListStore>((set, get) => ({
     },
     forgetProjects(endpointId) {
         set({ projects: get().projects.filter((row) => row.endpointId !== endpointId) });
+    },
+    forgetProject(endpointId, projectId) {
+        set({ projects: get().projects.filter((row) => row.endpointId !== endpointId || row.summary.projectId !== projectId) });
     }
 }));

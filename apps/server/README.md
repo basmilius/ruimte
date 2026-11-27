@@ -263,7 +263,7 @@ $RUIMTE_HOME/
   power/closed-lid-held            0700 folder, present while sleep is off for a closed lid
 ```
 
-The desktop shell and helpers add `speech.json` and the speech models under `models/`, and `apple-foundation/` for the Apple helper's sessions, which go with their chat. The shell removes the obsolete `models/coreml-cache` at start.
+The desktop shell and helpers add `speech.json`, and `apple-foundation/` for the Apple helper's sessions, which go with their chat. Speech to Text keeps no model here; the shell removes the retired Nemotron model under `models/` at start.
 
 Disposable files expire on the rule of their writer: `screenshots/` after a day, `device-captures/` after a week (never `placed/`), the computer use helper's captures after an hour, and a temporary write in `chats/` (`<file>.<pid>-<n>.tmp`) after a day. Each folder is swept on a new write, and by a maintenance pass at start and every hour while no agent is in a turn (`src/maintenance`). A pass reads at most 5000 entries and removes at most 1000 files per folder, only regular files whose name or time says they expired, and stops between files on shutdown.
 

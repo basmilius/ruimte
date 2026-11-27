@@ -285,7 +285,7 @@ struct LaunchImportSheet: View {
         NavigationStack {
             MobileForm {
                 Section {
-                    Text("Nothing is saved until you import. What you import counts as your approval on this machine.")
+                    Text("Ruimte saves nothing until you import. What you import counts as your approval on this machine.")
                         .font(.caption).foregroundStyle(MobileStyle.muted)
                     if let failure { Label(failure, lucideIcon: "triangle-alert").foregroundStyle(MobileStyle.statusError) }
                 }

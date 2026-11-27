@@ -106,7 +106,7 @@ struct NotificationsSettingsPage: View {
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
                 Text(
-                    "No alert on this iPhone in these hours. Agents keep working, and what still waits is announced when they end."
+                    "No alert on this iPhone in these hours. Agents keep working, and you hear what still waits when the hours end."
                 )
                 if coordinator.preferences.quiet.on, !outdatedMachines.isEmpty {
                     Text("\(outdatedMachines.joined(separator: ", ")) needs an update to hold alerts in quiet hours.")

@@ -1,6 +1,7 @@
 import { formatDuration } from '@adecore/ui/format';
 import type { LaunchStatus } from '@ruimte/contracts';
 import i18next from 'i18next';
+import { mayNotify, raiseNotification } from '@/attention/system-notification';
 import { projectOnScreen, showLaunchOutput, startLaunch } from '@/launches/actions';
 import { shownLaunches } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
@@ -21,6 +22,9 @@ function readDocument(endpointId: string, projectId: string): void {
 }
 
 const FAILED_TOAST = 'launch-failed:';
+
+/* The failure notification of each launch, closed before the next failure of that launch raises its own. */
+const failureNotifications = new Map<string, Notification>();
 
 function launchName(endpointId: string, status: LaunchStatus): string {
     const document = useLaunches.getState().documents[endpointKey(endpointId, status.projectId)];
@@ -56,18 +60,12 @@ function announceFailure(endpointId: string, previous: LaunchStatus | undefined,
             { label: i18next.t('launches:failed.again'), run: again }
         ]
     });
-    if (document.hasFocus() || !('Notification' in window) || Notification.permission !== 'granted') {
+    if (document.hasFocus() || !mayNotify()) {
         return;
     }
-    const notification = new Notification(title, {
-        body: description,
-        tag: `ruimte-launch-${endpointId}-${status.projectId}-${status.launchId}`
-    });
-    notification.onclick = () => {
-        window.focus();
-        show();
-        notification.close();
-    };
+
+    failureNotifications.get(id)?.close();
+    failureNotifications.set(id, raiseNotification(title, { body: description }, show));
 }
 
 /*

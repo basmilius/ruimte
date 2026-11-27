@@ -1,12 +1,13 @@
 import { basename } from 'node:path';
 import { ToolRefusal } from '@adecore/agents/context';
 import { isWithin } from '@adecore/utils/path';
-import { ARRANGE_LAYOUTS, ActionRefusal, type ActionHandlers, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
+import { ActionRefusal, type ActionHandlers, type ActionInput, type ActionName, type ActionOutput } from '@ruimte/actions';
 import {
     DEFAULT_TITLES,
     NODE_ACCENT_NAMES,
     flagOf,
     emptyCanvasGroupIds,
+    gridPoint,
     groupFrame,
     groupMemberIds,
     nodeColorOf,
@@ -33,11 +34,12 @@ import {
 import { ArtifactError } from '../artifacts/artifact-names.ts';
 import { isChatView } from '../canvas/chat-view.ts';
 import { NEW_NODE, canvasNamed, field, orNote, referencedBy, snoozedAt, type AgentCall } from '../canvas/host.ts';
+import { anchorOf, settled, sideSpot, sizeGiven } from '../canvas/layout.ts';
 import { ownEnd } from '../canvas/links.ts';
 import { EVERY_KIND_LINE, KIND_FIELDS, REQUIRED_FIELD, kindLine, type KindField } from '../canvas/node-kinds.ts';
 import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, checkUrl, newId, nodeLines, nodesNamed, openingEdge } from '../canvas/nodes.ts';
 import { ownViewOf, refuseMissingNodes, refuseOwnView } from '../canvas/own-view.ts';
-import { arrangeRects, containersOf, gridColumns, groupMembers, placeBeside, placeFree } from '../canvas/placement.ts';
+import { containersOf, groupMembers, placeBeside, placeFree } from '../canvas/placement.ts';
 import { checkCwd, checkPath } from '../canvas/project-paths.ts';
 import { refuseOtherMachine } from '../canvas/remote-node.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -48,7 +50,7 @@ import { entryOf, routinesOf } from './routine-actions.ts';
 /* The set is closed and short enough to print whole, unlike the Lucide names a view picks from. */
 export const COLOR_LINES: readonly string[] = [['colors', ...NODE_ACCENT_NAMES].join('\t')];
 
-function withCanvas(content: ProjectContent, canvas: ProjectCanvasView): ProjectContent {
+export function withCanvas(content: ProjectContent, canvas: ProjectCanvasView): ProjectContent {
     return {
         ...content,
         views: content.views.map((view) => (view.id === canvas.id ? canvas : view))
@@ -202,6 +204,23 @@ type NodeSpec = {
     routine?: string | null;
 };
 
+/* The corner a spec gave its node, on the grid. A corner goes with neither a side nor a node to stand beside. */
+function cornerGiven(spec: NodeSpec): { x: number; y: number } | null {
+    if (spec.x == null && spec.y == null) {
+        return null;
+    }
+
+    if (spec.x == null || spec.y == null) {
+        throw new ToolRefusal('bad-arguments', 'x and y go together; give both, or neither');
+    }
+
+    if (spec.beside != null || spec.side != null) {
+        throw new ToolRefusal('bad-arguments', 'x and y place the node themselves; leave out beside and side, or leave out x and y');
+    }
+
+    return { x: gridPoint(spec.x), y: gridPoint(spec.y) };
+}
+
 /* What a spec names on the disk or the machine, looked up before the project's lock is taken. */
 interface Checked {
     spec: NodeSpec;
@@ -338,18 +357,29 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
             const { kind } = spec;
             const placed = await forNode(counted ? index : null, async () => {
                 const sourceName = sourceNameOf(current, spec);
-                const size = host.machine.nodeSize(kind);
+                const size = sizeGiven(host.machine.nodeSize(kind), spec.w, spec.h);
+                const corner = cornerGiven(spec);
+                // A side is asked for by name; `beside` alone keeps the place it always gave, and joins no group by itself.
+                const sideAnchor = spec.side == null ? undefined : anchorOf(current, canvas, actor.id, spec.beside);
                 const anchor = spec.beside == null ? undefined : canvas.nodes.find((node) => node.id === spec.beside);
                 if (spec.beside != null && !anchor) {
                     throw refuseMissingNodes(current, [spec.beside], canvas.id, 'the new node has nothing there to stand beside', nodeLines(canvas));
                 }
-                const rect = anchor
-                    ? placeBeside(anchor, size)
-                    : spec.at != null
-                      ? { x: Math.round(spec.at.x - size.w / 2), y: Math.round(spec.at.y - size.h / 2), ...size }
-                      : placeFree(canvas.nodes, size, caller);
+                const rect =
+                    sideAnchor !== undefined && spec.side != null
+                        ? sideSpot(canvas, sideAnchor, size, spec.side, { walk: spec.beside == null })
+                        : corner !== null
+                          ? { ...corner, ...size }
+                          : anchor
+                            ? placeBeside(anchor, size)
+                            : spec.at != null
+                              ? { x: Math.round(spec.at.x - size.w / 2), y: Math.round(spec.at.y - size.h / 2), ...size }
+                              : placeFree(canvas.nodes, size, caller);
                 return {
                     rect,
+                    // Only a node the call placed itself makes its group grow; one that found its own spot lands as a drop does.
+                    settles: sideAnchor !== undefined || corner !== null,
+                    beside: sideAnchor?.id ?? null,
                     title:
                         spec.title ??
                         sourceName ??
@@ -377,11 +407,10 @@ async function createNodes(call: ServerActionCall, viewId: string, specs: readon
                 ...(routine === undefined ? {} : { routine: routine.id })
             };
             const edge = caller ? openingEdge(caller.id, node, current) : null;
-            canvas = {
-                ...canvas,
-                nodes: joinGroupUnder({ nodes: [...canvas.nodes, node], texts: canvas.texts }, id),
-                edges: edge ? [...canvas.edges, edge] : canvas.edges
-            };
+            const added = { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges };
+            canvas = placed.settles
+                ? settled(canvas, added, [{ id, beside: placed.beside, moved: true }])
+                : { ...added, nodes: joinGroupUnder({ nodes: added.nodes, texts: canvas.texts }, id) };
             current = withCanvas(current, canvas);
             owned.push(id);
             made.push(
@@ -425,6 +454,7 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     w: node.w,
                     h: node.h,
                     groupId: containers.get(node.id)?.id ?? null,
+                    collapsed: node.collapsed === true,
                     flag: flagOf(content.flags, node.id),
                     snoozedUntil: snoozedAt(context.host, node.id)
                 })),
@@ -734,53 +764,6 @@ export const nodeActions: ActionHandlers<ServerActionContext> = {
                     }
                 }
             };
-        });
-    },
-    'node.arrange': async ({ viewId, nodeIds, layout, columns }, { context }) => {
-        const { host, place } = context;
-        const ids = [...new Set(nodeIds)];
-        if (columns !== null && layout !== 'grid') {
-            throw new ToolRefusal('flag-not-for-layout', `cols does not go with ${layout}; a row is one row and a column is one column`, [
-                'layout\tgrid\ttakes cols',
-                `layout\t${ARRANGE_LAYOUTS.filter((candidate) => candidate !== 'grid').join(', ')}\ttake no cols`
-            ]);
-        }
-        return host.projects.mutate(place.projectId, (content) => {
-            const canvas = canvasNamed(content, viewId);
-            const moving = nodesNamed(content, canvas, ids, { ...NOT_A_GROUP, cannot: 'there is nothing there to move' });
-            const carrier = moving.find((node) => node.kind === 'group');
-            if (carrier) {
-                throw new ToolRefusal(
-                    'not-arrangeable',
-                    `${carrier.id} is a group and carries whatever stands inside it; node_arrange moves the nodes it is given, so name those instead`
-                );
-            }
-            if (columns !== null && columns > moving.length) {
-                throw new ToolRefusal(
-                    'too-many-columns',
-                    `cols is ${columns} and you named ${moving.length} ${moving.length === 1 ? 'node' : 'nodes'}; a grid holds at most one column per node`,
-                    [`columns\twithout cols\t${gridColumns(moving.length)}`]
-                );
-            }
-
-            const placed = arrangeRects(moving, layout, columns ?? undefined);
-            const byId = new Map(moving.map((node, index) => [node.id, placed[index]!]));
-            const changed = moving.some((node, index) => node.x !== placed[index]!.x || node.y !== placed[index]!.y);
-            const output = {
-                viewId: canvas.id,
-                nodes: moving.map((node) => ({ nodeId: node.id, x: byId.get(node.id)!.x, y: byId.get(node.id)!.y })),
-                changed
-            };
-            if (!changed) {
-                return { content: null, result: { output } };
-            }
-            const moved = (node: ProjectNode): ProjectNode => {
-                const rect = byId.get(node.id);
-                return rect === undefined ? node : { ...node, x: rect.x, y: rect.y };
-            };
-            // Each moved node lands in the group it now stands in, as a person's drop puts it there.
-            const nodes = moving.reduce((placedNodes, node) => joinGroupUnder({ nodes: placedNodes, texts: canvas.texts }, node.id), canvas.nodes.map(moved));
-            return { content: withCanvas(content, { ...canvas, nodes }), result: { output } };
         });
     }
 };

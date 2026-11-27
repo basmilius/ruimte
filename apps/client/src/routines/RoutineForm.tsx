@@ -108,7 +108,9 @@ export function RoutineForm({
     const launches = useLaunches((s) => s.documents[endpointKey(endpointId, projectId)]?.launches ?? null);
     const { pickable, provider, selection } = useAgentPick(pick);
     const providerInfo = pickable.find((entry) => entry.kind === provider);
-    const skills = useRoutineSkills(endpointId, projectId, kind === 'agent' ? provider : null);
+    // An account belongs to its CLI, so another agent picked in the form runs on that one's default account.
+    const account = editing?.kind === 'agent' && editing.provider === provider ? request.editing?.local.account : undefined;
+    const skills = useRoutineSkills(endpointId, projectId, kind === 'agent' ? provider : null, account);
     const openProjectId = useProject((s) => s.current?.projectId ?? null);
     const openReferables = useReferables(endpointId, '');
     // `#` reaches the views of the project open here; another project's views this window does not know.

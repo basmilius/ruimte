@@ -22,6 +22,7 @@ export const PROJECT_WRITES: ReadonlySet<ActionName> = new Set<ActionName>([
     'node.setColor',
     'group.create',
     'node.arrange',
+    'node.layout',
     'link.create',
     'link.delete',
     'link.deleteMany',

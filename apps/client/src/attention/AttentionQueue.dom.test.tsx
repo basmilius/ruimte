@@ -230,7 +230,7 @@ describe('the attention queue', () => {
         const reads = machine.requests('chat.attach').length;
 
         await openQueue();
-        expect(dialog()!.textContent).toContain('Nothing is waiting or finished unseen.');
+        expect(dialog()!.textContent).toContain('Nothing is waiting, and you have seen everything that finished.');
         expect(machine.requests('chat.attach')).toHaveLength(reads);
     });
 

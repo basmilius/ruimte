@@ -307,32 +307,20 @@ describe('the map of a canvas', () => {
 });
 
 describe('agent notifications', () => {
-    test('makes no sound until somebody asks for one', () => {
+    test('notifies of a question and an alert, and makes no sound until somebody picks a pack', () => {
         expect(settingsFrom({})).toMatchObject({
-            soundPack: 'bar',
-            soundEvents: { question: false, alert: false, limit: false, error: false, finished: false },
+            soundPack: 'none',
+            notifyEvents: { question: true, alert: true, limit: false, error: false, finished: false },
             customSoundPacks: [],
             projectSounds: {}
         });
     });
 
-    test('the one switch there was before turns on the two alerts it covered', () => {
-        const before = { agentsTurnSound: true } as Partial<Settings>;
-
-        expect(settingsFrom(before).soundEvents).toEqual({ question: true, alert: true, limit: false, error: false, finished: false });
-        expect(
-            settingsFrom({ ...before, soundEvents: { question: false, alert: false, limit: true, error: false, finished: false } }).soundEvents.question
-        ).toBe(false);
-    });
-
-    test('a pack nobody has reads as the first one, also for a project', () => {
+    test('a pack of a person’s own stays the pack of the settings', () => {
         const own = { id: 'custom-1', name: 'Mine', files: { question: 'ping.wav' } };
+        const events = { question: true, alert: true, limit: false, error: false, finished: false };
 
-        expect(settingsFrom({ soundPack: 'gone' }).soundPack).toBe('bar');
-        expect(settingsFrom({ soundPack: 'custom-1', customSoundPacks: [own] }).soundPack).toBe('custom-1');
-        expect(
-            settingsFrom({ projectSounds: { 'local:a': { pack: 'gone' }, 'local:b': { silent: true, pack: 'glass' }, 'local:c': {} } }).projectSounds
-        ).toEqual({ 'local:b': { silent: true, pack: 'glass' } });
+        expect(settingsFrom({ notifyEvents: events, soundPack: 'custom-1', customSoundPacks: [own] }).soundPack).toBe('custom-1');
     });
 });
 

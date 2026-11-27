@@ -126,7 +126,8 @@ export class AfterSettleLaunches {
             return;
         }
         const { chatId } = event.payload;
-        if (this.deps.chats.isLoading(chatId)) {
+        // A streamed piece of text comes while a turn runs, which never settles a chat, and comes most often.
+        if (event.payload.event.type === 'delta' || this.deps.chats.isLoading(chatId)) {
             return;
         }
         void this.consider(chatId).catch((e: unknown) => console.error(`Owing the launch after ${chatId} settled failed:`, errorText(e)));
@@ -182,13 +183,14 @@ export class AfterSettleLaunches {
     }
 
     private async consider(chatId: string): Promise<void> {
-        if (this.deps.isPeerChat(chatId)) {
-            return;
-        }
+        // Most projects chose no task, so that is asked first; asking whether a peer gave the chat its task reads the disk.
         const projectId = this.deps.projectOf(chatId);
         const choice = projectId === null ? null : this.deps.store.choiceOf(projectId);
         const turn = choice === null ? null : this.settledTurn(chatId);
         if (projectId === null || choice === null || turn === null || (turn.endedAt ?? 0) < choice.chosenAt) {
+            return;
+        }
+        if (this.deps.isPeerChat(chatId)) {
             return;
         }
         const key = `${chatId}\t${turn.id}`;

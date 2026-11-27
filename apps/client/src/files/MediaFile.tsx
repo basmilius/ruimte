@@ -1,6 +1,7 @@
 import { EmptyState, ScrollArea } from '@adecore/ui';
 import { formatBytes, formatClockDuration } from '@adecore/ui/format';
 import type { FsReadBinary } from '@ruimte/contracts';
+import clsx from 'clsx';
 import { FileAudio, FileVideo } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,13 +38,17 @@ export function MediaFile({ kind, source, name, read }: MediaFileProps) {
     const bytes = useMachineUrl(machineResourceOf(source, read, true), endpointId);
     const path = revealablePath(source);
     const Media = kind;
+    const unplayable = failed || bytes.failure !== null;
 
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar />
-            <FileContextMenu className="flex min-h-0 grow flex-col bg-surface-sunken">
-                <ScrollArea axis="both" className="grow" viewportClassName="grid place-items-center p-4">
-                    {failed || bytes.failure !== null ? (
+            {/* Black behind a player, the way a player looks everywhere; the sunken ground stays for the message that it cannot play. */}
+            <FileContextMenu
+                className={clsx('flex min-h-0 grow flex-col', unplayable ? 'bg-surface-sunken' : 'bg-media-bg', !unplayable && kind === 'audio' && 'px-4')}
+            >
+                {unplayable ? (
+                    <ScrollArea axis="both" className="grow" viewportClassName="grid place-items-center p-4">
                         <EmptyState
                             className="select-text"
                             icon={kind === 'audio' ? FileAudio : FileVideo}
@@ -52,26 +57,26 @@ export function MediaFile({ kind, source, name, read }: MediaFileProps) {
                             {t(`file.${kind}.cannotPlay`, { name, mime: read.mime, size: formatBytes(read.size) })}
                             {bytes.failure !== null && ` ${bytes.failure}.`}
                         </EmptyState>
-                    ) : (
-                        bytes.url !== null && (
-                            <Media
-                                controls
-                                preload="metadata"
-                                src={bytes.url}
-                                className={kind === 'audio' ? 'w-full max-w-xl' : 'max-h-full max-w-full'}
-                                onLoadedMetadata={(event) => {
-                                    const media = event.currentTarget;
-                                    setLoaded({
-                                        duration: media.duration,
-                                        width: media instanceof HTMLVideoElement ? media.videoWidth : 0,
-                                        height: media instanceof HTMLVideoElement ? media.videoHeight : 0
-                                    });
-                                }}
-                                onError={() => setFailed(true)}
-                            />
-                        )
-                    )}
-                </ScrollArea>
+                    </ScrollArea>
+                ) : (
+                    bytes.url !== null && (
+                        <Media
+                            controls
+                            preload="metadata"
+                            src={bytes.url}
+                            className={kind === 'audio' ? 'm-auto w-full max-w-2xl' : 'min-h-0 w-full grow'}
+                            onLoadedMetadata={(event) => {
+                                const media = event.currentTarget;
+                                setLoaded({
+                                    duration: media.duration,
+                                    width: media instanceof HTMLVideoElement ? media.videoWidth : 0,
+                                    height: media instanceof HTMLVideoElement ? media.videoHeight : 0
+                                });
+                            }}
+                            onError={() => setFailed(true)}
+                        />
+                    )
+                )}
             </FileContextMenu>
             <div className={FILE_FOOTER}>
                 {kind === 'audio' && loaded !== null && Number.isFinite(loaded.duration) && <span>{formatClockDuration(loaded.duration * 1000)}</span>}

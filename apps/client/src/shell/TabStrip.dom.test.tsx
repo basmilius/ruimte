@@ -174,9 +174,7 @@ describe('the tabs of a host', () => {
     test('a shift-click on a tab with edits nobody submitted asks before it closes', async () => {
         await act(async () => useFiles.getState().setUnsubmitted(FILE, true));
         await pressTab(FILE, { button: 0, shiftKey: true });
-        await until(() =>
-            [...document.querySelectorAll('[role="dialog"]')].some((dialog) => dialog.textContent?.includes('These edits were never submitted.'))
-        );
+        await until(() => [...document.querySelectorAll('[role="dialog"]')].some((dialog) => dialog.textContent?.includes('You never submitted these edits.')));
         expect(tab(FILE)).not.toBeNull();
     });
 

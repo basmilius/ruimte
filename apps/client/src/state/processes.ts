@@ -1,32 +1,5 @@
-import {
-    COARSE_POINTS,
-    FINE_POINTS,
-    type ProcessAlert,
-    type ProcessPoint,
-    type ProcessScope,
-    type ProcessSort,
-    type ProcessesSampleEvent,
-    type ProcessesSubscribeResult
-} from '@ruimte/contracts';
-import { z } from 'zod';
+import { COARSE_POINTS, FINE_POINTS, type ProcessAlert, type ProcessPoint, type ProcessesSampleEvent, type ProcessesSubscribeResult } from '@ruimte/contracts';
 import { create } from 'zustand';
-import { storedJson } from '@/state/stored-json';
-
-interface Preferences {
-    scope: ProcessScope;
-    sort: ProcessSort;
-}
-
-const DEFAULTS: Preferences = { scope: 'ruimte', sort: 'cpu' };
-
-/* A value this version does not know falls back to the default for that field alone. */
-const storedPreferences = storedJson<Preferences>(
-    'ruimte.processes',
-    z.looseObject({ scope: z.unknown(), sort: z.unknown() }).transform((stored): Preferences => ({
-        scope: stored.scope === 'all' ? 'all' : DEFAULTS.scope,
-        sort: stored.sort === 'memory' || stored.sort === 'disk' ? stored.sort : DEFAULTS.sort
-    }))
-);
 
 interface ProcessesRow {
     /* Null until the machine answered the subscription; false on a platform without a sampler. */
@@ -42,12 +15,10 @@ function capped(points: readonly ProcessPoint[], point: ProcessPoint | null, cap
     return point === null ? [...points] : [...points, point].slice(-cap);
 }
 
-interface ProcessesStore extends Preferences {
+interface ProcessesStore {
     byEndpoint: Record<string, ProcessesRow>;
-    setScope(scope: ProcessScope): void;
-    setSort(sort: ProcessSort): void;
     receive(endpointId: string, result: ProcessesSubscribeResult): void;
-    /* `current` is false for a sample of the scope or sort before the one just asked for. Its points count, its rows do not. */
+    /* `current` is false for a sample of a scope the panel does not list. Its points count, its rows do not. */
     applySample(endpointId: string, sample: ProcessesSampleEvent, current: boolean): void;
     forget(endpointId: string): void;
 }
@@ -58,16 +29,7 @@ export const useProcesses = create<ProcessesStore>((set, get) => {
         set({ byEndpoint: { ...get().byEndpoint, [endpointId]: { ...row, ...next(row) } } });
     };
     return {
-        ...(storedPreferences.read() ?? DEFAULTS),
         byEndpoint: {},
-        setScope(scope) {
-            storedPreferences.write({ scope, sort: get().sort });
-            set({ scope });
-        },
-        setSort(sort) {
-            storedPreferences.write({ scope: get().scope, sort });
-            set({ sort });
-        },
         receive(endpointId, { supported, fine, coarse, sample }) {
             patch(endpointId, () => ({ supported, fine, coarse, sample }));
         },

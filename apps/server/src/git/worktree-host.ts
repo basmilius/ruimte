@@ -70,14 +70,10 @@ export function checkoutHost(worktrees: Worktrees): CheckoutHost {
  * the project, so a path only git names could point anywhere.
  */
 async function madeWorktreePaths(worktrees: Worktrees, folder: string): Promise<string[]> {
-    const [listed, registered, root] = await Promise.all([
-        worktrees.list(folder),
-        worktrees.registeredPaths(folder).catch(() => [] as string[]),
-        realOrNull(worktrees.root)
-    ]);
+    const [{ listed, made: registered }, root] = await Promise.all([worktrees.listedAndMade(folder), realOrNull(worktrees.root)]);
     const made = new Set(await Promise.all(registered.map(realOrNull)));
     const kept = await Promise.all(
-        listed.map(async ({ path }) => {
+        listed.map(async (path) => {
             const real = await realOrNull(path);
 
             return real !== null && ((root !== null && isWithin(root, real)) || made.has(real)) ? path : null;

@@ -52,6 +52,7 @@ beforeEach(async () => {
         write: async (pack, event, file) => void kept.set(`${pack}/${event}`, file),
         remove: async (pack, event) => void kept.delete(`${pack}/${event}`)
     });
+    useSettings.getState().update({ soundPack: 'marimba-low' });
     workspace = await openFakeWorkspace(new FakeMachine(), { views: [] } as never, { activeViewId: null, views: {} } as never);
     page = mount();
     await page.renderApp();
@@ -69,40 +70,101 @@ afterEach(async () => {
     setCustomSoundFiles(null);
     useSettings.getState().update({
         soundPack: before.soundPack,
-        soundEvents: before.soundEvents,
+        notifyEvents: before.notifyEvents,
         customSoundPacks: before.customSoundPacks,
         projectSounds: before.projectSounds
     });
 });
 
-describe('Settings > General > Notifications > Sounds', () => {
-    test('every event is off until turned on, and a pack and an event stay chosen after the settings are read again', async () => {
+describe('Settings > General > Notifications', () => {
+    test('a question and an alert notify from the start, and a pack and an event stay chosen after the settings are read again', async () => {
         await openNotifications();
-        expect(switchOf('A turn finishes')?.getAttribute('aria-checked')).toBe('false');
+        expect(switchOf('Questions and approvals')?.getAttribute('aria-checked')).toBe('true');
+        expect(switchOf('Alerts from agents')?.getAttribute('aria-checked')).toBe('true');
+        expect(switchOf('Finished turns')?.getAttribute('aria-checked')).toBe('false');
 
-        await clickOn(buttonWithText('Bar'));
-        await pick('Glass');
-        await clickOn(switchOf('A turn finishes'));
+        await clickOn(buttonWithText('Marimba Low'));
+        await pick('Log');
+        await clickOn(switchOf('Finished turns'));
         await act(async () => useSettings.getState().reload());
 
-        expect(useSettings.getState()).toMatchObject({ soundPack: 'glass', soundEvents: { finished: true, question: false } });
-        expect(buttonWithText('Glass')).not.toBeNull();
-        expect(switchOf('A turn finishes')?.getAttribute('aria-checked')).toBe('true');
+        expect(useSettings.getState()).toMatchObject({ soundPack: 'log', notifyEvents: { finished: true, question: true } });
+        expect(buttonWithText('Log')).not.toBeNull();
+        expect(switchOf('Finished turns')?.getAttribute('aria-checked')).toBe('true');
     });
 
-    test('the play button of a row plays that event in the chosen pack', async () => {
+    test('the preview of an event shows its notification, with its sound only while a pack plays one', async () => {
+        const raised: { title: string; body: string | undefined }[] = [];
+        const original = Object.getOwnPropertyDescriptor(globalThis, 'Notification');
+
+        class FakeNotification {
+            static permission = 'granted';
+            onclick: (() => void) | null = null;
+
+            constructor(title: string, options: NotificationOptions) {
+                raised.push({ title, body: options.body });
+            }
+
+            close(): void {}
+        }
+
+        Object.defineProperty(globalThis, 'Notification', { configurable: true, value: FakeNotification });
+
+        try {
+            await openNotifications();
+            await clickOn(buttonWithText('Marimba Low'));
+            await pick('Vibes');
+            await clickOn(labelled('Preview: Usage limits'));
+            await until(() => played.length === 1);
+
+            await clickOn(buttonWithText('Vibes'));
+            await pick('No sound');
+            await clickOn(labelled('Preview: Finished turns'));
+
+            expect(raised).toEqual([
+                { title: 'Example chat', body: 'Stopped on a usage limit' },
+                { title: 'Example chat', body: 'Finished' }
+            ]);
+            expect(played).toEqual(['vibes/fall.wav']);
+        } finally {
+            if (original) {
+                Object.defineProperty(globalThis, 'Notification', original);
+            } else {
+                Reflect.deleteProperty(globalThis, 'Notification');
+            }
+        }
+    });
+
+    test('the list has the packs by name, and one plays a sample without being picked while the list stays open', async () => {
         await openNotifications();
-        await clickOn(buttonWithText('Bar'));
-        await pick('Grand');
-        await clickOn(labelled('Play the sound for: A usage limit is hit'));
+        await clickOn(buttonWithText('Marimba Low'));
+        await until(() => labelled('Play Vibes') !== null);
+        expect([...document.querySelectorAll('[role="option"]')].map((row) => row.textContent)).toEqual([
+            'No sound',
+            'Kalimba',
+            'Kalimba Low',
+            'Log',
+            'Marimba',
+            'Marimba Low',
+            'Music Box',
+            'String',
+            'Tine',
+            'Vibes',
+            'New pack'
+        ]);
+
+        await clickOn(labelled('Play Vibes'));
         await until(() => played.length === 1);
 
-        expect(played).toEqual(['grand/fall.wav']);
+        expect(played).toEqual(['vibes/trio.wav']);
+        expect(useSettings.getState().soundPack).toBe('marimba-low');
+        expect(labelled('Play Log')).not.toBeNull();
+        expect(labelled('Play No sound')).toBeNull();
     });
 
     test('a new pack takes a name and a file, and plays that file', async () => {
         await openNotifications();
-        await clickOn(buttonWithText('Bar'));
+        await clickOn(buttonWithText('Marimba Low'));
         await pick('New pack');
         await until(() => labelled<HTMLInputElement>('Name of the pack') !== null);
         await typeInto(labelled<HTMLInputElement>('Name of the pack')!, 'Office');
@@ -111,19 +173,19 @@ describe('Settings > General > Notifications > Sounds', () => {
 
         expect(pack.name).toBe('Office');
         expect(useSettings.getState().soundPack).toBe(pack.id);
-        expect(everything()).toContain('No file, sounds as in Bar');
-        await clickOn(labelled('Play the sound for: A usage limit is hit'));
+        expect(everything()).toContain('No file, sounds as in Marimba Low');
+        await clickOn(labelled('Play the sound for: Usage limits'));
         await until(() => played.length === 1);
-        expect(played).toEqual(['bar/fall.wav']);
+        expect(played).toEqual(['marimba-low/fall.wav']);
 
-        await clickOn(labelled('Turn off in this pack: A usage limit is hit'));
+        await clickOn(labelled('Turn off in this pack: Usage limits'));
         expect(useSettings.getState().customSoundPacks[0]?.off).toEqual(['limit']);
         expect(everything()).toContain('Off in this pack');
-        expect(labelled<HTMLButtonElement>('Play the sound for: A usage limit is hit')?.disabled).toBe(true);
-        await clickOn(labelled('Turn on in this pack: A usage limit is hit'));
+        expect(labelled<HTMLButtonElement>('Play the sound for: Usage limits')?.disabled).toBe(true);
+        await clickOn(labelled('Turn on in this pack: Usage limits'));
         expect(useSettings.getState().customSoundPacks[0]?.off).toBeUndefined();
 
-        await clickOn(labelled('Choose the file for: A question or approval waits'));
+        await clickOn(labelled('Choose the file for: Questions and approvals'));
         const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="audio/*"]')!;
         Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(8)], 'ping.wav', { type: 'audio/wav' })] });
         await act(async () => {
@@ -132,27 +194,28 @@ describe('Settings > General > Notifications > Sounds', () => {
         await until(() => everything().includes('ping.wav'));
 
         expect(kept.get(`${pack.id}/question`)?.size).toBe(8);
-        await clickOn(labelled('Play the sound for: A question or approval waits'));
+        await clickOn(labelled('Play the sound for: Questions and approvals'));
         await until(() => played.length === 2);
     });
 });
 
 describe('Project settings > Sounds', () => {
-    test('a project follows the settings until it takes a pack of its own or is silent, and another project is left alone', async () => {
+    test('a project follows the settings until it takes a pack of its own or no sound, and the settings keep their pack', async () => {
         const { current, currentEndpointId } = useProject.getState();
         const key = projectSoundKey(currentEndpointId!, current!.projectId);
 
         await act(async () => projectSettingsAsk.set(true));
         await until(() => tab('Sounds') !== null);
         await clickOn(tab('Sounds'));
-        await until(() => buttonWithText('As in Settings (Bar)') !== null);
-        await clickOn(buttonWithText('As in Settings (Bar)'));
-        await pick('Nylon');
-        expect(useSettings.getState().projectSounds).toEqual({ [key]: { pack: 'nylon' } });
+        await until(() => buttonWithText('As in Settings (Marimba Low)') !== null);
+        await clickOn(buttonWithText('As in Settings (Marimba Low)'));
+        await pick('Tine');
+        expect(useSettings.getState().projectSounds).toEqual({ [key]: { pack: 'tine' } });
 
-        await clickOn(switchOf('Silent'));
-        expect(useSettings.getState().projectSounds).toEqual({ [key]: { silent: true, pack: 'nylon' } });
-        expect(useSettings.getState().soundPack).toBe('bar');
+        await clickOn(buttonWithText('Tine'));
+        await pick('No sound');
+        expect(useSettings.getState().projectSounds).toEqual({ [key]: { pack: 'none' } });
+        expect(useSettings.getState().soundPack).toBe('marimba-low');
     });
 
     test('a project takes a new pack of its own with a name and a file, and the settings keep their pack', async () => {
@@ -162,8 +225,8 @@ describe('Project settings > Sounds', () => {
         await act(async () => projectSettingsAsk.set(true));
         await until(() => tab('Sounds') !== null);
         await clickOn(tab('Sounds'));
-        await until(() => buttonWithText('As in Settings (Bar)') !== null);
-        await clickOn(buttonWithText('As in Settings (Bar)'));
+        await until(() => buttonWithText('As in Settings (Marimba Low)') !== null);
+        await clickOn(buttonWithText('As in Settings (Marimba Low)'));
         await pick('New pack');
         await until(() => labelled<HTMLInputElement>('Name of the pack') !== null);
         await typeInto(labelled<HTMLInputElement>('Name of the pack')!, 'Atlas calls');
@@ -172,10 +235,10 @@ describe('Project settings > Sounds', () => {
 
         expect(pack.name).toBe('Atlas calls');
         expect(useSettings.getState().projectSounds).toEqual({ [key]: { pack: pack.id } });
-        expect(useSettings.getState().soundPack).toBe('bar');
-        expect(switchOf('A turn finishes')).toBeNull();
+        expect(useSettings.getState().soundPack).toBe('marimba-low');
+        expect(switchOf('Finished turns')).toBeNull();
 
-        await clickOn(labelled('Choose the file for: A turn finishes'));
+        await clickOn(labelled('Choose the file for: Finished turns'));
         const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="audio/*"]')!;
         Object.defineProperty(input, 'files', { configurable: true, value: [new File([new Uint8Array(8)], 'done.wav', { type: 'audio/wav' })] });
         await act(async () => {
@@ -184,7 +247,7 @@ describe('Project settings > Sounds', () => {
         await until(() => everything().includes('done.wav'));
 
         await clickOn(labelled('Delete pack'));
-        await until(() => buttonWithText('As in Settings (Bar)') !== null);
+        await until(() => buttonWithText('As in Settings (Marimba Low)') !== null);
         expect(useSettings.getState().projectSounds).toEqual({});
     });
 });

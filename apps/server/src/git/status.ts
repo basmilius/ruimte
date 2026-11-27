@@ -250,9 +250,11 @@ export async function readStatusAt(root: string, leftOut: LeftOut = LEAVE_NOTHIN
     }
     const parsed = parsePorcelain(porcelain);
     const entries = parsed.entries.slice(0, GIT_STATUS_MAX_FILES);
+    // A clean checkout has no counts to read, and most status reads are of one.
+    const clean = parsed.entries.length === 0;
     const [staged, unstaged, base, operation, linked] = await Promise.all([
-        readGit(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
-        readGit(['diff', '--numstat', '-z'], root).then(byPath),
+        clean ? new Map<string, Numstat>() : readGit(['diff', '--cached', '--numstat', '-z'], root).then(byPath),
+        clean ? new Map<string, Numstat>() : readGit(['diff', '--numstat', '-z'], root).then(byPath),
         resolveBase(root, now),
         operationOf(root),
         isLinkedWorktree(root)

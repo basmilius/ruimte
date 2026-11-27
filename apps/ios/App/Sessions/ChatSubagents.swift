@@ -416,7 +416,7 @@ enum ChatSubagents {
     static func stopsTaskWarning(_ agents: Int) -> String {
         let warning = String(
             localized:
-                "Ends the agent and cancels the task. The chat that gave it is not told. Its node stays on the canvas."
+                "Ends the agent and cancels the task. The chat that gave it hears nothing. Its node stays on the canvas."
         )
         return agents == 0 ? warning : "\(warning) \(endsAgentsWarning(agents))"
     }

@@ -11091,6 +11091,15 @@
           "queuePaused": {
             "type": "boolean"
           },
+          "queueHeld": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
           "background": {
             "type": "array",
             "items": {
@@ -13115,6 +13124,10 @@
                 "said": {
                   "type": "boolean",
                   "const": true
+                },
+                "stops": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -14889,6 +14902,10 @@
                 "said": {
                   "type": "boolean",
                   "const": true
+                },
+                "stops": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -16657,6 +16674,10 @@
                         "said": {
                           "type": "boolean",
                           "const": true
+                        },
+                        "stops": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -17477,6 +17498,15 @@
                     "queuePaused": {
                       "type": "boolean"
                     },
+                    "queueHeld": {
+                      "type": "object",
+                      "properties": {
+                        "task": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    },
                     "background": {
                       "type": "array",
                       "items": {
@@ -18159,6 +18189,15 @@
                     },
                     "queuePaused": {
                       "type": "boolean"
+                    },
+                    "queueHeld": {
+                      "type": "object",
+                      "properties": {
+                        "task": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
                     },
                     "background": {
                       "type": "array",
@@ -20184,6 +20223,10 @@
                           "said": {
                             "type": "boolean",
                             "const": true
+                          },
+                          "stops": {
+                            "type": "string",
+                            "minLength": 1
                           }
                         },
                         "required": [
@@ -22489,6 +22532,10 @@
                 "said": {
                   "type": "boolean",
                   "const": true
+                },
+                "stops": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -23086,6 +23133,15 @@
       },
       "queuePaused": {
         "type": "boolean"
+      },
+      "queueHeld": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
       "background": {
         "type": "array",
@@ -23785,6 +23841,15 @@
               },
               "queuePaused": {
                 "type": "boolean"
+              },
+              "queueHeld": {
+                "type": "object",
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
               },
               "background": {
                 "type": "array",
@@ -24628,6 +24693,15 @@
       },
       "queuePaused": {
         "type": "boolean"
+      },
+      "queueHeld": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
       "background": {
         "type": "array",
@@ -25524,6 +25598,15 @@
           },
           "queuePaused": {
             "type": "boolean"
+          },
+          "queueHeld": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "background": {
             "type": "array",
@@ -27808,6 +27891,10 @@
                 "said": {
                   "type": "boolean",
                   "const": true
+                },
+                "stops": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -28392,6 +28479,15 @@
             },
             "queuePaused": {
               "type": "boolean"
+            },
+            "queueHeld": {
+              "type": "object",
+              "properties": {
+                "task": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
             },
             "background": {
               "type": "array",
@@ -31820,6 +31916,10 @@
                 "said": {
                   "type": "boolean",
                   "const": true
+                },
+                "stops": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -73951,6 +74051,10 @@
           "copilot",
           "apple"
         ]
+      },
+      "account": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]{0,63}$"
       }
     },
     "required": [
@@ -85013,6 +85117,10 @@
                       "said": {
                         "type": "boolean",
                         "const": true
+                      },
+                      "stops": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
                     "required": [
@@ -85833,6 +85941,15 @@
                   "queuePaused": {
                     "type": "boolean"
                   },
+                  "queueHeld": {
+                    "type": "object",
+                    "properties": {
+                      "task": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
                   "background": {
                     "type": "array",
                     "items": {
@@ -86515,6 +86632,15 @@
                   },
                   "queuePaused": {
                     "type": "boolean"
+                  },
+                  "queueHeld": {
+                    "type": "object",
+                    "properties": {
+                      "task": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
                   },
                   "background": {
                     "type": "array",
@@ -88540,6 +88666,10 @@
                         "said": {
                           "type": "boolean",
                           "const": true
+                        },
+                        "stops": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -89094,6 +89224,15 @@
           },
           "queuePaused": {
             "type": "boolean"
+          },
+          "queueHeld": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "background": {
             "type": "array",

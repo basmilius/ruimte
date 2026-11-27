@@ -36,7 +36,7 @@ test('failed action loads reload once beside a prefetch, report repeated failure
         expect(heard).toBe(1);
         expect(reloads).toBe(1);
         expect(useToasts.getState().toasts.filter((toast) => toast.id === 'action-load-failed')).toMatchObject([
-            { kind: 'error', description: 'The action could not be loaded. Reload Ruimte and try again.' }
+            { kind: 'error', description: 'Could not load the action. Reload Ruimte and try again.' }
         ]);
 
         stopRecovery();

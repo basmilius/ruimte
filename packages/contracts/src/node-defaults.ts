@@ -216,8 +216,40 @@ export function groupMemberIds(group: GroupFrame, items: readonly GroupItem[]): 
 // The room between a node and the one placed next to it; a multiple of the client's 8 px grid.
 export const PLACEMENT_GAP = 40;
 
-/* Contracts cannot import the action catalog, so the layouts are named here as well; `node.arrange` takes the same three. */
+/* The sides of a frame another one is placed on. */
+export const PLACEMENT_SIDES = ['left', 'right', 'above', 'below'] as const;
+export type PlacementSide = (typeof PLACEMENT_SIDES)[number];
+
+/* A frame of `size` on that side of the anchor: top edges level beside it, left edges level above and below it. */
+export function rectBeside(anchor: NodeRect, size: NodeSize, side: PlacementSide, gap: number = PLACEMENT_GAP): NodeRect {
+    const spot = {
+        left: { x: anchor.x - gap - size.w, y: anchor.y },
+        right: { x: anchor.x + anchor.w + gap, y: anchor.y },
+        above: { x: anchor.x, y: anchor.y - gap - size.h },
+        below: { x: anchor.x, y: anchor.y + anchor.h + gap }
+    }[side];
+
+    return { x: Math.round(spot.x), y: Math.round(spot.y), w: size.w, h: size.h };
+}
+
+/* Whether two frames stand within `gap` of each other; with no gap, whether they overlap. */
+export function rectsWithin(first: NodeRect, second: NodeRect, gap: number): boolean {
+    return (
+        first.x < second.x + second.w + gap && second.x < first.x + first.w + gap && first.y < second.y + second.h + gap && second.y < first.y + first.h + gap
+    );
+}
+
+/* Contracts cannot import the action catalog, so the layouts are named here as well; `node.arrange` takes these and `spread`. */
 export type ArrangeLayout = 'grid' | 'row' | 'column';
+
+/* Where a node stands in the cell its column and row give it, on both axes. */
+export const ARRANGE_ALIGNS = ['start', 'center', 'end'] as const;
+export type ArrangeAlign = (typeof ARRANGE_ALIGNS)[number];
+
+export interface ArrangeOptions {
+    readonly gap?: number;
+    readonly align?: ArrangeAlign;
+}
 
 /* How many columns a grid takes without being told: as square as the count allows. */
 export function gridColumns(count: number): number {
@@ -229,10 +261,12 @@ export function gridColumns(count: number): number {
  * is straightened where it stands. Columns and rows take their widest and tallest node, so nodes of
  * different sizes never touch and none is resized.
  */
-export function arrangeRects(rects: readonly NodeRect[], layout: ArrangeLayout, cols?: number): NodeRect[] {
+export function arrangeRects(rects: readonly NodeRect[], layout: ArrangeLayout, cols?: number, options: ArrangeOptions = {}): NodeRect[] {
     if (rects.length === 0) {
         return [];
     }
+    const gap = options.gap ?? PLACEMENT_GAP;
+    const inset = (room: number): number => (options.align === 'center' ? room / 2 : options.align === 'end' ? room : 0);
     const columns = layout === 'row' ? rects.length : layout === 'column' ? 1 : Math.min(cols ?? gridColumns(rects.length), rects.length);
     const origin = {
         x: Math.round(Math.min(...rects.map((rect) => rect.x))),
@@ -251,18 +285,70 @@ export function arrangeRects(rects: readonly NodeRect[], layout: ArrangeLayout, 
         let at = 0;
         for (const size of sizes) {
             places.push(at);
-            at += size + PLACEMENT_GAP;
+            at += size + gap;
         }
         return places;
     };
     const left = offsets(widths);
     const top = offsets(heights);
     return rects.map((rect, index) => ({
-        x: Math.round(origin.x + left[columnOf(index)]!),
-        y: Math.round(origin.y + top[rowOf(index)]!),
+        x: Math.round(origin.x + left[columnOf(index)]! + inset(widths[columnOf(index)]! - rect.w)),
+        y: Math.round(origin.y + top[rowOf(index)]! + inset(heights[rowOf(index)]! - rect.h)),
         w: rect.w,
         h: rect.h
     }));
+}
+
+/*
+ * The rectangles moved apart until none stands within `gap` of another. They are taken from the left,
+ * so the first stays put, and each moves only right or down, by the smaller of the two, which is what ends it.
+ */
+export function spreadRects(rects: readonly NodeRect[], gap: number = PLACEMENT_GAP): NodeRect[] {
+    const order = rects.map((_, index) => index).sort((first, second) => rects[first]!.x - rects[second]!.x || rects[first]!.y - rects[second]!.y);
+    const placed: NodeRect[] = [];
+    const spread = [...rects];
+
+    for (const index of order) {
+        const spot = { ...rects[index]! };
+
+        for (;;) {
+            const blocking = placed.find((other) => rectsWithin(spot, other, gap));
+
+            if (blocking === undefined) {
+                break;
+            }
+
+            const right = blocking.x + blocking.w + gap - spot.x;
+            const down = blocking.y + blocking.h + gap - spot.y;
+
+            if (right <= down) {
+                spot.x += right;
+            } else {
+                spot.y += down;
+            }
+        }
+
+        placed.push(spot);
+        spread[index] = spot;
+    }
+
+    return spread;
+}
+
+/*
+ * A side an agent gave a node: whole pixels, up to the next step of the grid. Null outside what a
+ * person can drag a frame to, which the caller refuses with the range.
+ */
+export function gridSide(value: number, min: number): number | null {
+    const side = Math.ceil(value / CANVAS_GRID) * CANVAS_GRID;
+
+    return side >= min && side <= NODE_SIZE_MAX ? side : null;
+}
+
+/* A coordinate an agent gave, on the grid a person's drag lands on. */
+export function gridPoint(value: number): number {
+    // Rounding a small negative gives -0, which a file and an answer would both carry.
+    return snap(value) || 0;
 }
 
 /* What a node of each kind is called before anything names it. */

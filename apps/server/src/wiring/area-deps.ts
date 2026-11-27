@@ -9,7 +9,7 @@ import { chatForkDeps, forkChat, readForkInfo, readHandoff } from '../chat/fork.
 import { ChatImageFiles } from '../chat/image-files.ts';
 import { chatsLocatedIn, chatsOfViews, ProjectChatSearch } from '../chat/project-search.ts';
 import { readServedFile } from '../fs/read.ts';
-import type { WriteBoundary } from '../fs/write.ts';
+import { worktreeListsOnce, type WriteBoundary } from '../fs/write.ts';
 import type { ArchiveDeps } from '../handlers/archive.ts';
 import type { AuthDeps } from '../handlers/auth.ts';
 import type { BytesDeps } from '../handlers/bytes.ts';
@@ -45,9 +45,8 @@ export type AreaLater = Later<Pick<DaemonBundles, 'clients'>>;
 function boundaryOf({ projects, git }: AreaInput): (clientId: string) => Promise<WriteBoundary> {
     return async (clientId) => ({
         folders: await projects.store.heldFolders(clientId),
-        worktreesOf: git.checkouts.paths,
         worktreesRoot: git.worktrees.root,
-        registeredWorktrees: (folder) => git.worktrees.registeredPaths(folder)
+        ...worktreeListsOnce((folder) => git.worktrees.listedAndMade(folder))
     });
 }
 
@@ -183,8 +182,9 @@ export function chatSearchDeps({ projects, agents, providers, sessionFs }: AreaI
                 );
                 const own = new Set(resumes);
                 for (const chatId of chatIds) {
-                    const sessionId = (await chats.readChat(chatId))?.info.agentSessionId;
-                    if (sessionId !== null && sessionId !== undefined) {
+                    // Most of these chats are not open, and their threads would be read and checked in full for one field.
+                    const sessionId = await chats.agentSessionIdOf(chatId);
+                    if (sessionId !== null) {
                         own.add(sessionId);
                     }
                 }

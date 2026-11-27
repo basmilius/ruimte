@@ -427,7 +427,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
     };
 
     return (
-        <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-black">
+        <div className="relative flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-media-bg">
             <canvas
                 ref={canvas}
                 // With a keyboard the ring says where the keys go, however the screen got the focus.

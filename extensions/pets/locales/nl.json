@@ -30,7 +30,7 @@
         },
         "sprite": {
             "label": "Figuren",
-            "description": "Kies een of meer pakketten. Elke agent houdt één figuur. Buddy's en Dieren geven elke provider een eigen figuur; de andere pakketten verdelen hun figuren over je agents.",
+            "description": "Kies een of meer pakketten. Elke agent houdt één figuur. Buddy's en Dieren geven elke provider een eigen figuur. De andere pakketten verdelen hun figuren over je agents.",
             "sets": {
                 "buddies": "Buddy's",
                 "animals": "Dieren",
@@ -141,7 +141,7 @@
             "problem": {
                 "type": "Kies een PNG- of WebP-afbeelding.",
                 "bytes": "Deze afbeelding is groter dan {{kilobytes}} KB.",
-                "unreadable": "Dit bestand kon niet worden gelezen als PNG- of WebP-afbeelding.",
+                "unreadable": "Ruimte kon dit bestand niet lezen als PNG- of WebP-afbeelding.",
                 "frame-small": "Een frame is minstens {{min}} pixels hoog.",
                 "frame-large": "Een frame is hoogstens {{max}} pixels hoog.",
                 "frames-whole": "De breedte moet een heel aantal vierkante frames zijn.",
@@ -162,7 +162,7 @@
         "agents": {
             "title": "Per agent",
             "label": "Een figuur per agent",
-            "description": "Geef een CLI een pakket of één vaste figuur, zoals Nox voor Codex. Dat gaat voor de pakketten die je aanzette. Een CLI op Standaard gebruikt die pakketten.",
+            "description": "Geef een provider een pakket of één vaste figuur, zoals Nox voor Codex. Dat gaat voor de pakketten die je aanzette. Een provider op Standaard gebruikt die pakketten.",
             "default": "Standaard",
             "packs": "Pakketten",
             "own": "Je eigen figuren",

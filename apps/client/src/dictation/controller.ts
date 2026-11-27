@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { claimMicrophone } from '@/audio/ownership';
 import { desktop } from '@/desktop/bridge';
 import { useSettings } from '@/state/settings';
+import { useToasts } from '@/state/toasts';
 import { machineUsage } from '@/transport';
 import { fireAndForget } from '@/transport-api/transport';
 import type { DictationEngine, DictationSession } from './engine';
@@ -52,21 +53,21 @@ export interface DictationTarget {
 }
 export type DictationPhase = 'idle' | 'starting' | 'listening' | 'finishing' | 'error';
 interface State {
-    model: SpeechState | null;
+    speech: SpeechState | null;
     targetId: string | null;
     phase: DictationPhase;
     text: string;
     error: string | null;
     bands: number[];
 }
-export const useDictation = create<State>(() => ({ model: null, targetId: null, phase: 'idle', text: '', error: null, bands: [] }));
+export const useDictation = create<State>(() => ({ speech: null, targetId: null, phase: 'idle', text: '', error: null, bands: [] }));
 const targets = new Map<HTMLElement, DictationTarget>();
 let session: DictationSession | null = null;
 let generation = 0;
 let releaseAudio: (() => void) | null = null;
 let insertion: DictationInsertion | null = null;
 let observers = 0;
-let releaseModel: (() => void) | null = null;
+let releaseSpeech: (() => void) | null = null;
 let engine: DictationEngine = helperEngine;
 // Until the run may use the microphone: the system's question about it takes the window's focus.
 let awaitingAccess = false;
@@ -81,8 +82,12 @@ export function setDictationEngine(next: DictationEngine): () => void {
 }
 
 function failWith(targetId: string, error: unknown): void {
+    const text = dictationFailureText(error);
+
     console.warn('Dictation failed:', error);
-    useDictation.setState({ targetId, phase: 'error', error: dictationFailureText(error) });
+    useDictation.setState({ targetId, phase: 'error', error: text });
+    // A composer has no room for the reason beside its button, so the reason is a toast as well.
+    useToasts.getState().show({ kind: 'error', title: i18next.t('voice:dictation.error'), description: text });
 }
 
 function discardDictation(): void {
@@ -106,36 +111,36 @@ export function observeSpeech(): () => void {
     if (observers++ === 0) {
         let active = true;
         let receivedEvent = false;
-        const receive = (model: SpeechState): void => {
+        const receive = (speech: SpeechState): void => {
             if (!active) {
                 return;
             }
-            useDictation.setState({ model });
-            if (!model.enabled) {
+            useDictation.setState({ speech });
+            if (!speech.enabled) {
                 discardDictation();
             }
         };
-        const off = bridge.onState((model) => {
+        const off = bridge.onState((speech) => {
             receivedEvent = true;
-            receive(model);
+            receive(speech);
         });
-        releaseModel = () => {
+        releaseSpeech = () => {
             active = false;
             off();
         };
         void fireAndForget(
             'bridge.state',
-            bridge.state().then((model) => {
+            bridge.state().then((speech) => {
                 if (!receivedEvent) {
-                    receive(model);
+                    receive(speech);
                 }
             })
         );
     }
     return () => {
         if (--observers === 0) {
-            releaseModel?.();
-            releaseModel = null;
+            releaseSpeech?.();
+            releaseSpeech = null;
             discardDictation();
         }
     };
@@ -185,7 +190,7 @@ export function toggleDictation(target: DictationTarget): void {
         stopDictation();
         return;
     }
-    if (!state.model?.enabled || state.model.phase !== 'ready' || target.disabled?.()) {
+    if (!state.speech?.enabled || state.speech.phase !== 'ready' || target.disabled?.()) {
         return;
     }
     discardDictation();
@@ -287,7 +292,7 @@ export function toggleFocusedDictation(): boolean {
     let element = document.activeElement;
     while (element instanceof HTMLElement) {
         const target = targets.get(element);
-        if (target && useDictation.getState().model?.enabled) {
+        if (target && useDictation.getState().speech?.enabled) {
             toggleDictation(target);
             return true;
         }

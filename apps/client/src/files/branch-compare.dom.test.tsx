@@ -139,7 +139,7 @@ test('a seed from a branch row names that branch and the mode it asked for', asy
 test('a machine without the request, and a machine that is gone, explain it and are not asked', async () => {
     machine.answersOnly(['git.refs', 'git.repos']);
     await act(async () => showBranchCompare());
-    await until(() => document.body.textContent?.includes('too old to compare branches') === true);
+    await until(() => document.body.textContent?.includes('Update this machine to compare branches') === true);
     expect(machine.requests('git.compare')).toEqual([]);
     expect(machine.requests('git.refs')).toEqual([]);
     await act(async () => {

@@ -205,15 +205,17 @@ describe('ruimte login', () => {
     test('without a home, a daemon or the right secret nothing reaches the address book', async () => {
         const noHome = harness({ polls: [] }, { readSecret: async () => Promise.reject(new Error('ENOENT')) });
         expect(await noHome.run()).toBe(1);
-        expect(noHome.recorded.err[0]).toContain('No daemon has started with /home/ruimte/.ruimte');
+        expect(noHome.recorded.err[0]).toContain('No Ruimte machine has started with /home/ruimte/.ruimte');
 
         const down = harness({ polls: [], daemon: 'down' });
         expect(await down.run()).toBe(1);
-        expect(down.recorded.err).toEqual(['No daemon answers on port 4210. Start it with `ruimte service install`, or with `ruimte` in another terminal.']);
+        expect(down.recorded.err).toEqual([
+            'No Ruimte machine answers on port 4210. Start it with `ruimte service install`, or with `ruimte` in another terminal.'
+        ]);
 
         const forbidden = harness({ polls: [], daemon: 'forbidden' });
         expect(await forbidden.run()).toBe(1);
-        expect(forbidden.recorded.err[0]).toContain('set RUIMTE_HOME');
+        expect(forbidden.recorded.err[0]).toContain('Set RUIMTE_HOME');
         expect(noHome.recorded.fetched).toEqual([]);
         for (const refused of [down, forbidden]) {
             expect(refused.recorded.fetched).toEqual(['http://127.0.0.1:4210/machine/link-request']);

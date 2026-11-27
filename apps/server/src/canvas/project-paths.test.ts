@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkDevicePath } from './project-paths.ts';
+import { checkDevicePath, startCwdGuard } from './project-paths.ts';
 
 describe('checkDevicePath', () => {
     let root: string;
@@ -36,5 +36,33 @@ describe('checkDevicePath', () => {
     test('takes a bundle whose links stay inside and refuses one with a link out of the project', async () => {
         expect(await checkDevicePath(project, 'Good.app', noWorktrees)).toBe(join(project, 'Good.app'));
         await expect(checkDevicePath(project, 'Leaky.app', noWorktrees)).rejects.toMatchObject({ code: 'device-path-refused' });
+    });
+});
+
+describe('startCwdGuard', () => {
+    let root: string;
+    let project: string;
+
+    const guard = startCwdGuard({ madeByAgent: (nodeId) => nodeId !== 'person', folderOf: () => project, worktreePaths: async () => [] });
+
+    beforeAll(async () => {
+        root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-start-cwd-')));
+        project = join(root, 'project');
+        await mkdir(join(project, 'src'), { recursive: true });
+        await mkdir(join(root, 'outside'));
+    });
+
+    afterAll(async () => {
+        await rm(root, { recursive: true, force: true });
+    });
+
+    test('says a folder that is gone is gone, apart from one outside the project', async () => {
+        await expect(guard('agent', 'src')).resolves.toBeUndefined();
+        await expect(guard('agent', 'removed-worktree')).rejects.toMatchObject({
+            code: 'bad-cwd',
+            message: `The folder ${join(project, 'removed-worktree')} is gone, so nothing can start in it until it is back or the chat moves to another folder`
+        });
+        await expect(guard('agent', join(root, 'outside'))).rejects.toMatchObject({ code: 'cwd-outside-project' });
+        await expect(guard('person', 'removed-worktree')).resolves.toBeUndefined();
     });
 });

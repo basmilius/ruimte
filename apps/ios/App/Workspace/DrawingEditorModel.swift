@@ -381,7 +381,7 @@ final class DrawingEditorModel {
                     let reason = error.localizedDescription
                     problem = String(
                         localized:
-                            "Your drawing is saved on this device and will sync when the connection returns. \(reason)",
+                            "Your drawing is saved on this device and syncs when the connection returns. \(reason)",
                         comment: "%@ is the reason the save failed")
                     return
                 }

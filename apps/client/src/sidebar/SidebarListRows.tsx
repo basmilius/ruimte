@@ -3,8 +3,8 @@ import { Tooltip, Icon, Input, ListRow, ContextMenu, Menu, SectionLabel, isApple
 import { MAX_TITLE_LENGTH } from '@ruimte/actions';
 import type { AgentKind, AgentStatus, CanvasNodeKind } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { ChevronRight, Globe, PanelTop, Pencil, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
-import { useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { ChevronRight, Globe, PanelTop, Pencil, PictureInPicture2, Plus, Trash, TriangleAlert, Users } from 'lucide-react';
+import { createContext, useContext, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renameNodeAction, renameViewAction } from '@/action-port/person-actions';
 import { BackgroundMark } from '@/attention/BackgroundMark';
@@ -42,6 +42,7 @@ import { StatusDot } from '@/surface/StatusDot';
 import { showsTaskMark } from '@/tasks/task-mark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { ViewMenuItems } from '@/view-menu/ViewMenuItems';
+import { canMoveToNewWindow, moveViewToNewWindow } from '@/view-windows/commands';
 import { NewViewItems } from '@/views/NewViewMenu';
 
 const ROW = 'w-full gap-2 text-left text-sm';
@@ -51,6 +52,21 @@ const ICON_SLOT = 'grid size-4 shrink-0 place-items-center';
 const ROW_PLAIN = 'text-text-muted hover:bg-surface-hover hover:text-text';
 /* A row with `selected` gets its background from `ListRow`, so only the text is left to set. */
 const ROW_IDLE = 'text-text-muted hover:text-text';
+const SEPARATOR = 'focus-ring flex w-full cursor-default';
+
+/* Where every project has a heading, its rows sit one step in under it, as a node sits under its view. */
+const ProjectRowsInset = createContext(false);
+export const InsetProjectRows = ProjectRowsInset.Provider;
+
+function useInset(nested: boolean): string | false {
+    const inset = useContext(ProjectRowsInset);
+    return nested ? (inset ? 'pl-10' : 'pl-6') : inset && 'pl-6';
+}
+
+/* A line takes back the padding of the list around it, and in under a heading starts where the icons do. */
+function useLineInset(): string {
+    return useContext(ProjectRowsInset) ? 'ml-6' : '-mx-2';
+}
 
 interface RowProps {
     /* The one row Tab reaches: the list is a single stop and the arrows move inside it. */
@@ -174,9 +190,11 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
     const [renaming, setRenaming] = useState(false);
     // The menu's Rename swaps this row for the field, which then has the keyboard.
     const renamedFromMenu = useRef(false);
+    const nestedInset = useInset(true);
+    const flatInset = useInset(false);
     if (renaming) {
         return (
-            <ListRow variant="inset" className={`${ROW} pl-6`}>
+            <ListRow variant="inset" className={clsx(ROW, nestedInset)}>
                 <span className={ICON_SLOT}>
                     <RowIcon id={node.id} kind={node.kind} provider={node.provider} className="text-text-muted" />
                 </span>
@@ -203,7 +221,7 @@ export function NodeRow({ row, tabbable, snoozable }: RowProps & { row: SidebarN
                 render={<ListRow variant="inset" selected={selected} render={<button />} />}
                 data-sidebar-row={row.rowId}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, row.viewName === null && 'pl-6', selected ? 'text-text' : ROW_IDLE)}
+                className={clsx(ROW, row.viewName === null ? nestedInset : flatInset, selected ? 'text-text' : ROW_IDLE)}
                 onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
                 onDoubleClick={() => {
                     if (node.chatOf === undefined) {
@@ -303,6 +321,7 @@ function DeleteRowMenu({ onDelete }: { onDelete(): void }) {
 export function SeparatorRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
+    const lineInset = useLineInset();
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -313,13 +332,11 @@ export function SeparatorRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx('focus-ring flex w-full cursor-default', row.headingBelow ? 'h-4 items-end' : 'h-6 items-center')}
+                className={clsx(SEPARATOR, row.headingBelow ? 'h-3 items-end' : 'h-4 items-center')}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
             >
-                {/* Edge to edge: the negative margin takes back the padding of the list around it,
-                    the way the line in a menu takes back the padding of its popup. */}
-                <span className="-mx-2 h-px grow bg-border-soft" />
+                <span className={clsx(lineInset, 'h-px grow bg-border-soft')} />
             </ContextMenu.Trigger>
             <DeleteRowMenu onDelete={onDelete} />
         </ContextMenu.Root>
@@ -335,9 +352,10 @@ export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
     const { view } = row;
     const renaming = renamingView.useViewId() === view.id;
     const rename = (on: boolean): void => renamingView.set(on ? view.id : null);
+    const inset = useInset(false);
     if (renaming) {
         return (
-            <div className="flex h-8 w-full items-center px-2">
+            <div className={clsx('flex h-8 w-full items-center px-2', inset)}>
                 <RenameField
                     value={view.name}
                     onDone={(next) => {
@@ -361,7 +379,7 @@ export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className="focus-ring flex h-8 w-full cursor-default items-center px-2"
+                className={clsx('focus-ring flex h-8 w-full cursor-default items-center px-2', inset)}
                 onDoubleClick={() => rename(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
@@ -395,6 +413,7 @@ export function SubheaderRow({ row, tabbable, onDelete, onDrag }: Omit<ViewRowPr
 export function UnknownViewRow({ row, tabbable, onDelete }: Omit<ViewRowProps, 'onToggle' | 'onDrag'>) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
+    const inset = useInset(false);
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
@@ -403,7 +422,7 @@ export function UnknownViewRow({ row, tabbable, onDelete }: Omit<ViewRowProps, '
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, 'focus-ring cursor-default font-medium text-text-faint')}
+                className={clsx(ROW, inset, 'focus-ring cursor-default text-text-faint')}
             >
                 <Tooltip label={t('sidebar.needsNewerRuimte')}>
                     <span className="flex min-w-0 grow items-center gap-2">
@@ -429,10 +448,11 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
     const [renaming, setRenaming] = useState(false);
     // An open canvas lists its nodes under it, each with its own; a folded one speaks for them.
     const childWait = view.self ? view.self.childWait : row.expanded === true ? null : view.nodes.find((node) => node.childWait)?.childWait;
+    const inset = useInset(false);
 
     if (renaming) {
         return (
-            <ListRow variant="inset" className={ROW}>
+            <ListRow variant="inset" className={clsx(ROW, inset)}>
                 <span className={ICON_SLOT}>
                     <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} className="text-text-muted" />
                 </span>
@@ -461,7 +481,7 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                 tabIndex={tabbable ? 0 : -1}
                 // Standing in a cell beside the focused one, the name is at full strength without the background,
                 // so it reads as open without claiming to be the row the keyboard is on.
-                className={clsx(ROW, 'group font-medium', active || row.beside ? 'text-text' : ROW_IDLE)}
+                className={clsx(ROW, inset, 'group', active && 'font-medium', active || row.beside ? 'text-text' : ROW_IDLE)}
                 onClick={(event) => (row.target ? void openSidebarTarget(row.target) : showView(view.id, { newTab: wantsNewTab(event, isApplePlatform()) }))}
                 onDoubleClick={() => setRenaming(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
@@ -552,6 +572,11 @@ export function ViewRow({ row, tabbable, onToggle, onDrag }: ViewRowProps) {
                         <ContextMenu.Item onClick={() => showView(view.id, { newTab: true })}>
                             <Icon icon={PanelTop} size={14} /> {t('viewMenu.openInNewTab')}
                         </ContextMenu.Item>
+                        {canMoveToNewWindow(view.id) && (
+                            <ContextMenu.Item onClick={() => moveViewToNewWindow(view.id)}>
+                                <Icon icon={PictureInPicture2} size={14} /> {t('viewWindows.openInNewWindow')}
+                            </ContextMenu.Item>
+                        )}
                         <ContextMenu.Separator />
                     </>
                 )}
@@ -729,11 +754,12 @@ export function NewViewRow({ group, rowId, tabbable }: RowProps & { group: Sideb
     const { t } = useTranslation('shell');
     const asked = useSidebarProjects((state) => state.newViewFor === group.key);
     const [open, setOpen] = useState(false);
+    const inset = useInset(false);
     const common = {
         variant: 'inset' as const,
         'data-sidebar-row': rowId,
         tabIndex: tabbable ? 0 : -1,
-        className: clsx(ROW, ROW_PLAIN, 'focus-visible:outline-2 focus-visible:outline-accent-on-surface')
+        className: clsx(ROW, inset, ROW_PLAIN, 'focus-visible:outline-2 focus-visible:outline-accent-on-surface')
     };
     const label = (text: string): ReactNode => (
         <>
@@ -795,6 +821,9 @@ export function BackgroundRow({
     snoozable: boolean;
 }) {
     const { t } = useTranslation('shell');
+    const lineInset = useLineInset();
+    const nestedInset = useInset(true);
+    const flatInset = useInset(false);
     const view = row.type === 'view' ? row.view : null;
     const item = row.type === 'node' ? row.node : null;
     // Rows are derived again on a status event; closures and children depend on their displayed values.
@@ -819,7 +848,21 @@ export function BackgroundRow({
     const targetProject = row.target?.projectId;
     const targetView = row.target?.viewId;
     const targetNode = row.target?.nodeId;
-    const inert = viewKind === 'separator' || viewKind === 'subheader' || viewKind === 'unknown' || !group.summary.available;
+    if (row.type === 'view' && viewKind === 'separator') {
+        // The same line as in the open project, so a project keeps its height when another one opens.
+        return (
+            <div
+                role="separator"
+                aria-label={t('viewKinds.separator')}
+                data-sidebar-row={rowId}
+                tabIndex={tabbable ? 0 : -1}
+                className={clsx(SEPARATOR, row.headingBelow ? 'h-3 items-end' : 'h-4 items-center')}
+            >
+                <span className={clsx(lineInset, 'h-px grow bg-border-soft')} />
+            </div>
+        );
+    }
+    const inert = viewKind === 'subheader' || viewKind === 'unknown' || !group.summary.available;
     const toggle = () => {
         if (viewId !== undefined) {
             useSidebarProjects.getState().expandView(groupKey, viewId, !expanded);
@@ -858,45 +901,39 @@ export function BackgroundRow({
                     ROW,
                     'focus-visible:outline-2 focus-visible:outline-accent-on-surface',
                     inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
-                    unindented && 'pl-6'
+                    unindented ? nestedInset : flatInset
                 )}
             >
-                {viewKind === 'separator' ? (
-                    <span className="h-px w-full bg-border" />
-                ) : (
-                    <>
-                        <span
-                            className={ICON_SLOT}
-                            onClick={(event) => {
-                                if (expandable) {
-                                    event.stopPropagation();
-                                    toggle();
-                                }
-                            }}
-                        >
-                            {expandable ? (
-                                <Icon icon={ChevronRight} size={14} className={clsx(expanded && 'rotate-90')} />
-                            ) : viewId !== undefined && viewKind !== undefined ? (
-                                viewKind === 'browser' && !icon ? (
-                                    <Icon icon={Globe} size={14} />
-                                ) : (
-                                    <ViewGlyph id={viewId} kind={viewKind} icon={icon} provider={provider} path={path} />
-                                )
-                            ) : itemKind === 'browser' ? (
-                                <Icon icon={Globe} size={14} />
-                            ) : itemId !== undefined && itemKind !== undefined ? (
-                                <RowIcon id={itemId} kind={itemKind} provider={itemProvider} />
-                            ) : null}
-                        </span>
-                        <span className="min-w-0 truncate">{label || t('sidebar.noViews')}</span>
-                        {extraName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{extraName}</span>}
-                        <span className="grow" />
-                        <span className={SNOOZE_MARKS}>
-                            {ready && <RowStatus status={status} work={undefined} />}
-                            {shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
-                        </span>
-                    </>
-                )}
+                <span
+                    className={ICON_SLOT}
+                    onClick={(event) => {
+                        if (expandable) {
+                            event.stopPropagation();
+                            toggle();
+                        }
+                    }}
+                >
+                    {expandable ? (
+                        <Icon icon={ChevronRight} size={14} className={clsx(expanded && 'rotate-90')} />
+                    ) : viewId !== undefined && viewKind !== undefined ? (
+                        viewKind === 'browser' && !icon ? (
+                            <Icon icon={Globe} size={14} />
+                        ) : (
+                            <ViewGlyph id={viewId} kind={viewKind} icon={icon} provider={provider} path={path} />
+                        )
+                    ) : itemKind === 'browser' ? (
+                        <Icon icon={Globe} size={14} />
+                    ) : itemId !== undefined && itemKind !== undefined ? (
+                        <RowIcon id={itemId} kind={itemKind} provider={itemProvider} />
+                    ) : null}
+                </span>
+                <span className="min-w-0 truncate">{label || t('sidebar.noViews')}</span>
+                {extraName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{extraName}</span>}
+                <span className="grow" />
+                <span className={SNOOZE_MARKS}>
+                    {ready && <RowStatus status={status} work={undefined} />}
+                    {shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
+                </span>
             </ListRow>
         </MaybeTooltip>
     );

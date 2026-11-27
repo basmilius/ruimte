@@ -44,7 +44,7 @@
             "hint": "A policy, an extension or the page itself stopped the request."
         },
         "address": {
-            "title": "That address cannot be opened",
+            "title": "Ruimte cannot open that address",
             "hint": "Check the scheme and the spelling."
         },
         "other": {
@@ -59,7 +59,7 @@
         "notReady": "The browser is not ready yet",
         "status": "The browser did not answer ({{status}})",
         "unknownFormat": "Could not show the page",
-        "stopped": "The browser stream stopped",
+        "stopped": "The browser stopped",
         "failed": "The remote browser failed"
     },
     "splash": {

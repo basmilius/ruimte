@@ -141,7 +141,7 @@
         "skippedOverlap": "Overgeslagen, de vorige run was nog niet klaar",
         "skippedHeld": "Overgeslagen, nog niet goedgekeurd",
         "skippedPaused": "Gepauzeerd",
-        "starting": "Start",
+        "starting": "Start op",
         "running": "Bezig sinds {{time}}",
         "needsYou": "Heeft je nodig",
         "limit": "Gestopt op de verbruikslimiet",
@@ -235,7 +235,7 @@
         "save": "Opslaan",
         "failed": "Kon de routine niet opslaan.",
         "outputAgent": "Resultaten gaan naar Output, niet in het project.",
-        "outputPrinted": "Zijn uitvoer gaat naar Output."
+        "outputPrinted": "Wat hij print, gaat naar Output."
     },
     "detail": {
         "definition": "Wat deze routine doet",

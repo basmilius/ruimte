@@ -30,7 +30,7 @@
         },
         "sprite": {
             "label": "Figures",
-            "description": "Pick one or more packs. Each agent keeps one figure. Buddies and Animals give every provider its own; the other packs spread their figures over your agents.",
+            "description": "Pick one or more packs. Each agent keeps one figure. Buddies and Animals give every provider its own. The other packs spread their figures over your agents.",
             "sets": {
                 "buddies": "Buddies",
                 "animals": "Animals",
@@ -141,7 +141,7 @@
             "problem": {
                 "type": "Pick a PNG or WebP image.",
                 "bytes": "This image is larger than {{kilobytes}} KB.",
-                "unreadable": "This file could not be read as a PNG or WebP image.",
+                "unreadable": "Ruimte could not read this file as a PNG or WebP image.",
                 "frame-small": "A frame is at least {{min}} pixels high.",
                 "frame-large": "A frame is at most {{max}} pixels high.",
                 "frames-whole": "The width must be a whole number of square frames.",
@@ -162,7 +162,7 @@
         "agents": {
             "title": "Per agent",
             "label": "A figure per agent",
-            "description": "Give a CLI a pack or one fixed figure, such as Nox for Codex. That overrides the packs you turned on. A CLI on Default uses those packs.",
+            "description": "Give a provider a pack or one fixed figure, such as Nox for Codex. That overrides the packs you turned on. A provider on Default uses those packs.",
             "default": "Default",
             "packs": "Packs",
             "own": "Your own figures",

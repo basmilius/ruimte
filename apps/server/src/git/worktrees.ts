@@ -139,10 +139,16 @@ export class Worktrees {
         return this.sinks.subscribe(clientId, sink);
     }
 
-    /* The paths of the worktrees the daemon made for the repository a folder is in, wherever the worktree folder was then. */
-    async registeredPaths(folder: string): Promise<string[]> {
-        const { main } = await this.read(folder);
-        return [...(await this.registerOf(main).read()).keys()];
+    /*
+     * Every worktree git lists beside the main checkout, and the paths the daemon made for the repository
+     * wherever the worktree folder was then, from one run of git and one read of the register. A check of
+     * where a write may go holds the two against each other, and asks this on every save.
+     */
+    async listedAndMade(folder: string): Promise<{ listed: string[]; made: string[] }> {
+        const { main, entries } = await this.read(folder);
+        const records = await this.registerOf(main).read();
+
+        return { listed: entries.map((entry) => entry.path), made: [...records.keys()] };
     }
 
     /*

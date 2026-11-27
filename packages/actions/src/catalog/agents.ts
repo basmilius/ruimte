@@ -218,7 +218,7 @@ export const AGENTS_ACTIONS = {
                 .nullish()
                 .describe("The reasoning effort for a chat agent, one the model offers; null keeps the person's last pick when the model offers it"),
             account: agentField(z.string().min(1)).describe(
-                "An account a person named in the calling chat as @account:<cli>/<id>, for this CLI; null inherits the caller's"
+                "An account a person named in the calling chat as @account:<cli>/<id> or @model:<cli>:<id>/<model>, for this CLI; null inherits the caller's"
             ),
             design: agentField(z.boolean()).describe(
                 'Makes a hidden chat agent with a task a designer, working in a free folder under .ruimte/private/designs that its result names the pages of'
@@ -264,7 +264,9 @@ export const AGENTS_ACTIONS = {
                             .string()
                             .min(1)
                             .nullish()
-                            .describe("An account a person named in the calling chat as @account:<cli>/<id>, for this role's CLI; null inherits the caller's")
+                            .describe(
+                                "An account a person named in the calling chat as @account:<cli>/<id> or @model:<cli>:<id>/<model>, for this role's CLI; null inherits the caller's"
+                            )
                     })
                 )
                 .min(1)

@@ -271,6 +271,8 @@
     --font-brand: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     /* The hand a drawing is written in, for the text a person places by hand on a canvas as well. */
     --font-hand: 'Kalam', 'Comic Sans MS', cursive;
+    /* Behind a video, a sound or a device screen: black in either theme, the way a player looks everywhere. */
+    --color-media-bg: #000000;
 }
 
 @theme inline {
@@ -732,6 +734,10 @@
         flex: none;
         border-block: 1px solid var(--border);
         background: repeating-linear-gradient(135deg, transparent 0 6px, var(--editor-hatch) 6px 7px);
+    }
+    /* The rest of the machine in a usage bar of the processes panel: what Ruimte measures but does not own. */
+    .usage-hatch {
+        background: repeating-linear-gradient(135deg, var(--text-faint) 0 2px, transparent 2px 4px);
     }
     /* The mark over a plan step the active item in the header went to. A layer of its own, so a row
        with a background keeps it while the mark fades; with motion off it stays until the timer ends it. */

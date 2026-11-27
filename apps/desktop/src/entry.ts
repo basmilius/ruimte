@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { join, resolve } from 'node:path';
 import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage, isExternalLink } from '@adecore/shell';
+import { splitAuxWindowKey } from '@ruimte/desktop-bridge';
 import { DEFAULT_PORT, DEV_PORT, devRuimteHome, ruimteHome as installedRuimteHome } from '@ruimte/service/runtime';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
 import { windowUrl } from './app-windows';
@@ -241,10 +242,12 @@ function createWindow(
 ): Electron.BrowserWindow {
     // `windows.open` calls this in the same tick as the channel that set what it opens with.
     const { view, inactive } = windowChannels.takeOpening();
+    // An auxiliary window holds a view or two, such as a terminal on a second screen, so it may be small and starts smaller than the window it left.
+    const aux = key !== null && splitAuxWindowKey(key) !== null;
     const window = new BrowserWindow({
         ...bounds,
-        minWidth: 800,
-        minHeight: 500,
+        ...(aux && origin === 'opened' ? { width: Math.min(bounds.width, 960), height: Math.min(bounds.height, 640) } : {}),
+        ...(aux ? { minWidth: 360, minHeight: 240 } : { minWidth: 800, minHeight: 500 }),
         show: false,
         ...theme.windowOptions(),
         webPreferences: {
@@ -269,6 +272,7 @@ function createWindow(
     });
     const id = window.id;
     const contents = window.webContents;
+    windowChannels.opened(window, key);
     // A window back from the last session or the first of a start is no window a person opened.
     if (origin === 'opened') {
         usage.windowOpened();
@@ -381,6 +385,8 @@ const updates = installUpdates(ipc, {
     askBeforeQuit,
     confirmQuit: (confirmed) => {
         quitConfirmed = confirmed;
+        // An install closes the windows before `before-quit` fires.
+        windowChannels.setLeaving(confirmed);
     }
 });
 
@@ -445,10 +451,14 @@ if (!app.requestSingleInstanceLock()) {
         }
     });
 
+    // Fires before the windows close, so an auxiliary window that goes with the quit is not taken for one a person closed.
+    app.on('before-quit', () => windowChannels.setLeaving(true));
+
     windows.attach(app, {
         confirmQuit: async ({ update }) => {
             if (!update && !quitConfirmed && !(await askBeforeQuit().catch(() => true))) {
                 machine.keepOnQuit();
+                windowChannels.setLeaving(false);
                 return false;
             }
             await machine.settleBeforeQuit();

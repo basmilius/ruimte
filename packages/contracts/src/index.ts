@@ -132,7 +132,7 @@ export * from './model-sniff.ts';
 export * from './nanogpt.ts';
 export * from './node-defaults.ts';
 export * from './node-title.ts';
-export { emptyCanvasGroupIds, groupUnder, joinGroupUnder } from './canvas-groups.ts';
+export { containerIds, emptyCanvasGroupIds, groupsGrownAround, groupUnder, heldIds, hiddenIds, joinGroup, joinGroupUnder } from './canvas-groups.ts';
 export * from './plan-host.ts';
 export * from './processes.ts';
 export * from './provenance.ts';

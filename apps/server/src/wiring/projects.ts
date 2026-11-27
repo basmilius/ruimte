@@ -1,4 +1,5 @@
 import { chatIsWorking } from '@ruimte/contracts';
+import { bestEffort } from '../best-effort.ts';
 import { StartClaims } from '../canvas/start-claims.ts';
 import type { MachineHome } from '../disk/machine-home.ts';
 import { errorText } from '../error-text.ts';
@@ -133,6 +134,8 @@ export async function wireProjects({ home, machineId, machineHome, stores, agent
     await store.hiddenAgents.load();
     await store.remote.load();
     await store.peers.load();
+    // Not awaited, so a folder on a slow network mount never holds up the boot.
+    void bestEffort('Forgetting projects whose folder is gone', store.forgetMissingFolders());
     const startClaims = new StartClaims(home);
     await startClaims.load();
     const drawings = new DrawingStore(store);

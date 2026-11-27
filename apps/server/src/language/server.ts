@@ -1033,7 +1033,7 @@ export class LanguageServer {
     /* A server that never answers its handshake would leave the kind starting for good. */
     private async withinHandshake(handshake: Promise<unknown>, profile: ComponentProfile): Promise<void> {
         if ((await this.beforeDeadline(handshake, INITIALIZE_TIMEOUT_MS)) === 'expired') {
-            throw new Error(`the ${titleOf(profile)} process did not answer its handshake within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`);
+            throw new Error(`the ${titleOf(profile)} process did not answer within ${INITIALIZE_TIMEOUT_MS / 1000} seconds`);
         }
     }
 

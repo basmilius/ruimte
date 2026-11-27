@@ -47,7 +47,7 @@
     "moveChat": {
         "titleMake": "Make project",
         "titleMove": "Move to {{project}}",
-        "failedToRender": "The move dialog could not be shown",
+        "failedToRender": "Could not show the move dialog",
         "project": "Project",
         "chooseProject": "Choose a project",
         "newProject": "New project",

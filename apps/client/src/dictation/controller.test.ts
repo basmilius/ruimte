@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import type { SpeechState } from '@ruimte/desktop-bridge';
+import { useToasts } from '@/state/toasts';
 import { cancelDictation, registerDictationTarget, setDictationEngine, stopDictation, toggleDictation, useDictation, type DictationTarget } from './controller';
 import { DictationError, type DictationHandlers } from './engine';
 
@@ -31,7 +32,7 @@ function target(id = 'field') {
     return { target: dictationTarget, inserted, previews };
 }
 
-const READY = { enabled: true, phase: 'ready' } as unknown as SpeechState;
+const READY: SpeechState = { enabled: true, phase: 'ready', error: null };
 
 describe('the dictation controller', () => {
     let fake = fakeEngine();
@@ -40,7 +41,7 @@ describe('the dictation controller', () => {
     beforeEach(() => {
         fake = fakeEngine();
         restore = setDictationEngine(fake.engine);
-        useDictation.setState({ model: READY });
+        useDictation.setState({ speech: READY });
         (globalThis as { document?: unknown }).document = { hasFocus: () => true };
     });
 
@@ -94,6 +95,21 @@ describe('the dictation controller', () => {
         expect(state.phase).toBe('error');
         expect(state.error).toBe('Speech recognition stopped with an error. Try again.');
         expect(field.inserted).toEqual([]);
+        expect(useToasts.getState().toasts).toMatchObject([
+            { kind: 'error', title: 'Dictation stopped', description: 'Speech recognition stopped with an error. Try again.' }
+        ]);
+        warn.mockRestore();
+    });
+
+    test('a microphone that macOS holds back says where to look', () => {
+        const warn = spyOn(console, 'warn').mockImplementation(() => undefined);
+        const field = target();
+        toggleDictation(field.target);
+        fake.handlers().onError(new DOMException('Could not start audio source', 'NotReadableError'));
+
+        expect(useDictation.getState().error).toBe(
+            'The microphone did not open. Another app may be using it, or System Settings blocks it under Privacy & Security.'
+        );
         warn.mockRestore();
     });
 

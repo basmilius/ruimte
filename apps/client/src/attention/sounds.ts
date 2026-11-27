@@ -10,7 +10,7 @@ export interface SoundPorts {
     play(url: string): Promise<void>;
     now(): number;
 
-    /* Whether this window is the one that plays the sound of `tag`; an alert every window hears is claimed by one. */
+    /* Whether this window is the one that announces `tag`; an alert every window hears is claimed by one. */
     claim(tag: string): Promise<boolean>;
 }
 
@@ -45,6 +45,11 @@ export function setSoundPorts(next: Partial<SoundPorts>): () => void {
         ports = REAL_PORTS;
         lastPlayed.clear();
     };
+}
+
+/* Claims what every window hears for this one, which then raises its notification and plays its sound. */
+export function claimAnnouncement(tag: string): Promise<boolean> {
+    return ports.claim(tag);
 }
 
 async function start(choice: SoundChoice): Promise<void> {

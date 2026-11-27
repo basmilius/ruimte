@@ -107,11 +107,11 @@ describe('reading account limits from the usage section', () => {
         page = mount();
         await page.render(<UsageLimits />);
         await until(() => machine.requests('usage.limits').length > previous);
-        expect(page.host.textContent).toContain('No plan limits have been read.');
+        expect(page.host.textContent).toContain('No plan limits read yet.');
         expect(page.host.textContent).not.toContain('Loading limits');
         await clickOn(readButton()!);
         await until(() => page.host.querySelectorAll('[role="progressbar"]').length === 1);
-        expect(page.host.textContent).not.toContain('No plan limits have been read.');
+        expect(page.host.textContent).not.toContain('No plan limits read yet.');
     });
 
     test('warns at ten minutes and tolerates small machine clock skew', async () => {

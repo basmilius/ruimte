@@ -1,7 +1,7 @@
 import { waitingRequestsOf, type ChatState } from '@adecore/agents-react/state';
 import type { Editor, EditorRange, EditorTrackedRange } from '@adecore/editor';
 import { endOfInsertion, fitReplacement, locateSelection, parseAnswer, replaceRange, type InlineProblem, type LineSpan } from '@adecore/editor-react/models';
-import { messageOf } from '@adecore/ui';
+import { LONG_MS, messageOf } from '@adecore/ui';
 import type { AgentKind, ProjectNewInlineChatPayload, ProjectNewInlineChatResult } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
@@ -66,7 +66,14 @@ export interface InlineEditDeps {
     stageFile(path: string, disk: DiskText, text: string): void;
     saveRecord(record: InlineEditRecord): InlineEditRecord | null;
     forgetRecord(path: string, chatId: string): void;
-    notify(toast: { kind: 'success' | 'error'; title: string; description?: string; action?: { label: string; run: () => void } }): void;
+    notify(toast: {
+        kind: 'success' | 'error';
+        title: string;
+        description?: string;
+        action?: { label: string; run: () => void };
+        persist?: boolean;
+        lifetime?: number;
+    }): void;
 }
 
 export interface InlineEditInit {
@@ -553,6 +560,8 @@ export class InlineEditSession {
                 kind: 'success',
                 title: i18next.t('inline-edit:toast.ready', { name }),
                 description: state.instruction,
+                // Nothing changes the file until a person applies the proposal, so the offer waits for them.
+                persist: true,
                 action: { label: i18next.t('inline-edit:toast.apply'), run: () => void this.applyFromToast() }
             });
             return;
@@ -561,6 +570,7 @@ export class InlineEditSession {
             kind: state.phase === 'failed' ? 'error' : 'success',
             title: i18next.t(state.phase === 'failed' ? 'inline-edit:toast.failed' : 'inline-edit:toast.answered', { name }),
             description: state.instruction,
+            lifetime: LONG_MS,
             ...(state.attached ? { action: { label: i18next.t('inline-edit:toast.show'), run: () => this.show() } } : {})
         });
     }

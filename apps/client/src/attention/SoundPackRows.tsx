@@ -1,7 +1,7 @@
 import { Button, FormError, IconButton, Input, useAsyncAction } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { Play, Trash2, Volume2, VolumeX } from 'lucide-react';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { removeCustomSoundPack, renameCustomSoundPack, setCustomSound, setCustomSoundOff, type SoundFileRefusal } from '@/attention/custom-sounds';
 import { playSound } from '@/attention/sounds';
@@ -13,8 +13,6 @@ const PACK_NAME_MAX = 40;
 
 interface SoundPackRowsProps {
     pack: string;
-    /* What a row holds after its play button, such as the switch that turns the event on. */
-    eventControl?(event: SoundEvent, label: string): ReactNode;
 }
 
 /*
@@ -23,7 +21,7 @@ interface SoundPackRowsProps {
  * turns the event off in this pack. Keyed by pack where it is drawn, so a refusal about one pack's file
  * does not stay under the next.
  */
-export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
+export function SoundPackRows({ pack }: SoundPackRowsProps) {
     const { t } = useTranslation('settings');
     const custom = useSettings((s) => s.customSoundPacks);
     const soundPack = useSettings((s) => s.soundPack);
@@ -79,9 +77,9 @@ export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
                 const file = own?.files[event];
                 const off = own?.off?.includes(event) === true;
                 const sound = packSound({ soundPack, customSoundPacks: custom }, pack, event);
-                const from = off
-                    ? t('agents.sounds.custom.off')
-                    : (file ?? t('agents.sounds.custom.noFile', { pack: soundPackName(sound?.pack ?? pack, custom, t) }));
+                const missing =
+                    sound === null ? t('agents.sounds.custom.noSound') : t('agents.sounds.custom.noFile', { pack: soundPackName(sound.pack, custom, t) });
+                const from = off ? t('agents.sounds.custom.off') : (file ?? missing);
 
                 return (
                     <SettingsRow
@@ -117,7 +115,6 @@ export function SoundPackRows({ pack, eventControl }: SoundPackRowsProps) {
                                         onClick={() => setCustomSoundOff(own.id, event, !off)}
                                     />
                                 )}
-                                {eventControl?.(event, label)}
                             </div>
                         }
                     />

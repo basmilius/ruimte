@@ -21,9 +21,12 @@ interface ProjectGlyphProps {
     className?: string;
     /* The machine's Chats project, which is no folder and wears a mark of its own whatever its icon says. */
     scratch?: boolean;
+
+    /* Every mark in the project's color alone, so it can stand for the project where that color does, as in a legend. */
+    mono?: boolean;
 }
 
-export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className, scratch = false }: ProjectGlyphProps) {
+export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, className, scratch = false, mono = false }: ProjectGlyphProps) {
     const theme = useTheme((s) => s.resolved);
     const box = { width: size, height: size };
     const image = useMachineUrl(icon.kind === 'image' && !scratch ? { kind: 'projectIcon', projectId, theme, version: icon.version } : null, endpointId);
@@ -52,7 +55,11 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
 
     if (scratch) {
         return (
-            <span aria-hidden className={clsx('flex shrink-0 items-center justify-center text-text-muted', className)} style={box}>
+            <span
+                aria-hidden
+                className={clsx('flex shrink-0 items-center justify-center', !mono && 'text-text-muted', className)}
+                style={mono ? { ...box, color } : box}
+            >
                 <Icon icon={picked ?? MessagesSquare} size={size >= 32 ? 20 : size >= 20 ? 14 : 12} />
             </span>
         );
@@ -69,6 +76,11 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
         // The box holds its place while the bytes are on their way, so the name beside it does not jump.
         if (image.url === null) {
             return <span aria-hidden className={clsx('shrink-0', className)} style={box} />;
+        }
+        if (mono) {
+            // The logo's shape as a mask, filled with the color; a logo without transparency fills its whole box.
+            const mask = { maskImage: `url("${image.url}")`, maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center' };
+            return <span aria-hidden className={clsx('shrink-0', className)} style={{ ...box, ...mask, backgroundColor: color }} />;
         }
         return (
             <DisplayImage
@@ -89,7 +101,7 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
             className={clsx('flex shrink-0 items-center justify-center leading-none font-semibold', className)}
             style={{
                 ...box,
-                background: `color-mix(in oklab, ${color} 20%, transparent)`,
+                ...(mono ? {} : { background: `color-mix(in oklab, ${color} 20%, transparent)` }),
                 color,
                 fontSize: Math.max(12, Math.round(size * 0.68))
             }}

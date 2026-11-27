@@ -86,6 +86,32 @@ export function runBehavior(id: string): void {
     }
 }
 
+/* Filled by `view-windows` for a window that leaves commands to another one. The menu, the palette and the keys ask it before they run a row. */
+export interface CommandRelay {
+    placeOf(id: string): 'here' | 'relayed' | 'dropped';
+    relay(id: string): void;
+}
+
+let commandRelay: CommandRelay | null = null;
+
+export function provideCommandRelay(relay: CommandRelay | null): void {
+    commandRelay = relay;
+}
+
+/* True when this window does not run the row. A relayed row has gone to the window that does by then. */
+export function relayCommand(id: string): boolean {
+    const place = commandRelay?.placeOf(id) ?? 'here';
+    if (place === 'relayed') {
+        commandRelay?.relay(id);
+    }
+
+    return place !== 'here';
+}
+
+export function commandPlace(id: string): 'here' | 'relayed' | 'dropped' {
+    return commandRelay?.placeOf(id) ?? 'here';
+}
+
 export type KeyHandler = (press: KeyPress) => boolean;
 
 const keyHandlers: KeyHandler[] = [];

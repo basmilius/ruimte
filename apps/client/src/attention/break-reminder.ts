@@ -1,8 +1,8 @@
 import { formatDuration } from '@adecore/ui/format';
 import i18next from 'i18next';
 import { z } from 'zod';
-import { mayNotify } from '@/attention/notifications';
 import { playEventSound } from '@/attention/sounds';
+import { mayNotify, raiseNotification } from '@/attention/system-notification';
 import { desktop, type SystemIdleState } from '@/desktop/bridge';
 import { clientQuietState } from '@/state/quiet-hours';
 import { useSettings } from '@/state/settings';
@@ -15,7 +15,10 @@ const AWAY_SECONDS = 300;
 const AWAY_MS = AWAY_SECONDS * 1000;
 const LATER_MS = 15 * 60_000;
 const TOAST_ID = 'break-reminder';
-const NOTIFICATION_TAG = 'ruimte-break';
+const SOUND_CLAIM = 'ruimte-break';
+
+/* The notification this window raised last, closed before its next so a reminder nobody opened does not pile up. */
+let raised: Notification | null = null;
 
 /*
  * The stretch of work in progress, shared by every window of this client. `seenAt` is the last tick that
@@ -77,26 +80,20 @@ function showToast(stretch: Stretch, now: number): void {
 }
 
 function notify(stretch: Stretch, now: number): void {
-    const notification = new Notification(i18next.t('shell:breakReminder.title'), {
-        body: i18next.t('shell:breakReminder.description', { duration: formatDuration(now - stretch.startedAt) }),
-        tag: NOTIFICATION_TAG,
-        silent: true
-    });
+    const body = i18next.t('shell:breakReminder.description', { duration: formatDuration(now - stretch.startedAt) });
 
-    // No session's event and no project's: it sounds as an alert does in the settings' own pack.
-    playEventSound('alert', null, NOTIFICATION_TAG);
-
-    notification.onclick = () => {
-        window.focus();
-        notification.close();
-
+    raised?.close();
+    raised = raiseNotification(i18next.t('shell:breakReminder.title'), { body, silent: true }, () => {
         const current = stretches.read();
 
         if (current !== null) {
             stretches.write({ ...current, stage: 'shown' });
             showToast(current, Date.now());
         }
-    };
+    });
+
+    // No session's event and no project's: it sounds as an alert does in the settings' own pack, if that has a sound.
+    playEventSound('alert', null, SOUND_CLAIM);
 }
 
 /*

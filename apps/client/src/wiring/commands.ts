@@ -43,6 +43,7 @@ import { routineFacts } from '@/routines/menu-facts';
 import { WINDOW_BEHAVIORS } from '@/shell/window-commands';
 import { TERMINAL_COMMANDS } from '@/terminal/command-table';
 import { terminalFacts } from '@/terminal/menu-facts';
+import { VIEW_WINDOW_COMMANDS } from '@/view-windows/command-table';
 import { VIEW_COMMANDS } from '@/views/command-table';
 import { VIEW_GENERATED } from '@/views/generated-commands';
 import { VIEW_MENU_EXTRAS } from '@/views/menu-extras';
@@ -80,6 +81,7 @@ export function installCommands(): void {
     registerCommands(VOICE_COMMANDS);
     registerCommands(DICTATION_COMMANDS);
     registerCommands(LANGUAGE_AND_EDITOR_COMMANDS);
+    registerCommands(VIEW_WINDOW_COMMANDS);
 
     registerMenuFacts(agentFacts, attentionFacts, canvasFacts, chatFacts, fileFacts, languageFacts, launchFacts, routineFacts, terminalFacts, viewFacts);
     registerMenuExtras(...AGENT_MENU_EXTRAS, ...CANVAS_MENU_EXTRAS, ...CHAT_MENU_EXTRAS, ...LAUNCH_MENU_EXTRAS, ...VIEW_MENU_EXTRAS);

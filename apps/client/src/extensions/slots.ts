@@ -282,12 +282,25 @@ export function baseContext(): BaseContext {
     return contextOf(useProject.getState().current, views, activeViewId, currentEndpointId(), pageTheme());
 }
 
-function useBaseContext(): BaseContext {
-    const current = useProject((state) => state.current);
-    const views = useDocument((state) => state.views);
-    const activeViewId = useDocument((state) => state.activeViewId);
+function followNothing(): () => void {
+    return () => {};
+}
+
+function noTheme(): null {
+    return null;
+}
+
+/* `null` while `active` is false, so a host with no entry redraws on no focus move between cells and watches no theme. */
+function useBaseContext(active: boolean): BaseContext | null {
+    const current = useProject((state) => (active ? state.current : null));
+    const views = useDocument((state) => (active ? state.views : null));
+    const activeViewId = useDocument((state) => (active ? state.activeViewId : null));
     const endpointId = useEndpointId();
-    const theme = useSyncExternalStore(followPageTheme, pageTheme);
+    const theme = useSyncExternalStore<BaseContext['theme'] | null>(active ? followPageTheme : followNothing, active ? pageTheme : noTheme);
+
+    if (views === null || theme === null) {
+        return null;
+    }
 
     return contextOf(current, views, activeViewId, endpointId, theme);
 }
@@ -378,9 +391,9 @@ export function useSlot(place: SlotName, context: object): { resolved: ResolvedE
     const entries = useContributions((state) => state.slotEntries);
     const here = entries.filter((entry) => entry.slots[place] !== undefined);
     const sources = useNodeSources(here.length > 0);
-    const base = useBaseContext();
+    const base = useBaseContext(here.length > 0);
 
-    if (sources === null) {
+    if (sources === null || base === null) {
         return { resolved: [], full: context };
     }
 
