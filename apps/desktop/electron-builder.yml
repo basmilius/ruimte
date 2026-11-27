@@ -8,6 +8,8 @@ directories:
   buildResources: build
 files:
   - dist/**
+  # A native module cannot load from inside the asar, so it rides along as a resource.
+  - '!dist/native{,/**/*}'
   - package.json
 extraResources:
   - from: ../client/dist
@@ -41,6 +43,7 @@ mac:
     - Contents/Resources/bin/ruimte
     - Contents/Resources/bin/native/ios-device-bridge
     - Contents/Resources/bin/native/speech-bridge
+    - Contents/Resources/native/fullscreen-titlebar.node
   # The computer use helper is an app of its own, because macOS attaches Accessibility and Screen Recording
   # to a bundle. Contents/Helpers is where a bundle expects a nested app: codesign signs and verifies it
   # there as nested code, where under Resources it would only be sealed as files. `build/sign.cjs` signs it
@@ -55,6 +58,9 @@ mac:
   extraResources:
     - from: build/icon/Assets.car
       to: Assets.car
+    # Traffic lights that fade in over the page in fullscreen (`scripts/build-fullscreen-titlebar.ts`).
+    - from: dist/native
+      to: native
     # Only the type's name is translated; `electronLanguages` keeps en alone, so nl.lproj holds just this.
     - from: build/nl.lproj
       to: nl.lproj

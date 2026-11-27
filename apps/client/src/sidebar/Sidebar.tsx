@@ -469,7 +469,7 @@ export function Sidebar({ brandMenu }: { brandMenu?: ReactNode }) {
                 >
                     <SidebarGlow />
                     <div
-                        className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
+                        className="window-top-band app-drag flex h-12 shrink-0 items-center justify-between pr-2"
                         style={{ paddingLeft: inset === undefined ? BRAND_PADDING_PX : inset + 8 }}
                     >
                         {brandMenu ?? <Brand className="pointer-events-none" />}

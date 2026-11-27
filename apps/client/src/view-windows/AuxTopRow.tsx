@@ -25,7 +25,7 @@ export function AuxTopRow() {
 
     return (
         <WorkspaceTopRow
-            className={clsx('workspace-toolbar app-drag', hasOverlayControls() && 'toolbar-overlay-inset')}
+            className={clsx('workspace-toolbar window-top-band app-drag', hasOverlayControls() && 'toolbar-overlay-inset')}
             style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}
         >
             {project !== null && endpointId !== null && (

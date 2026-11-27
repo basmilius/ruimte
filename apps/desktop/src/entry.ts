@@ -1,7 +1,17 @@
 import { existsSync } from 'node:fs';
 import { Socket } from 'node:net';
 import { join, resolve } from 'node:path';
-import { createAppIpc, createPageKeys, createTheme, createWindows, type WindowOrigin, createWindowState, fileStorage, isExternalLink } from '@adecore/shell';
+import {
+    createAppIpc,
+    createPageKeys,
+    createTheme,
+    createWindows,
+    type WindowOrigin,
+    createWindowState,
+    fileStorage,
+    isExternalLink,
+    loadFullScreenTitlebar
+} from '@adecore/shell';
 import { splitAuxWindowKey } from '@ruimte/desktop-bridge';
 import { DEFAULT_PORT, DEV_PORT, devRuimteHome, ruimteHome as installedRuimteHome } from '@ruimte/service/runtime';
 import { answerAppRequest, createDesktopAppScheme } from './app-scheme';
@@ -120,6 +130,7 @@ const theme = createTheme({
     windows: () => windows.all(),
     background: '#131316',
     overlay: { height: TITLEBAR_HEIGHT, colors: OVERLAY_COLORS },
+    fullScreenTitlebar: loadFullScreenTitlebar(join(app.isPackaged ? process.resourcesPath : here, 'native', 'fullscreen-titlebar.node')),
     // Controls over the page cover the side panels' own buttons there, so Windows gets its title bar and menu bar.
     nativeFrame: process.platform === 'win32'
 });
@@ -314,7 +325,7 @@ function createWindow(
         recoveredAt = now;
         contents.reload();
     });
-    // In fullscreen macOS hides the traffic lights, so the client can take the room back.
+    // In fullscreen the traffic lights show only while the menu bar is down, so the client keeps their room only then.
     theme.followWindowControls(window, (state) => contents.send('window:controls', state));
     // Links a page opens in a new window go to the system browser, never to another Electron window.
     contents.setWindowOpenHandler(({ url }) => {

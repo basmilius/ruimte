@@ -984,6 +984,22 @@
     }
 }
 
+/* The top band of each column. In fullscreen on a display without a notch the menu bar comes down over the
+   window, and the bands come down with it over what is under them, as a native toolbar does. The shell says
+   how far (`connectWindowControls`). Outside its layer, so it wins over the bands' own utilities. */
+.window-top-band {
+    position: relative;
+    transform: translateY(var(--window-controls-offset, 0px));
+}
+:root[data-window-controls-offset] .window-top-band {
+    z-index: 30;
+    background-color: var(--color-surface);
+}
+/* In fullscreen the room for the traffic lights comes as they start to fade in, and has to clear them before they show. */
+:root[data-window-fullscreen] .window-top-band {
+    transition: padding 90ms ease-out;
+}
+
 /* A release's own headings sit under its version, so none of them may outgrow it. */
 .release-notes .chat-markdown :is(h1, h2, h3, h4) {
     font-size: var(--text-sm);

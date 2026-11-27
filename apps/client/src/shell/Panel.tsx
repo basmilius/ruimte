@@ -54,7 +54,7 @@ export function Panel() {
         >
             {/* An open panel is the rightmost column, so on Windows and Linux the close button would
                 land under the native window controls; the inset keeps their width free. */}
-            <PanelHeader className={clsx('app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <PanelHeader className={clsx('window-top-band app-drag', open && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <div ref={setLeadingHeaderSlot} className="contents" />
                 <div ref={setTitleSignal} className="panel-title-signal hidden" />
                 <SectionLabel className="panel-title shrink-0">{label}</SectionLabel>

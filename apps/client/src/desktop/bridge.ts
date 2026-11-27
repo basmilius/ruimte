@@ -1,5 +1,5 @@
 import { setApplePlatform, setWindowControlsSource } from '@adecore/ui';
-import { type DesktopBridge, type MachineMode, windowControlsOf } from '@ruimte/desktop-bridge';
+import { type DesktopBridge, type MachineMode, type WindowControlsState, windowControlsOf } from '@ruimte/desktop-bridge';
 
 export type {
     BrowserRouteBinding,
@@ -71,7 +71,11 @@ export function canTellIdle(): boolean {
 /* The padding a strip starts with where there are no window controls to clear. */
 export const STRIP_PADDING_PX = 12;
 
-/* `useWindowControlsInset` of `@adecore/ui` follows the room the shell keeps for the traffic lights, which fullscreen hides. */
+/*
+ * `useWindowControlsInset` of `@adecore/ui` follows the room the shell keeps for the traffic lights, which in
+ * fullscreen is there only while they show. How far the menu bar pushes the top down there goes to the
+ * `.window-top-band` rules as a variable, since it changes every frame and no component has to draw again for it.
+ */
 export function connectWindowControls(): (() => void) | undefined {
     const bridge = desktop();
     if (!bridge?.windowControls || !bridge.onWindowControls) {
@@ -80,9 +84,19 @@ export function connectWindowControls(): (() => void) | undefined {
 
     let inset = windowControlsOf(bridge.platform).inset;
     const listeners = new Set<() => void>();
-    const take = (state: { inset: number | null }) => {
-        inset = state.inset;
-        listeners.forEach((listener) => listener());
+    const root = typeof document === 'undefined' ? null : document.documentElement;
+    const take = (state: WindowControlsState) => {
+        // Only a fullscreen window followed by the shell reports an offset.
+        if (root !== null) {
+            root.toggleAttribute('data-window-fullscreen', state.offset !== undefined);
+            root.toggleAttribute('data-window-controls-offset', (state.offset ?? 0) > 0);
+            root.style.setProperty('--window-controls-offset', `${state.offset ?? 0}px`);
+        }
+
+        if (state.inset !== inset) {
+            inset = state.inset;
+            listeners.forEach((listener) => listener());
+        }
     };
 
     const stop = bridge.onWindowControls(take);

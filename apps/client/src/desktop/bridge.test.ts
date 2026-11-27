@@ -55,4 +55,18 @@ describe('the room for the window controls', () => {
         shell.push({ inset: null });
         expect(source.inset()).toBeNull();
     });
+
+    test('draws nothing again while only the menu bar moves the top down in fullscreen', () => {
+        const shell = silentShell('darwin');
+        const source = connectedSource();
+        let changes = 0;
+        source.subscribe(() => changes++);
+
+        shell.push({ inset: 86, offset: 0 });
+        shell.push({ inset: 86, offset: 12 });
+        shell.push({ inset: 86, offset: 30 });
+        shell.push({ inset: null, offset: 0 });
+        expect(changes).toBe(1);
+        expect(source.inset()).toBeNull();
+    });
 });

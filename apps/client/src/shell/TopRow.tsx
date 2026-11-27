@@ -37,7 +37,7 @@ export function TopRow() {
         <WorkspaceTopRow
             // `app-drag` for the client's own rules about what in a drag region still answers the pointer.
             className={clsx(
-                'workspace-toolbar app-drag transition-[padding] duration-200 ease-out',
+                'workspace-toolbar window-top-band app-drag transition-[padding] duration-200 ease-out',
                 // The window controls of Linux stand over the top right while no panel header takes them.
                 !panelOpen && hasOverlayControls() && 'toolbar-overlay-inset'
             )}
