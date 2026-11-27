@@ -6134,8 +6134,9 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
     public let `from`: String?
     public let `message`: ChatNoteItemMessage?
     public let `said`: Bool?
+    public let `stops`: String?
 
-    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil, `message`: ChatNoteItemMessage? = nil, `said`: Bool? = nil) {
+    public init(`id`: String, `createdAt`: Double, `turnId`: String?, `kind`: String = "note", `level`: ChatNoteItemLevel, `text`: String, `from`: String? = nil, `message`: ChatNoteItemMessage? = nil, `said`: Bool? = nil, `stops`: String? = nil) {
         self.`id` = `id`
         self.`createdAt` = `createdAt`
         self.`turnId` = `turnId`
@@ -6145,6 +6146,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         self.`from` = `from`
         self.`message` = `message`
         self.`said` = `said`
+        self.`stops` = `stops`
     }
 
     public init(from decoder: Decoder) throws {
@@ -6158,6 +6160,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         `from` = try container.decodeIfPresent(String.self, forKey: .`from`)
         `message` = try container.decodeIfPresent(ChatNoteItemMessage.self, forKey: .`message`)
         `said` = try container.decodeIfPresent(Bool.self, forKey: .`said`)
+        `stops` = try container.decodeIfPresent(String.self, forKey: .`stops`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -6171,6 +6174,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`from`, forKey: .`from`)
         try container.encodeIfPresent(`message`, forKey: .`message`)
         try container.encodeIfPresent(`said`, forKey: .`said`)
+        try container.encodeIfPresent(`stops`, forKey: .`stops`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -6183,6 +6187,7 @@ public struct ChatNoteItem: Codable, Sendable, Equatable {
         case `from` = "from"
         case `message` = "message"
         case `said` = "said"
+        case `stops` = "stops"
     }
 }
 
@@ -6398,6 +6403,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `skills`: [String]?
     public let `queue`: [ChatInfoQueueItem]?
     public let `queuePaused`: Bool?
+    public let `queueHeld`: ChatInfoQueueHeld?
     public let `background`: [ChatInfoBackgroundItem]?
     public let `delegating`: Bool?
     public let `usage`: ChatInfoUsage
@@ -6411,7 +6417,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
     public let `goal`: ChatInfoGoal?
     public let `createdAt`: Double
 
-    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `workdir`: String? = nil, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
+    public init(`chatId`: String, `provider`: String, `account`: String? = nil, `cwd`: String, `workdir`: String? = nil, `agentSessionId`: String?, `model`: String?, `selection`: ChatInfoSelection, `runtimeMode`: String, `effectiveRuntimeMode`: String? = nil, `permissionMode`: String? = nil, `status`: String, `running`: Bool, `activeTurnId`: String?, `slashCommands`: [String], `skills`: [String]? = nil, `queue`: [ChatInfoQueueItem]? = nil, `queuePaused`: Bool? = nil, `queueHeld`: ChatInfoQueueHeld? = nil, `background`: [ChatInfoBackgroundItem]? = nil, `delegating`: Bool? = nil, `usage`: ChatInfoUsage, `suggestedTitle`: String? = nil, `hidden`: Bool? = nil, `forkOf`: ChatInfoForkOf? = nil, `resumeAtReset`: Bool? = nil, `limit`: ChatInfoLimit? = nil, `resumeAt`: Double? = nil, `requests`: [ChatInfoRequestsItem]? = nil, `goal`: ChatInfoGoal? = nil, `createdAt`: Double) {
         self.`chatId` = `chatId`
         self.`provider` = `provider`
         self.`account` = `account`
@@ -6430,6 +6436,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         self.`skills` = `skills`
         self.`queue` = `queue`
         self.`queuePaused` = `queuePaused`
+        self.`queueHeld` = `queueHeld`
         self.`background` = `background`
         self.`delegating` = `delegating`
         self.`usage` = `usage`
@@ -6464,6 +6471,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         `skills` = try container.decodeIfPresent([String].self, forKey: .`skills`)
         `queue` = try container.decodeIfPresent([ChatInfoQueueItem].self, forKey: .`queue`)
         `queuePaused` = try container.decodeIfPresent(Bool.self, forKey: .`queuePaused`)
+        `queueHeld` = try container.decodeIfPresent(ChatInfoQueueHeld.self, forKey: .`queueHeld`)
         `background` = try container.decodeIfPresent([ChatInfoBackgroundItem].self, forKey: .`background`)
         `delegating` = try container.decodeIfPresent(Bool.self, forKey: .`delegating`)
         `usage` = try container.decode(ChatInfoUsage.self, forKey: .`usage`)
@@ -6498,6 +6506,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         try container.encodeIfPresent(`skills`, forKey: .`skills`)
         try container.encodeIfPresent(`queue`, forKey: .`queue`)
         try container.encodeIfPresent(`queuePaused`, forKey: .`queuePaused`)
+        try container.encodeIfPresent(`queueHeld`, forKey: .`queueHeld`)
         try container.encodeIfPresent(`background`, forKey: .`background`)
         try container.encodeIfPresent(`delegating`, forKey: .`delegating`)
         try container.encode(`usage`, forKey: .`usage`)
@@ -6531,6 +6540,7 @@ public struct ChatInfo: Codable, Sendable, Equatable {
         case `skills` = "skills"
         case `queue` = "queue"
         case `queuePaused` = "queuePaused"
+        case `queueHeld` = "queueHeld"
         case `background` = "background"
         case `delegating` = "delegating"
         case `usage` = "usage"
@@ -6778,6 +6788,28 @@ public struct ChatInfoQueueItemQuoteSource: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case `itemId` = "itemId"
+    }
+}
+
+public struct ChatInfoQueueHeld: Codable, Sendable, Equatable {
+    public let `task`: String?
+
+    public init(`task`: String? = nil) {
+        self.`task` = `task`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `task` = try container.decodeIfPresent(String.self, forKey: .`task`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(`task`, forKey: .`task`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `task` = "task"
     }
 }
 

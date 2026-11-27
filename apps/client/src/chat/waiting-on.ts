@@ -30,6 +30,7 @@ export function useWaitingOn(chatId: string | null, endpointId?: string): string
     const key = chatId === null ? null : endpointKey(machine, chatId);
     const background = useChats((s) => (key === null ? undefined : s.statusByKey[key]?.info.background));
     const delegating = useChats((s) => (key === null ? false : s.statusByKey[key]?.info.delegating === true));
+    const queueHeld = useChats((s) => (key === null ? undefined : s.statusByKey[key]?.info.queueHeld));
     const tasks = useTasks((s) => s.byEndpoint[machine]);
     const children = chatId === null ? NO_CHILDREN : openChildTasks(tasks, chatId);
     // A count, so the status of a chat that is no child of this one draws nothing again.
@@ -42,7 +43,7 @@ export function useWaitingOn(chatId: string | null, endpointId?: string): string
         ...children.flatMap((task) => (task.paused === undefined ? [] : [{ paused: task.paused }]))
     ];
 
-    const waiting = waitingOnOf({ children: waitingChildren, background, delegating, planStatus });
+    const waiting = waitingOnOf({ children: waitingChildren, background, delegating, planStatus, queueHeld });
     const now = useNow(1000, waiting?.kind === 'command');
 
     return waiting === null ? null : waitingOnLabel(waiting, now);
