@@ -1,7 +1,7 @@
-import type { MachineStart, MachineStep, SpawnDescription } from '@ruimte/extension/server';
-import type { Devcontainer } from './devcontainer';
-import type { MachineOrigin } from './machine-origin';
-import { sha256, type ContainerNames } from './names';
+import type { Devcontainer } from './devcontainer.ts';
+import { sha256, type ContainerNames } from './names.ts';
+import type { MachineOrigin } from './origin.ts';
+import type { Spawn, Start, Step } from './spawn.ts';
 
 /* Where the container has Ruimte for Linux, read only, from this computer. */
 export const MACHINE_FOLDER = '/opt/ruimte';
@@ -44,15 +44,15 @@ const POST_CREATE = '[ -e "$0" ] || { "$@" && : > "$0"; }';
 // A machine that runs already holds the port, so a second one ends by itself and changes nothing.
 const RUN_MACHINE = `exec ruimte --no-lan --direct-ports "$0" --direct-host-address 127.0.0.1 >>${STATE_FOLDER}/machine.log 2>&1`;
 
-function docker(...args: string[]): SpawnDescription {
+function docker(...args: string[]): Spawn {
     return { command: 'docker', args };
 }
 
-function sh(script: string, ...args: string[]): SpawnDescription {
+function sh(script: string, ...args: string[]): Spawn {
     return { command: 'sh', args: ['-c', script, ...args] };
 }
 
-function imageStep(devcontainer: Devcontainer, names: ContainerNames): MachineStep {
+function imageStep(devcontainer: Devcontainer, names: ContainerNames): Step {
     const { build, image } = devcontainer;
 
     if (build === null) {
@@ -118,7 +118,7 @@ export interface StartParts {
  * Every one can run again: an image that is there is not pulled, a container made from the same description is kept,
  * and a machine that runs keeps running. So a second start of a project comes back as the same machine.
  */
-export async function describeStart({ devcontainer, names, origin, label, fingerprint }: StartParts): Promise<MachineStart> {
+export async function describeStart({ devcontainer, names, origin, label, fingerprint }: StartParts): Promise<Start> {
     const { container } = names;
     const as = devcontainer.remoteUser === null ? [] : ['--user', devcontainer.remoteUser];
     const create = createArgs(devcontainer, names, origin, label);
@@ -127,7 +127,7 @@ export async function describeStart({ devcontainer, names, origin, label, finger
 
     return {
         steps: [
-            origin.step,
+            ...(origin.step === null ? [] : [origin.step]),
             imageStep(devcontainer, names),
             {
                 title: `Create the container ${container}, unless it is there as described`,

@@ -126,6 +126,7 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
+        "@ruimte/devcontainer": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
@@ -356,6 +357,7 @@
       "name": "@ruimte/extension-devcontainers",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/devcontainer": "workspace:*",
         "@ruimte/extension": "workspace:*",
       },
     },
@@ -524,6 +526,14 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.5",
+        "typescript": "^7.0.2",
+      },
+    },
+    "packages/devcontainer": {
+      "name": "@ruimte/devcontainer",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.5",
         "typescript": "^7.0.2",
@@ -1377,6 +1387,8 @@
     "@ruimte/desktop": ["@ruimte/desktop@workspace:apps/desktop"],
 
     "@ruimte/desktop-bridge": ["@ruimte/desktop-bridge@workspace:packages/desktop-bridge"],
+
+    "@ruimte/devcontainer": ["@ruimte/devcontainer@workspace:packages/devcontainer"],
 
     "@ruimte/extension": ["@ruimte/extension@workspace:packages/extension"],
 

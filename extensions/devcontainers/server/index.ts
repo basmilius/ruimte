@@ -1,8 +1,5 @@
+import { checkoutOrigin, describeDevcontainer, findDevcontainer, linuxArchOf, namesOf, type ReadText } from '@ruimte/devcontainer';
 import { defineMachineSource, files, log, type ProjectInfo } from '@ruimte/extension/server';
-import { DEVCONTAINER_FILES, readDevcontainer, type Devcontainer, type DevcontainerRead } from './devcontainer';
-import { machineOrigin, type LinuxArch } from './machine-origin';
-import { namesOf, sha256 } from './names';
-import { describeStart } from './steps';
 
 export const SOURCE = 'devcontainer';
 export const CANDIDATE = 'devcontainer';
@@ -13,40 +10,8 @@ export const CHECKOUT_VARIABLE = 'RUIMTE_DEV_CHECKOUT';
 // The types an extension is checked with know no runtime, and `server/` runs in one that has this.
 const runtime = (globalThis as { process?: { arch: string; env: Record<string, string | undefined> } }).process;
 
-interface Found {
-    file: string;
-    text: string;
-    read: DevcontainerRead;
-}
-
-async function devcontainerOf(project: ProjectInfo): Promise<Found | null> {
-    for (const file of DEVCONTAINER_FILES) {
-        const text = await files.readText(project, file);
-
-        if (text.ok) {
-            return { file, text: text.value, read: readDevcontainer(text.value, { file, folder: project.folder }) };
-        }
-    }
-
-    return null;
-}
-
-/* The digest of the file and of every file it names, so a change to either asks a person again. */
-async function fingerprintOf(project: ProjectInfo, found: Found, devcontainer: Devcontainer): Promise<string> {
-    const named = devcontainer.build === null ? [] : [devcontainer.build.dockerfile];
-    const texts = await Promise.all(
-        named.map(async (path) => {
-            const text = await files.readText(project, path);
-
-            if (!text.ok) {
-                throw new Error(`${found.file} names ${path}, which cannot be read: ${text.error.message}`);
-            }
-
-            return [path, text.value];
-        })
-    );
-
-    return sha256(JSON.stringify([[found.file, found.text], ...texts]));
+function readerOf(project: ProjectInfo): ReadText {
+    return (path) => files.readText(project, path);
 }
 
 /*
@@ -58,7 +23,7 @@ defineMachineSource({
     id: SOURCE,
     title: 'Dev Containers',
     async list(project) {
-        const found = await devcontainerOf(project);
+        const found = await findDevcontainer(project.folder, readerOf(project));
 
         if (found === null) {
             return [];
@@ -70,7 +35,7 @@ defineMachineSource({
         return [{ id: CANDIDATE, title, place: place.slice(0, 200), running: false }];
     },
     async start(candidate, { project, report }) {
-        const found = await devcontainerOf(project);
+        const found = await findDevcontainer(project.folder, readerOf(project));
 
         if (found === null) {
             throw new Error('This project has no devcontainer.json anymore');
@@ -91,19 +56,12 @@ defineMachineSource({
             log.info(ignored);
         }
 
-        const arch: LinuxArch = runtime?.arch === 'x64' ? 'x64' : 'arm64';
-        const origin = machineOrigin(arch, runtime?.env[CHECKOUT_VARIABLE]);
+        const origin = checkoutOrigin(linuxArchOf(runtime?.arch ?? ''), runtime?.env[CHECKOUT_VARIABLE]);
 
         if (origin === null) {
             throw new Error('This Ruimte has no build for Linux to put in a container yet. Dev Containers works from a checkout of Ruimte for now.');
         }
 
-        return describeStart({
-            devcontainer,
-            names: await namesOf(project.folder),
-            origin,
-            label: candidate.title,
-            fingerprint: await fingerprintOf(project, found, devcontainer)
-        });
+        return describeDevcontainer({ folder: project.folder, found, devcontainer, label: candidate.title, origin, readText: readerOf(project) });
     }
 });

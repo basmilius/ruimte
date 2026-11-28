@@ -1,4 +1,4 @@
-import { parseJsonc } from './jsonc';
+import { parseJsonc } from './jsonc.ts';
 
 /* Where a project keeps the file, the first that exists. */
 export const DEVCONTAINER_FILES: readonly string[] = ['.devcontainer/devcontainer.json', '.devcontainer.json'];

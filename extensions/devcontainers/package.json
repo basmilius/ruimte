@@ -9,6 +9,7 @@
         "pack": "bun ../../apps/server/src/main.ts extension pack"
     },
     "dependencies": {
+        "@ruimte/devcontainer": "workspace:*",
         "@ruimte/extension": "workspace:*"
     }
 }

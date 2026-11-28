@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { readDevcontainer, type Devcontainer } from '../server/devcontainer';
-import { parseJsonc } from '../server/jsonc';
+import { readDevcontainer, type Devcontainer } from './devcontainer.ts';
+import { parseJsonc } from './jsonc.ts';
 
 const PLACE = { file: '.devcontainer/devcontainer.json', folder: '/work/shop' };
 

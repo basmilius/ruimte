@@ -39,6 +39,13 @@ const BUILT_IN_SOURCES = ['extensions/pets', 'extensions/limits', 'extensions/th
 const PUBLIC = ['@ruimte/extension/client', '@ruimte/extension/ui', '@ruimte/extension/agents-ui', '@ruimte/extension/charts', '@ruimte/extension/server'];
 const LIBRARIES = ['react', 'react-dom', 'react/jsx-runtime', 'clsx', 'zod', 'zustand', 'lucide-react'];
 const IN_TESTS = ['bun:test', '@ruimte/extension/testing'];
+/*
+ * A package of this repository an extension may import, since `extension pack` bundles it into the extension as its own
+ * code. Each holds only code that imports nothing but itself, which the loop after this one checks.
+ */
+const BUNDLED: Record<string, { name: string; folder: string }[]> = {
+    'extensions/devcontainers': [{ name: '@ruimte/devcontainer', folder: 'packages/devcontainer/src' }]
+};
 const reaches: string[] = [];
 
 for (const folder of BUILT_IN_SOURCES) {
@@ -52,9 +59,29 @@ for (const folder of BUILT_IN_SOURCES) {
         const test = /\.test\.tsx?$/.test(path) || path.startsWith('test/');
         const specifiers = [...readFileSync(`${folder}/${path}`, 'utf8').matchAll(/(?:from|import) '([^']+)'/g)].map((match) => match[1] ?? '');
         const allowed = (specifier: string) =>
-            specifier.startsWith('.') || PUBLIC.includes(specifier) || LIBRARIES.includes(specifier) || (test && IN_TESTS.includes(specifier));
+            specifier.startsWith('.') ||
+            PUBLIC.includes(specifier) ||
+            LIBRARIES.includes(specifier) ||
+            (BUNDLED[folder] ?? []).some((bundled) => bundled.name === specifier) ||
+            (test && IN_TESTS.includes(specifier));
 
         for (const specifier of specifiers.filter((each) => !allowed(each))) {
+            reaches.push(`  ${folder}/${path}: ${specifier}`);
+        }
+    }
+}
+
+for (const { folder } of Object.values(BUNDLED).flat()) {
+    for (const found of new Glob('**/*.ts').scanSync(folder)) {
+        const path = found.replaceAll('\\', '/');
+
+        if (/\.test\.ts$/.test(path)) {
+            continue;
+        }
+
+        const specifiers = [...readFileSync(`${folder}/${path}`, 'utf8').matchAll(/(?:from|import) '([^']+)'/g)].map((match) => match[1] ?? '');
+
+        for (const specifier of specifiers.filter((each) => !each.startsWith('.'))) {
             reaches.push(`  ${folder}/${path}: ${specifier}`);
         }
     }

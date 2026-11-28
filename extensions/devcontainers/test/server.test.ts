@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { namesOf } from '@ruimte/devcontainer';
 import { createTestServer } from '@ruimte/extension/testing';
-import { namesOf } from '../server/names';
 
 const CHECKOUT = '/src/ruimte';
 const ARCH = process.arch === 'x64' ? 'x64' : 'arm64';
