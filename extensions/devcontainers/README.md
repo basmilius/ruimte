@@ -4,6 +4,8 @@ A project with a `devcontainer.json` gets a machine of Ruimte inside its contain
 
 It is a machine source (`defineMachineSource`) with only a `server/`, on the public extension API. Machine sources are a proposed part, so it runs as a dev link and cannot be installed yet. `bun dev` links it.
 
+What it reads, the names and the programs are `@ruimte/devcontainer` (`packages/devcontainer`), which `extension pack` bundles into it. The desktop app that runs no machine of its own uses the same package to start a folder's dev container itself, with Docker on the computer it runs on, and puts that machine on the account the app is signed in to (`apps/desktop/CLAUDE.md`). Everything below holds for both, except where the machine comes from.
+
 ## What it reads
 
 It looks for `.devcontainer/devcontainer.json`, then `.devcontainer.json`, and lists one place for the first it finds, named after the file's `name` or the project. The file may hold comments and a comma after a last entry.
@@ -80,17 +82,17 @@ docker volume rm ruimte-devcontainer-<folder>-<digest>-machine ruimte-devcontain
 
 ## How the machine gets in
 
-`server/machine-origin.ts` is the one place that knows where Ruimte for Linux comes from. Everything else only mounts the folder it names at `/opt/ruimte`, read only.
+The origin names where Ruimte for Linux comes from. Everything else only mounts the folder it names at `/opt/ruimte`, read only.
 
 From a checkout, `bun dev` sets `RUIMTE_DEV_CHECKOUT`, and the first step is `bun apps/server/scripts/compile.ts --target linux-<arch>`. That cross-compiles this checkout's daemon into `apps/server/dist/linux-<arch>` on every start, so the container runs the code you are working on. It takes about three seconds on an Apple silicon Mac once Bun has the Linux runtime (the first time it downloads 52 MB), and the folder is 149 MB. The architecture is this computer's.
 
-Without that variable there is no origin yet, and a start says so. The published `@ruimte/linux-arm64` and `@ruimte/linux-x64` hold the same binary, so a second origin can fetch the one that matches the running Ruimte. That needs a release that has `ruimte join`.
+Without that variable the extension has no origin, and a start says so. The desktop app in machine mode `none` has a second one: outside a checkout it downloads the published `@ruimte/linux-arm64` or `@ruimte/linux-x64` of its own version once, checks it against the `sha512` npm states, and mounts its `bin` folder. A version npm has no package of says so before anything runs.
 
 The binary is Bun's build for glibc. An image on musl, such as Alpine, fails at step 7.
 
 ## Reaching it
 
-The machine in the container starts with `--no-lan --direct-ports <block> --direct-host-address 127.0.0.1`. The door on the local network stays closed, since its addresses would be the container's. Ruimte gives every program of a start `RUIMTE_BROKER_URL` and `RUIMTE_BROKER_ADVERTISE_URL` of the machine on this computer, and step 8 hands them on, so the new machine announces itself to the broker your app already uses. The app signals through that broker and connects over UDP to `127.0.0.1`.
+The machine in the container starts with `--no-lan --direct-ports <block> --direct-host-address 127.0.0.1`. The door on the local network stays closed, since its addresses would be the container's. Ruimte gives every program of a start `RUIMTE_BROKER_URL` and `RUIMTE_BROKER_ADVERTISE_URL` of the machine on this computer, and step 8 hands them on, so the new machine announces itself to the broker your app already uses. The desktop app without a machine has no broker of its own to hand on, so the new machine takes the default, `wss://broker.ruimte.app`. The app signals through that broker and connects over UDP to `127.0.0.1`.
 
 What depends on your setup:
 
