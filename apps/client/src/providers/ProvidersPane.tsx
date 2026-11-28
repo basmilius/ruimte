@@ -1,6 +1,6 @@
 import { ProvidersPane as Pane } from '@adecore/agents-react/providers';
 import { useProvidersStore } from '@adecore/agents-react/state';
-import type { AgentKind, ProviderInfo } from '@ruimte/contracts';
+import { isExtensionAgentKind, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { useTranslation } from 'react-i18next';
 import { AcpServerSection, AcpServerStepBody, AgyUpdateSection } from '@/providers/AcpServerSection';
 import { ClaudeApiSection, NanoGptSection } from '@/providers/ApiKeySection';
@@ -67,6 +67,10 @@ export function ProvidersPane() {
         }
         if (agyTooOld(provider, antigravity.server)) {
             return { text: t('providers.agy.note'), tone: 'warning' as const };
+        }
+        // An extension's agent runs in no terminal, which the list reads as a provider with nothing to install.
+        if (isExtensionAgentKind(provider.kind) && !provider.installed) {
+            return { text: t('providers.extensionAgent.notInstalled'), tone: 'muted' as const };
         }
         return null;
     };

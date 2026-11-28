@@ -50,6 +50,11 @@ export function extensionAgentKind(extension: string, provider: string): string 
     return kind.length <= MAX_AGENT_KIND ? kind : null;
 }
 
+/* Whether a provider's kind is an extension's agent rather than a CLI Ruimte knows itself. */
+export function isExtensionAgentKind(kind: string): boolean {
+    return kind.startsWith('x-');
+}
+
 /* One part of `@ruimte/extension/client` that is still proposed: a function a manifest names under `proposed` before it may call it. */
 export interface ExtensionClientPoint {
     /* The function of `@ruimte/extension/client` that registers one. */

@@ -2196,6 +2196,9 @@
         }
     },
     "providers": {
+        "extensionAgent": {
+            "notInstalled": "Not installed"
+        },
         "nanogpt": {
             "description": "Chat with the models your NanoGPT subscription includes. Requests use only your subscription, never pay as you go.",
             "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",

@@ -2196,6 +2196,9 @@
         }
     },
     "providers": {
+        "extensionAgent": {
+            "notInstalled": "Niet geïnstalleerd"
+        },
         "nanogpt": {
             "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen via je abonnement, nooit via pay as you go.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
