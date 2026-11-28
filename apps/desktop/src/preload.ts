@@ -54,6 +54,19 @@ const quickLookBridge = {
     closeFilePreview: () => send('quick-look:close')
 } satisfies Pick<DesktopBridge, 'previewFile' | 'closeFilePreview'>;
 
+/* Only a shell that runs no machine starts one in a dev container itself, and only where `sh` and Docker's own Linux are. */
+const devcontainerBridge = {
+    devcontainers: {
+        pick: (accountId) => invoke('devcontainer:pick', accountId),
+        list: () => invoke('devcontainer:list'),
+        start: (id, accountId, digest) => invoke('devcontainer:start', id, accountId, digest),
+        stop: (id) => invoke('devcontainer:stop', id),
+        registration: (id, accountId) => invoke('devcontainer:registration', id, accountId),
+        joined: (id) => invoke('devcontainer:joined', id),
+        onChanged: on('devcontainer:changed')
+    }
+} satisfies Pick<DesktopBridge, 'devcontainers'>;
+
 const bridge = {
     extensions: {
         list: () => invoke('extensions:list'),
@@ -172,6 +185,7 @@ const bridge = {
     },
     ...(machineMode === 'local' ? localMachineBridge : {}),
     ...(machineMode === 'local' && process.platform === 'darwin' ? quickLookBridge : {}),
+    ...(machineMode === 'none' && (process.platform === 'darwin' || process.platform === 'linux') ? devcontainerBridge : {}),
     pulsar: {
         addressBook: () => invoke('pulsar:address-book'),
         listen: () => invoke('pulsar:login-listen'),

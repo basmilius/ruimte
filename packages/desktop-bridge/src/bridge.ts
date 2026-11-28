@@ -2,6 +2,7 @@ import type { WindowControlsState } from '@adecore/shell/bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { BrowserRouteBinding, BrowserRouteBlocked } from './browser.ts';
 import type { DatabaseSecretsBridge, OpenPathRequest, SavePathRequest } from './database.ts';
+import type { DevcontainerBridge } from './devcontainer.ts';
 import type { ExtensionsBridge } from './extensions.ts';
 import type { MachineModeBridge } from './machine.ts';
 import type { MenuSpec } from './menu.ts';
@@ -288,4 +289,6 @@ export interface DesktopBridge {
     pulsar?: PulsarBridge;
     /* Absent from a shell from before the mode, which always ran a machine. */
     machine?: MachineModeBridge;
+    /* Only in machine mode `none`, on macOS and Linux. Without it the app offers no folder in a dev container. */
+    devcontainers?: DevcontainerBridge;
 }

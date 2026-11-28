@@ -30,6 +30,7 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
+        "@ruimte/devcontainer": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",

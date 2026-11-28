@@ -3,6 +3,7 @@ import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { BrowserContextAction, BrowserContextParams, OpenAiCredentialStatus, OpenAiLiveSession, WindowPoint } from './bridge.ts';
 import type { BrowserRouteBinding, BrowserRouteBlocked } from './browser.ts';
 import type { OpenPathRequest, SavePathRequest } from './database.ts';
+import type { DevcontainerStart } from './devcontainer.ts';
 import type { InstalledClientExtension } from './extensions.ts';
 import type { MachineStopPreview } from './machine.ts';
 import type { MenuSpec } from './menu.ts';
@@ -110,6 +111,12 @@ export const IPC_INVOKE = {
     'speech:cancel': invoke<[sessionId: string]>(),
     'machine:stop-preview': invoke<[], MachineStopPreview>(),
     'machine:choose': invoke<[mode: 'local' | 'none']>(),
+    'devcontainer:pick': invoke<[accountId: string], DevcontainerStart | null>(),
+    'devcontainer:list': invoke<[], DevcontainerStart[]>(),
+    'devcontainer:start': invoke<[id: string, accountId: string, digest: string], DevcontainerStart>(),
+    'devcontainer:stop': invoke<[id: string]>(),
+    'devcontainer:registration': invoke<[id: string, accountId: string], unknown>(),
+    'devcontainer:joined': invoke<[id: string]>(),
     'pulsar:address-book': invoke<[], string>(),
     'pulsar:login-listen': invoke<[], { redirectUri: string }>(),
     'pulsar:login-callback': invoke<[], unknown>(),
@@ -162,7 +169,8 @@ export const IPC_EVENT = {
     'update:state': push<[state: UpdateState]>(),
     'speech:state': push<[state: SpeechState]>(),
     'speech:event': push<[event: SpeechEvent]>(),
-    'microphone:claimed': push()
+    'microphone:claimed': push(),
+    'devcontainer:changed': push<[start: DevcontainerStart]>()
 };
 
 export type InvokeChannel = keyof typeof IPC_INVOKE;
