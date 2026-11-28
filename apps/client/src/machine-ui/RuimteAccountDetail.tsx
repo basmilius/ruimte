@@ -2,11 +2,12 @@ import { Skeleton, Button, Icon, IconButton } from '@adecore/ui';
 import { SettingsRow } from '@adecore/ui/settings';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import clsx from 'clsx';
-import { Check, CircleAlert, KeyRound, LogOut, X } from 'lucide-react';
+import { Check, CircleAlert, Container, KeyRound, LogOut, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { DeleteAccountDialog } from '@/machine-ui/DeleteAccountDialog';
+import { offersDevcontainers, pickDevcontainerFolder, useDevcontainers } from '@/machine-ui/devcontainers';
 import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
 import { ProviderButton, SignInButtons } from '@/machine-ui/SignInButtons';
 import { SettingsSection } from '@/machines/SettingsSection';
@@ -190,8 +191,37 @@ function AddMachineSection() {
                     </Button>
                 }
             />
+            {offersDevcontainers() && <DevcontainerRow />}
             <LinkMachineDialog nested open={linkOpen} initialCode={null} onOpenChange={setLinkOpen} />
         </SettingsSection>
+    );
+}
+
+/* A folder whose dev container this app starts itself, with a machine in it that joins the account signed in here. */
+function DevcontainerRow() {
+    const { t } = useTranslation('settings');
+    const signedIn = usePulsarAccount((s) => s.status === 'signed-in');
+    const failure = useDevcontainers((s) => s.failure);
+
+    return (
+        <SettingsRow
+            searchId="machines.devcontainer"
+            label={t('machines.devcontainer.label')}
+            description={
+                failure === null ? (
+                    t(signedIn ? 'machines.devcontainer.description' : 'machines.devcontainer.signedOut')
+                ) : (
+                    <span className="break-words text-status-error" role="alert">
+                        {failure}
+                    </span>
+                )
+            }
+            control={
+                <Button disabled={!signedIn} onClick={() => void pickDevcontainerFolder()}>
+                    <Icon icon={Container} size={12} /> {t('machines.devcontainer.action')}
+                </Button>
+            }
+        />
     );
 }
 

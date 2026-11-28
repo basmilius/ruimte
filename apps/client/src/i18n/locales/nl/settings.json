@@ -2045,6 +2045,15 @@
             "enterCode": "Code invoeren",
             "short": "Toevoegen"
         },
+        "devcontainer": {
+            "label": "Een map openen in een dev container",
+            "description": "Ruimte start de dev container van de map met Docker op deze computer, zet er een machine in en opent de map daar.",
+            "signedOut": "Log eerst in. De nieuwe machine komt op het account waarmee je bent ingelogd.",
+            "action": "Map kiezen",
+            "held": "Ruimte las dit uit de devcontainer.json in {{folder}}. Er draait niets tot je het goedkeurt, en na een wijziging van dat bestand vraagt Ruimte het opnieuw.",
+            "joined": "Hij staat op je account. Ruimte opent {{folder}} erop in dit venster.",
+            "open": "Map openen"
+        },
         "listLabel": "Account en machines",
         "failed": "Kon de instellingen van het account niet tonen",
         "thisComputer": {

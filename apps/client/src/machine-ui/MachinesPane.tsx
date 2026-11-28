@@ -5,8 +5,10 @@ import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { AccountAvatar } from '@/machine-ui/AccountAvatar';
+import { DevcontainerDetail } from '@/machine-ui/DevcontainerDetail';
+import { useDevcontainers, useWatchDevcontainers } from '@/machine-ui/devcontainers';
 import { candidateKey, useMachineCandidates } from '@/machine-ui/machine-candidates';
-import { MachineCandidateDetail } from '@/machine-ui/MachineCandidateDetail';
+import { ProjectCandidateDetail } from '@/machine-ui/MachineCandidateDetail';
 import { MachineCandidateItem } from '@/machine-ui/MachineCandidateItem';
 import { MachineDetail } from '@/machine-ui/MachineDetail';
 import { MachineListItem } from '@/machine-ui/MachineListItem';
@@ -61,6 +63,21 @@ export function MachinesPane() {
         setPicked(next);
     };
 
+    // A folder this app starts in a dev container itself, which shows the same way; a folder just picked comes into view.
+    useWatchDevcontainers();
+    const devcontainers = useDevcontainers((s) => s.starts);
+    const focusedDevcontainer = useDevcontainers((s) => s.focused);
+    const currentDevcontainer = devcontainers.find((start) => candidateKey(start.candidate) === pickedCandidate) ?? null;
+    const listedCandidates = [...candidates, ...devcontainers.map((start) => start.candidate)];
+    const [seenFocus, setSeenFocus] = useState<typeof focusedDevcontainer>(null);
+    if (focusedDevcontainer !== seenFocus) {
+        setSeenFocus(focusedDevcontainer);
+        const focused = devcontainers.find((start) => start.id === focusedDevcontainer?.id);
+        if (focused !== undefined) {
+            setPickedCandidate(candidateKey(focused.candidate));
+        }
+    }
+
     const [seenTarget, setSeenTarget] = useState<string | null>(null);
     if (target !== seenTarget) {
         setSeenTarget(target);
@@ -71,7 +88,7 @@ export function MachinesPane() {
         }
     }
 
-    const shown = currentCandidate === null ? current.kind : 'candidate';
+    const shown = currentCandidate === null && currentDevcontainer === null ? current.kind : 'candidate';
 
     const list = (
         <>
@@ -124,8 +141,8 @@ export function MachinesPane() {
                     <Skeleton className="w-24" />
                 </div>
             )}
-            {candidates.map((candidate, index) => {
-                const before = candidates[index - 1]?.source;
+            {listedCandidates.map((candidate, index) => {
+                const before = listedCandidates[index - 1]?.source;
                 const opensSource = before?.extension !== candidate.source.extension || before.id !== candidate.source.id;
 
                 return (
@@ -137,7 +154,7 @@ export function MachinesPane() {
                         )}
                         <MachineCandidateItem
                             candidate={candidate}
-                            selected={currentCandidate === candidate}
+                            selected={shown === 'candidate' && pickedCandidate === candidateKey(candidate)}
                             onSelect={() => setPickedCandidate(candidateKey(candidate))}
                         />
                     </Fragment>
@@ -159,8 +176,10 @@ export function MachinesPane() {
             detail={
                 <ErrorBoundary label={t('machines.failed')} resetKeys={[shown, currentEntry?.id, pickedCandidate]}>
                     <div className="flex min-w-0 flex-col gap-7">
-                        {currentCandidate !== null && projectId !== null ? (
-                            <MachineCandidateDetail key={candidateKey(currentCandidate)} projectId={projectId} candidate={currentCandidate} />
+                        {currentDevcontainer !== null ? (
+                            <DevcontainerDetail key={currentDevcontainer.id} start={currentDevcontainer} />
+                        ) : currentCandidate !== null && projectId !== null ? (
+                            <ProjectCandidateDetail key={candidateKey(currentCandidate)} projectId={projectId} candidate={currentCandidate} />
                         ) : current.kind === 'this-computer' ? (
                             <ThisComputerDetail />
                         ) : currentEntry !== null ? (

@@ -2045,6 +2045,15 @@
             "enterCode": "Enter code",
             "short": "Add"
         },
+        "devcontainer": {
+            "label": "Open a folder in a dev container",
+            "description": "Ruimte starts the folder's dev container with Docker on this computer, puts a machine in it, and opens the folder there.",
+            "signedOut": "Sign in first. The new machine joins the account you are signed in to.",
+            "action": "Choose folder",
+            "held": "Ruimte read this from the devcontainer.json in {{folder}}. Nothing runs until you approve it, and a change to that file asks you again.",
+            "joined": "It is on your account. Ruimte opens {{folder}} on it in this window.",
+            "open": "Open folder"
+        },
         "listLabel": "Account and machines",
         "failed": "Could not show the account settings",
         "thisComputer": {

@@ -4,7 +4,7 @@ import type { MachineCandidate, MachineStartProgram } from '@ruimte/contracts';
 import { Container } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { underWay, useCandidateActions, useCandidateJoin } from '@/machine-ui/machine-candidates';
+import { underWay, useCandidateActions, useCandidateJoin, type CandidateActions, type CandidateJoin } from '@/machine-ui/machine-candidates';
 import { SettingsSection } from '@/machines/SettingsSection';
 
 function Program({ program }: { program: MachineStartProgram }) {
@@ -23,16 +23,30 @@ function Program({ program }: { program: MachineStartProgram }) {
     );
 }
 
+interface MachineCandidateDetailProps {
+    candidate: MachineCandidate;
+    actions: CandidateActions;
+    join: CandidateJoin;
+    /* Where what is held for a yes was read, when that is no file of the project on screen. */
+    heldDescription?: string;
+    /* What a joined start says, and what it offers to open on the new machine. */
+    joined?: { text: string; open(): void };
+}
+
+/* A place an extension of this computer's machine can start a machine in, for the project on screen. */
+export function ProjectCandidateDetail({ projectId, candidate }: { projectId: string; candidate: MachineCandidate }) {
+    return <MachineCandidateDetail candidate={candidate} actions={useCandidateActions(projectId, candidate)} join={useCandidateJoin(projectId, candidate)} />;
+}
+
 /*
- * One place an extension can start a machine in. A start shows what would run on this computer and waits for a yes,
- * which also says that the new machine comes on the person's account. Once it signed, this pane posts that with the
- * person's session, and says so when nobody is signed in or the account would not take it.
+ * One place a machine can be started in. A start shows what would run on this computer and waits for a yes, which also
+ * says that the new machine comes on the person's account. Once it signed, `join` posts that with the person's session,
+ * and this says so when nobody is signed in or the account would not take it.
  */
-export function MachineCandidateDetail({ projectId, candidate }: { projectId: string; candidate: MachineCandidate }) {
+export function MachineCandidateDetail({ candidate, actions, join, heldDescription, joined }: MachineCandidateDetailProps) {
     const { t } = useTranslation('settings');
-    const { failure, start, stop } = useCandidateActions(projectId, candidate);
+    const { failure, start, stop } = actions;
     const source = candidate.source.title;
-    const join = useCandidateJoin(projectId, candidate);
     const joins = candidate.held?.programs.some((program) => program.join === true) === true;
     const stopButton = (
         <Button variant="secondary" onClick={stop}>
@@ -57,7 +71,18 @@ export function MachineCandidateDetail({ projectId, candidate }: { projectId: st
             <SettingsRow
                 muted
                 label={t('machines.sources.done.label')}
-                description={t(candidate.join === 'joined' ? 'machines.sources.done.joined' : 'machines.sources.done.description')}
+                description={
+                    candidate.join === 'joined' && joined !== undefined
+                        ? joined.text
+                        : t(candidate.join === 'joined' ? 'machines.sources.done.joined' : 'machines.sources.done.description')
+                }
+                control={
+                    candidate.join === 'joined' && joined !== undefined ? (
+                        <Button variant="secondary" onClick={joined.open}>
+                            {t('machines.devcontainer.open')}
+                        </Button>
+                    ) : undefined
+                }
             />
         );
     } else if (candidate.state === 'stopped') {
@@ -135,7 +160,7 @@ export function MachineCandidateDetail({ projectId, candidate }: { projectId: st
                 )}
             </SettingsSection>
             {candidate.held !== undefined && (
-                <SettingsSection title={t('machines.sources.held.title')} description={t('machines.sources.held.description', { source })}>
+                <SettingsSection title={t('machines.sources.held.title')} description={heldDescription ?? t('machines.sources.held.description', { source })}>
                     {candidate.held.programs.map((program, index) => (
                         <Program key={index} program={program} />
                     ))}

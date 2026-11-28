@@ -673,6 +673,8 @@
         "projectIsAFolder": "Een project is elke map waarin je werkt. Ruimte zet er de eerste keer een .ruimte-map in.",
         "connectMachine": "Machine verbinden",
         "throughAccount": "Via je account",
+        "devcontainer": "Een map openen in een dev container",
+        "devcontainerHint": "Docker draait hem hier, met een eigen machine",
         "commandPalette": "Opdrachtenpalet",
         "whatsNew": "Wat is er nieuw"
     },

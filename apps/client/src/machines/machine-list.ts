@@ -104,7 +104,7 @@ export function pickForTarget(
     picked: MachineEntry | null,
     windowEndpointId: string | null = null
 ): MachinePick | null {
-    if (target === 'machines.signIn' || target === 'machines.add') {
+    if (target === 'machines.signIn' || target === 'machines.add' || target === 'machines.devcontainer') {
         return { kind: 'account' };
     }
     if (target === 'machines.thisComputer') {

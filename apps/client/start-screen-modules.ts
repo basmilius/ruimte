@@ -198,6 +198,7 @@ export const START_SCREEN_MODULES: readonly string[] = [
     'machine-ui/LinkRequestDialog.tsx',
     'machine-ui/MachineUpdateDialog.tsx',
     'machine-ui/SignInButtons.tsx',
+    'machine-ui/devcontainers.ts',
     'machine-ui/dialogs.ts',
     'machine-ui/machine-crash.ts',
     'machine-ui/machine-update.ts',

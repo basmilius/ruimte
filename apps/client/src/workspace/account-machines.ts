@@ -18,7 +18,7 @@ export async function refreshAccountMachines(): Promise<void> {
 }
 
 /* A refusal to put a machine on an account in the words of this client; anything else as it came. */
-async function withRefusalText<T>(work: () => Promise<T>): Promise<T> {
+export async function withRefusalText<T>(work: () => Promise<T>): Promise<T> {
     try {
         return await work();
     } catch (e) {

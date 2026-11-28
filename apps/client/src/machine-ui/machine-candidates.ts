@@ -85,7 +85,7 @@ export function useMachineCandidates(): { projectId: string | null; candidates: 
     return { projectId, candidates: asks && listed?.projectId === projectId ? listed.candidates : [] };
 }
 
-interface CandidateJoin {
+export interface CandidateJoin {
     /* The new machine signed, and nobody is signed in here to post it. */
     needsSignIn: boolean;
     /* Why the account did not take it. */
@@ -133,7 +133,7 @@ export function useCandidateJoin(projectId: string, candidate: MachineCandidate)
     };
 }
 
-interface CandidateActions {
+export interface CandidateActions {
     failure: string | null;
     /* `approve` is the person's yes to what the start was held with. */
     start(approve?: string): void;
