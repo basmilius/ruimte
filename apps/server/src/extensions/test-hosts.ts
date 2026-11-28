@@ -4,6 +4,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { definedLanguageOf, editorDecorationsOf, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import type * as PublicClient from '../../../../packages/extension/client';
 import type * as PublicTesting from '../../../../packages/extension/testing';
 import { clientApi, type ClientApi } from './test-client.ts';
@@ -67,6 +68,58 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
         node: (id) => host.defined('node', id),
         card: (id) => host.defined('sidebarCard', id),
         overlay: (id) => host.defined('overlay', id),
+        languageOf(path) {
+            const languages = host.definitions.flatMap(({ kind, definition }) =>
+                kind === 'language'
+                    ? [{ id: String(definition.id), extensions: definition.extensions as string[], filenames: (definition.filenames ?? []) as string[] }]
+                    : []
+            );
+
+            return definedLanguageOf(languages, path)?.id ?? null;
+        },
+        openEditor(path) {
+            const full = host.inProject(path);
+            const name = full.slice(Math.max(full.lastIndexOf('/'), full.lastIndexOf('\\')) + 1);
+            const dot = name.lastIndexOf('.');
+            const file = { path: full, name, extension: dot <= 0 ? '' : name.slice(dot + 1).toLowerCase() };
+            let marks: PublicTesting.TestEditorDecoration[] = [];
+            let asked = 0;
+            let open = true;
+            const ask = (): void => {
+                const turn = ++asked;
+                const sources = host.definitions.filter((each) => each.kind === 'editorDecoration').map((each) => each.definition);
+
+                void Promise.all(
+                    sources.map(async (source) => {
+                        const provide = source.provide as (file: PublicClient.FileInfo) => unknown;
+
+                        return editorDecorationsOf(await provide({ ...file })).map((mark) => ({ decoration: source.id, ...mark }));
+                    })
+                ).then(
+                    (answers) => {
+                        // An answer to an earlier ask, or for an editor that closed, draws nothing, as in the editor itself.
+                        if (open && turn === asked) {
+                            marks = answers.flat();
+                            host.changed();
+                        }
+                    },
+                    (e: unknown) => {
+                        host.logs.push(`defineEditorDecoration: ${e instanceof Error ? e.message : String(e)}`);
+                    }
+                );
+            };
+
+            host.editors.add(ask);
+            ask();
+
+            return {
+                decorations: () => marks.map((mark) => ({ ...mark })),
+                close() {
+                    open = false;
+                    host.editors.delete(ask);
+                }
+            };
+        },
         context: (place, extra) => host.context(place, extra) as never,
         slot: (definition, place, extra) => host.slot(definition, place, extra),
         run: (definition, place, extra) => host.run(definition, place, extra),
@@ -76,6 +129,10 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
         select: (ids) => host.select(ids),
         setSetting(key, value) {
             host.settings[key] = value;
+            host.changed();
+        },
+        setProjectSetting(key, value) {
+            host.storage.machine[projectSettingKey(host.project?.id ?? '', key)] = value;
             host.changed();
         },
         setAgent: (id, agent) => host.setAgent(id, agent),
@@ -138,6 +195,7 @@ function publicHost(host: TestHost, api: ClientApi): PublicTesting.TestHost {
             }
         },
         calls: host.calls,
+        terminals: host.terminals,
         storage: host.storage,
         settings: host.settings,
         logs: host.logs

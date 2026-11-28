@@ -10,7 +10,7 @@ let files: SecretFile[];
 let host: CanvasHost;
 
 function reading(launchId: string, overrides: Partial<LaunchReading> = {}): LaunchReading {
-    return { launchId, name: launchId, kind: 'service', approved: true, url: null, port: null, members: [], status: null, ...overrides };
+    return { launchId, name: launchId, kind: 'service', approved: true, url: null, port: null, members: [], status: null, source: null, ...overrides };
 }
 
 beforeEach(() => {

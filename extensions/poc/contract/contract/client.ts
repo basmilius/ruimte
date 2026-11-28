@@ -62,6 +62,8 @@ export interface WorldSeed {
     views?: { id: string; kind: string; name: string }[];
     /* The methods of `server/`, as `useServer` reaches them. */
     server?: Record<string, (...args: never[]) => unknown>;
+    /* What the machine answers an action it runs for the extension, by the action's name, in the shape the API promises. */
+    actions?: Record<string, (input: unknown) => unknown>;
     /* The pieces `agents.stream` answers. */
     stream?: string[];
     /* What the run does after its pieces: fail with this message, or wait until it is stopped. It ends by default. */
@@ -72,6 +74,8 @@ export interface WorldSeed {
     providers?: { id: string; name: string }[];
     /* What is on screen of the canvas in front, at 100%; 1280 by 800 from its origin by default. */
     visible?: Client.CanvasArea;
+    /* The proposed parts the manifest names. The extension is one its author develops, where a named part works. */
+    proposed?: string[];
 }
 
 export interface ClientWorld {
@@ -106,10 +110,23 @@ export interface ClientWorld {
     links(): { from: string; to: string }[];
     /* What a person was shown of a failed action: its title and why. */
     failures(): { text: string; detail: string }[];
+    /* What the machine typed into a terminal for the extension, in order. */
+    typed(): { terminal: string; text: string }[];
     /* Each view `views.focus` handed the keyboard to. */
     focused(): string[];
     /* The sections of their own this extension has in the settings navigation. */
     settingsSections(): string[];
+    /* The title of the section this extension has in the settings of the project in front, if it has one. */
+    projectSettings(): string[];
+    /* The language of this extension a file is colored in, by its path, or null for a file none of its languages covers. */
+    languageOf(path: string): string | null;
+    /*
+     * A file of the project opening in an editor. `marks` is what the extension's decorations show in its margin now, and
+     * `close` is the editor going.
+     */
+    openEditor(path: string): Promise<{ marks(): { line: number; endLine: number; kind: string }[]; close(): Promise<void> }>;
+    /* A person choosing a value for a field of that section. */
+    chooseProjectSetting(key: string, value: boolean | string): Promise<void>;
 }
 
 export type OpenClientWorld = (permissions: Record<string, string>, seed?: WorldSeed) => Promise<ClientWorld>;
@@ -128,6 +145,7 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'git.log': (api) => api.git.log(),
     'terminals.read': (api) => api.terminals.read(REF),
     'terminals.open': (api) => api.terminals.open(),
+    'terminals.write': (api) => api.terminals.write(REF, 'ls\n'),
     'database.connections': (api) => api.database.connections(),
     'database.query': (api) => api.database.query('main', 'select 1'),
     'chats.list': (api) => api.chats.list(),
@@ -161,6 +179,8 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'launches.start': (api) => api.launches.start({ launch: 'web' }),
     'launches.restart': (api) => api.launches.restart({ launch: 'web' }),
     'launches.stop': (api) => api.launches.stop({ launch: 'web' }),
+    'launches.create': (api) => api.launches.create({ name: 'Web', kind: 'service', command: 'bun dev' }),
+    'launches.edit': (api) => api.launches.edit({ launch: 'web', command: 'bun run dev' }),
     'routines.list': (api) => api.routines.list(),
     'routines.run': (api) => api.routines.run({ routine: 'nightly' }),
     'routines.pause': (api) => api.routines.pause({ routine: 'nightly' }),
@@ -178,7 +198,8 @@ const CALLS: Readonly<Record<string, (api: typeof Client) => unknown>> = {
     'devices.inspect': (api) => api.devices.inspect({ node: REF }),
     'devices.screenshot': (api) => api.devices.screenshot({ node: REF }),
     'devices.tap': (api) => api.devices.tap({ node: REF, x: 1, y: 1 }),
-    'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' })
+    'devices.launch': (api) => api.devices.launch({ node: REF, app: 'app.ruimte' }),
+    'chats.inspect': (api) => api.chats.inspect({ chat: 'chat-1' })
 };
 const HOOKS = new Set(['useAgents', 'useAgent', 'useSubagents', 'useUsageLimits', 'Chat']);
 
@@ -360,6 +381,26 @@ export function clientContract(open: OpenClientWorld): void {
                 error: { code: 'not-found', message: 'No terminal chat-1 in this project' }
             });
             expect(await api.chats.read('shell-1')).toMatchObject({ ok: false });
+        });
+
+        test('opens a terminal on the canvas in front, and types only into a terminal it opened itself', async () => {
+            const world = await open(
+                { 'canvas.write': 'Opens', 'terminals.write': 'Types' },
+                { nodes: [{ id: 'shell-1', kind: 'terminal', title: 'Shell', text: 'The screen' }] }
+            );
+            const opened = await world.api.terminals.open({ title: 'Build', near: [{ id: 'shell-1' }] });
+
+            expect(opened).toStrictEqual({ ok: true, value: { id: expect.any(String) } });
+
+            const terminal = opened.ok ? opened.value : { id: '' };
+
+            expect(await world.api.terminals.write(terminal, 'ls\n')).toStrictEqual({ ok: true, value: undefined });
+            expect(world.typed()).toEqual([{ terminal: terminal.id, text: 'ls\n' }]);
+            expect(await world.api.terminals.write({ id: 'shell-1' }, 'rm -rf .\n')).toStrictEqual({
+                ok: false,
+                error: { code: 'refused', message: 'poc.contract did not open the terminal shell-1, so it cannot type into it' }
+            });
+            expect(world.typed()).toHaveLength(1);
         });
 
         test('starts an agent as a node on the canvas in front, and as a view of its own with no canvas there', async () => {
@@ -852,6 +893,124 @@ export function clientContract(open: OpenClientWorld): void {
             ).toThrow(TypeError);
         });
 
+        test("puts a section in a project's settings, whose field a surface reads for the project in front", async () => {
+            const world = await open({}, { proposed: ['projectSettings'] });
+            const { api, createElement: h } = world;
+
+            api.defineProjectSettings({
+                title: 'Probe',
+                fields: [
+                    {
+                        key: 'service',
+                        type: 'select',
+                        label: 'Service',
+                        default: 'web',
+                        options: [
+                            { value: 'web', label: 'Web' },
+                            { value: 'db', label: 'Database' }
+                        ]
+                    }
+                ]
+            });
+
+            const Service = () => {
+                const project = api.useProject();
+
+                return h('p', null, `${project.id} ${project.name}: service ${api.useProjectSetting<string>('service')}`);
+            };
+            const screen = await world.render(Service);
+
+            expect(world.projectSettings()).toEqual(['Probe']);
+            expect(screen.text()).toBe(`${SEED.project.id} ${SEED.project.name}: service web`);
+
+            await world.chooseProjectSetting('service', 'db');
+            await screen.until(() => screen.text() === `${SEED.project.id} ${SEED.project.name}: service db`);
+        });
+
+        test("puts no section in a project's settings while its manifest does not name the part as proposed", async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineProjectSettings({ fields: [] })).toThrow(
+                'defineProjectSettings is still proposed; name projectSettings under proposed in manifest.json'
+            );
+            expect(world.projectSettings()).toEqual([]);
+        });
+
+        test('covers the files of a language of its own by extension and by name, and refuses a grammar outside its pack', async () => {
+            const world = await open({}, { proposed: ['languages'] });
+            const probe = { id: 'probe', name: 'Probe', extensions: ['probe'], filenames: ['Probefile'], grammar: 'assets/probe.tmLanguage.json' };
+
+            world.api.defineLanguage(probe);
+
+            expect(world.languageOf(`${SEED.project.folder}/rules.PROBE`)).toBe('probe');
+            expect(world.languageOf(`${SEED.project.folder}/sub/Probefile`)).toBe('probe');
+            expect(world.languageOf(`${SEED.project.folder}/notes.md`)).toBeNull();
+            expect(() => world.api.defineLanguage({ ...probe, id: 'other', grammar: '../other.json' })).toThrow(TypeError);
+            expect(() => world.api.defineLanguage({ ...probe, id: 'Other' })).toThrow(TypeError);
+            expect(() => world.api.defineLanguage({ ...probe, id: 'other', extensions: [], filenames: [] })).toThrow(TypeError);
+        });
+
+        test('covers no file with a language while its manifest does not name the part as proposed', async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineLanguage({ id: 'probe', name: 'Probe', extensions: ['probe'], grammar: 'assets/probe.tmLanguage.json' })).toThrow(
+                'defineLanguage is still proposed; name languages under proposed in manifest.json'
+            );
+            expect(world.languageOf(`${SEED.project.folder}/rules.probe`)).toBeNull();
+        });
+
+        test('marks lines in the margin of an open file, told only which file, and is asked again after it says they changed until the editor goes', async () => {
+            const world = await open({}, { proposed: ['editorDecorations'] });
+            const told: object[] = [];
+            let found: unknown[] = [
+                { line: 2, kind: 'warning' },
+                { line: 4, endLine: 6, kind: 'success' },
+                // Left out: a line before the first, and a kind that is none of Ruimte's.
+                { line: 0, kind: 'error' },
+                { line: 3, kind: 'purple' }
+            ];
+            const decoration = world.api.defineEditorDecoration({
+                id: 'probe',
+                provide: (file) => {
+                    told.push(file);
+
+                    return found as Client.EditorDecoration[];
+                }
+            });
+            // Something to wait on: both worlds settle an answer over turns of the event loop.
+            const screen = await world.render(() => world.createElement('p', null, 'open'));
+            const editor = await world.openEditor('src/app.ts');
+            const shows = (marks: object[]) => screen.until(() => JSON.stringify(editor.marks()) === JSON.stringify(marks));
+
+            await shows([
+                { line: 2, endLine: 2, kind: 'warning' },
+                { line: 4, endLine: 6, kind: 'success' }
+            ]);
+
+            found = [{ line: 9, kind: 'error' }];
+            decoration.refresh();
+            await shows([{ line: 9, endLine: 9, kind: 'error' }]);
+
+            expect(told).toEqual([
+                { path: `${SEED.project.folder}/src/app.ts`, name: 'app.ts', extension: 'ts' },
+                { path: `${SEED.project.folder}/src/app.ts`, name: 'app.ts', extension: 'ts' }
+            ]);
+
+            await editor.close();
+            decoration.refresh();
+
+            expect(told).toHaveLength(2);
+        });
+
+        test('marks nothing in the margin while its manifest does not name the part as proposed', async () => {
+            const world = await open({});
+
+            expect(() => world.api.defineEditorDecoration({ id: 'probe', provide: () => [{ line: 1, kind: 'info' }] })).toThrow(
+                'defineEditorDecoration is still proposed; name editorDecorations under proposed in manifest.json'
+            );
+            expect((await world.openEditor('src/app.ts')).marks()).toEqual([]);
+        });
+
         test('hands out the rows and sections of a settings page with the components', async () => {
             const { ui } = await open({});
 
@@ -909,6 +1068,53 @@ export function clientContract(open: OpenClientWorld): void {
             const screen = await world.render(Kinds);
 
             expect(screen.text()).toBe('Plan canvas, Board unknown');
+        });
+
+        test('adds a launch and changes one through the machine, which is handed what the call gave', async () => {
+            const asked: unknown[] = [];
+            const saved = (input: unknown) => {
+                asked.push(input);
+
+                return { id: 'web', name: 'Web' };
+            };
+            const world = await open({ 'launches.write': 'Adds a launch' }, { actions: { 'launch.create': saved, 'launch.edit': saved } });
+            const added = { name: 'Web', kind: 'service' as const, command: 'bun dev', env: { PORT: '5173' } };
+            const changed = { launch: 'web', env: { PORT: null } };
+
+            expect(await world.api.launches.create(added)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
+            expect(await world.api.launches.edit(changed)).toEqual({ ok: true, value: { id: 'web', name: 'Web' } });
+            expect(asked).toEqual([added, changed]);
+        });
+
+        test('reads what a chat runs on and that something waits in it through the machine, which is handed the chat it named', async () => {
+            const asked: unknown[] = [];
+            const state = {
+                id: 'chat-1',
+                title: 'Import',
+                provider: 'claude',
+                model: 'sonnet',
+                mode: 'supervised',
+                working: false,
+                queued: 1,
+                waitsOn: 'approval' as const,
+                subagents: 0,
+                background: 2
+            };
+            const world = await open(
+                { 'chats.read': 'Reads' },
+                {
+                    actions: {
+                        'chat.inspect': (input) => {
+                            asked.push(input);
+
+                            return state;
+                        }
+                    }
+                }
+            );
+
+            expect(await world.api.chats.inspect({ chat: 'chat-1' })).toEqual({ ok: true, value: state });
+            expect(asked).toEqual([{ chat: 'chat-1' }]);
         });
 
         test('tells a watch of a folder that a file under it changed, until it stops', async () => {

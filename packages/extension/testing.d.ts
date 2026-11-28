@@ -7,6 +7,7 @@ import type {
     ContextOf,
     ContextSource,
     DatabaseValue,
+    EditorDecoration,
     FileEntry,
     GitCommit,
     GitFileDiff,
@@ -21,14 +22,22 @@ import type {
 import type {
     ChatSummary,
     ExtensionErrorCode,
+    FileProblems,
     Json,
+    LaunchDescription,
+    MachineCandidate,
+    MachineStart,
     MachineActionName,
     MachineInput,
     MachineOutput,
+    Notification,
+    ReferenceItem,
     NodeRef,
+    ProjectInfo,
     ProjectRef,
     Result,
     ServerEvents,
+    SpawnDescription,
     ViewRef
 } from './server';
 
@@ -114,7 +123,7 @@ export interface TestHostAnswers {
 
 export interface TestHostOptions {
     /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */
-    manifest?: { id?: string; name?: string; permissions?: Record<string, string> };
+    manifest?: { id?: string; name?: string; permissions?: Record<string, string>; provides?: Record<string, string[]>; proposed?: string[] };
     /** `client/index.ts` by default, loaded afresh for this host. */
     entry?: string;
     /** The open project, with its views and nodes; the first view is in front. Null for no open project. */
@@ -183,6 +192,14 @@ export interface TestDefinition {
     [key: string]: unknown;
 }
 
+/** A mark in the margin of an editor a test opened, with the id of the decoration that put it there and its last line filled in. */
+export interface TestEditorDecoration {
+    decoration: string;
+    line: number;
+    endLine: number;
+    kind: EditorDecoration['kind'];
+}
+
 export interface TestHost {
     /** What the extension defined, in order, with the object each `define*` was given. */
     definitions: { kind: string; definition: TestDefinition }[];
@@ -195,6 +212,14 @@ export interface TestHost {
     node(id: string): TestDefinition;
     card(id: string): TestDefinition;
     overlay(id: string): TestDefinition;
+    /** The id of the language `defineLanguage` gave a file with this name or path, or null for a file none of yours covers. */
+    languageOf(path: string): string | null;
+    /**
+     * A file of the project opening in an editor, which asks every `defineEditorDecoration` for its marks, and again after a
+     * `refresh()`. `decorations()` is what the margin shows now; wait for an answer with `until` of a screen, or a turn of the
+     * event loop. `close()` is the editor going, after which nothing asks for that file.
+     */
+    openEditor(path: string): { decorations(): TestEditorDecoration[]; close(): void };
     /** What every slot tells at this place, filled with the project, view, machine and theme, and the selection where the place tells it. A `{ id }` of a node of the project becomes its `NodeInfo`. */
     context<Place extends SlotName>(place: Place, extra?: Partial<Record<keyof SlotContexts[Place], unknown>>): ContextOf<Place>;
     /** How an action, menu or widget shows at this place, or null where it does not. An unknown place throws. */
@@ -215,6 +240,8 @@ export interface TestHost {
     select(ids: string[]): void;
     /** Changes a setting, as a person would. */
     setSetting(key: string, value: boolean | string): void;
+    /** Changes a field of `defineProjectSettings` for the open project, as a person would in the settings of that project. */
+    setProjectSetting(key: string, value: boolean | string): void;
     /**
      * The agent of a node, or of a chat or terminal open as a view of its own, changing what it does as the machine reports it,
      * and draws again what reads it. Null takes a terminal's agent away, as its CLI ending does.
@@ -265,6 +292,8 @@ export interface TestHost {
     agents: { calls: TestCall[] };
     /** Every call that answered a Result, in order. */
     calls: TestCall[];
+    /** Each terminal `terminals.open` opened, with what `terminals.write` typed into it. Any other terminal refuses a write. */
+    terminals: TestTerminal[];
     /** What `useStorage` holds per scope now, changed in place. */
     storage: { computer: Record<string, Json>; project: Record<string, Json>; machine: Record<string, Json> };
     settings: Record<string, boolean | string>;
@@ -299,12 +328,41 @@ export interface TestServerAnswers {
     'chats.list'?(): Answer<ChatSummary[]>;
     'chats.read'?(chatId: string): Answer<string>;
     'chats.send'?(chatId: string, text: string): Answer<void>;
+    'terminals.read'?(terminal: NodeRef): Answer<string>;
     'machine.run'?: { [Name in MachineActionName]?: (input: MachineInput<Name>, project: ProjectRef) => Answer<MachineOutput<Name>> };
+}
+
+/** A terminal of the machine of a test. */
+export interface TestTerminal {
+    id: string;
+    /** `extension` for one `terminals.open` opened, the only kind `terminals.write` types into. */
+    openedBy: 'extension' | 'person';
+    /** Set it to true for an agent in the terminal that waits for the person, which refuses a write. */
+    needsYou: boolean;
+    /** What `terminals.write` typed, in order. */
+    written: string[];
+    /** The terminal profile it runs, by id. */
+    profile?: string;
+    /** What that profile's `spawn` described when the terminal opened, in a test server. */
+    spawn?: SpawnDescription;
+    title?: string;
+    cwd?: string;
 }
 
 export interface TestServerOptions {
     /** Over `manifest.json` in the folder the test runs in, such as `{ permissions: {} }` to take every permission away. */
-    manifest?: { id?: string; permissions?: Record<string, string> };
+    manifest?: { id?: string; permissions?: Record<string, string>; provides?: Record<string, string[]>; proposed?: string[] };
+    /**
+     * Where the extension came from. `dev-link` by default, as under `ruimte extension dev`; with `installed`, one that uses a
+     * proposed part does not load, and `createTestServer` rejects with what a person reads in Settings.
+     */
+    provenance?: 'dev-link' | 'installed';
+    /** The project a terminal profile is asked about. */
+    project?: Partial<ProjectInfo>;
+    /** Terminals that are there already, opened by a person unless one says otherwise. */
+    terminals?: (Pick<TestTerminal, 'id'> & Partial<TestTerminal>)[];
+    /** The text files of the project `files` reads, by their path in the project folder. */
+    files?: Record<string, string>;
     /** `server/index.ts` by default. */
     entry?: string;
     storage?: Record<string, Json>;
@@ -314,7 +372,22 @@ export interface TestServerOptions {
 
 /** A call of `server/` to the machine, with what it was answered. */
 export interface TestAsk {
-    method: 'agents.run' | 'agents.start' | 'chats.list' | 'chats.read' | 'chats.send' | 'machine.run' | 'defineLanguageServer';
+    method:
+        | 'agents.run'
+        | 'agents.start'
+        | 'chats.list'
+        | 'chats.read'
+        | 'chats.send'
+        | 'terminals.read'
+        | 'terminals.open'
+        | 'terminals.write'
+        | 'files.readText'
+        | 'files.list'
+        | 'files.watch'
+        | 'problems.report'
+        | 'problems.clear'
+        | 'machine.run'
+        | 'defineLanguageServer';
     args: Json[];
     result: Result<unknown>;
 }
@@ -341,6 +414,84 @@ export interface TestServer<Api> {
     languageServers: object[];
     /** What `log` wrote, and every refusal, as `ruimte extension dev` prints it. */
     logs: string[];
+    /** The terminals of the machine: those the options gave, and each one `terminals.open` opened, with what was typed into it. */
+    terminals: TestTerminal[];
+    /** A terminal profile `defineTerminalProfile` named, asked as the machine asks it. Throws for one it did not define. */
+    profile(id: string): {
+        title: string;
+        icon?: string;
+        available(project?: Partial<ProjectInfo>): Promise<boolean>;
+        spawn(context?: { project?: Partial<ProjectInfo>; cwd?: string }): Promise<SpawnDescription>;
+    };
+    /**
+     * A launch source `defineLaunchSource` named, asked as the machine asks it. `list` reads its launches and has the source
+     * tell when they change, as the machine does; `changes` counts how often it said so, and `stop` has it stop telling, as
+     * when the project closes. A launch the machine would not take is left out, with the reason in `logs`. Throws for a
+     * source it did not define.
+     */
+    launchSource(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<LaunchDescription[]>;
+        stop(project?: Partial<ProjectInfo>): Promise<void>;
+        readonly changes: number;
+    };
+    /**
+     * A machine source `defineMachineSource` named, asked as the machine asks it. `list` reads its places, and one the
+     * machine would not take is left out, with the reason in `logs`. `start` asks what starts a machine in a place by its
+     * id, as the machine does before it holds the start for a person's approval: it answers the description and the lines
+     * the source reported, runs nothing, and aborts the signal the source was handed once `signal` aborts. It rejects
+     * for a description the machine would not take. Throws for a source it did not define.
+     */
+    machineSource(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<MachineCandidate[]>;
+        start(candidate: string, options?: { project?: Partial<ProjectInfo>; signal?: AbortSignal }): Promise<{ start: MachineStart; reports: string[] }>;
+    };
+    /**
+     * A reference `defineReference` of `server/` named, asked as the machine asks it for `#` in a chat. `list` leaves
+     * out a thing the machine would not take, with the reason in `logs`, and `read` answers the text that goes in the
+     * prompt. Throws for a reference it did not define.
+     */
+    reference(id: string): {
+        title: string;
+        list(project?: Partial<ProjectInfo>): Promise<ReferenceItem[]>;
+        read(item: ReferenceItem, project?: Partial<ProjectInfo>): Promise<string>;
+    };
+    /** A command `defineSlashCommand` of `server/` named, run as the machine runs it for `/` in a chat. Throws for one it did not define. */
+    slashCommand(name: string): { description: string; run(args?: string, project?: Partial<ProjectInfo>): Promise<string> };
+    /**
+     * A UI source `defineUiSource` named, read as the machine reads it for a block. `name` is what a block writes as
+     * `source`, and `description` and `parameters` are what an agent is told. `read` hands over the arguments and the
+     * project, and rejects for an answer the machine would not hand a block: one over 32 KB, or a throw. A source whose
+     * description or parameters the machine does not take is not here, with the reason in `logs`. Throws for a source
+     * it did not define.
+     */
+    /**
+     * An agent `defineAgentProvider` described, as the machine takes it: the kind it goes by among the providers, its name,
+     * the program Ruimte starts for a chat and the models the picker offers first. Nothing starts here. One whose
+     * description the machine does not take is not here, with the reason in `logs`. Rejects for an agent it did not define.
+     */
+    agentProvider(id: string): Promise<{ kind: string; name: string; protocol: 'acp'; spawn: SpawnDescription; models: { id: string; name: string }[] }>;
+    uiSource(id: string): {
+        name: string;
+        description: string;
+        parameters?: object;
+        read(args?: Record<string, Json>, project?: Partial<ProjectInfo>): Promise<Json>;
+    };
+    /**
+     * A notification channel `defineNotificationChannel` named, handed a notification as the machine hands it one. What
+     * you leave out is filled in: a wait in `project` for the node `node-1`. Answers whether the channel delivered; a throw
+     * of the channel answers false with its reason in `logs`, as the machine writes it to the extension's log. When
+     * Ruimte tells a channel is the machine's to decide, so nothing here waits. Throws for a channel it did not define.
+     */
+    notificationChannel(id: string): { title: string; deliver(notification?: Partial<Notification>): Promise<boolean> };
+    /** What the problem sources hold now, as `problems.report` and `problems.clear` left it: per source, the files with problems. */
+    problems: { source: string; files: FileProblems[] }[];
+    /** The text files of the project, by path. `writeFile` changes one, or removes it with null, and tells every `files.watch` that follows it. */
+    files: Record<string, string>;
+    writeFile(path: string, text: string | null): void;
+    /** A person choosing a field of `defineProjectSettings` in the settings of a project, the test's own unless it names another. */
+    setProjectSetting(key: string, value: boolean | string, project?: { id?: string }): void;
     /** An agent's call of a tool `defineAgentTool` named, by the id it gave, answered in text. */
     tool(id: string): { run(input?: object, context?: { caller?: string }): Promise<string> };
     /** What an agent reads of a node of this type along a line. */

@@ -1307,6 +1307,10 @@
                 "description": "Of work without a break."
             }
         },
+        "notificationChannels": {
+            "label": "Notify through {{title}}",
+            "description": "Also sends what your phone would get, when an agent needs you, finishes or reaches a usage limit. It waits while you are at this computer."
+        },
         "notify": {
             "title": "Notify me about",
             "preview": "Preview: {{event}}",
@@ -2041,6 +2045,15 @@
             "enterCode": "Enter code",
             "short": "Add"
         },
+        "devcontainer": {
+            "label": "Open a folder in a dev container",
+            "description": "Ruimte starts the folder's dev container with Docker on this computer, puts a machine in it, and opens the folder there.",
+            "signedOut": "Sign in first. The new machine joins the account you are signed in to.",
+            "action": "Choose folder",
+            "held": "Ruimte read this from the devcontainer.json in {{folder}}. Nothing runs until you approve it, and a change to that file asks you again.",
+            "joined": "It is on your account. Ruimte opens {{folder}} on it in this window.",
+            "open": "Open folder"
+        },
         "listLabel": "Account and machines",
         "failed": "Could not show the account settings",
         "thisComputer": {
@@ -2057,6 +2070,73 @@
                 "description": "Every window closes and opens again. Agents on your other machines keep working.",
                 "action": "Restart",
                 "failed": "Ruimte could not restart to run a machine here. Try again."
+            }
+        },
+        "sources": {
+            "title": "From {{source}}",
+            "subtitle": "{{place}}, from {{source}}",
+            "stop": "Stop",
+            "row": {
+                "idle": "Not started",
+                "running": "A machine runs here",
+                "preparing": "Getting ready",
+                "held": "Waits for your approval",
+                "starting": "Starting",
+                "joining": "Joining your account",
+                "done": "Started",
+                "failed": "Did not start",
+                "stopped": "Stopped"
+            },
+            "start": {
+                "label": "Start a machine here",
+                "description": "You see what runs on this computer before anything starts.",
+                "action": "Start"
+            },
+            "running": {
+                "label": "A machine already runs here",
+                "description": "Once it is on your account, it is in the list of machines."
+            },
+            "preparing": {
+                "label": "Asking {{source}} what to run"
+            },
+            "held": {
+                "title": "Run this on this computer?",
+                "description": "{{source}} read this from a file in this project. Nothing runs until you approve it, and a change to that file asks you again.",
+                "join": "Put the new machine on your account",
+                "folder": "In {{folder}}",
+                "ask": "These run one after another, in this order.",
+                "joins": "Your approval also puts the new machine on your account.",
+                "approve": "Approve and start",
+                "cancel": "Cancel"
+            },
+            "starting": {
+                "label": "Starting the machine"
+            },
+            "joining": {
+                "label": "Putting the new machine on your account",
+                "signIn": {
+                    "label": "Sign in to put the new machine on your account",
+                    "description": "The machine runs. Sign in to your account in this app, and Ruimte adds it."
+                },
+                "failed": {
+                    "label": "The new machine is not on your account yet",
+                    "retry": "Try again"
+                }
+            },
+            "done": {
+                "label": "The machine runs",
+                "description": "Once it is on your account, it is in the list of machines.",
+                "joined": "It is on your account, in the list of machines. Open it from there."
+            },
+            "failed": {
+                "label": "The machine did not start"
+            },
+            "stopped": {
+                "label": "Stopped",
+                "description": "Ruimte removed nothing the start had made."
+            },
+            "log": {
+                "title": "What it wrote"
             }
         }
     },
@@ -2125,6 +2205,9 @@
         }
     },
     "providers": {
+        "extensionAgent": {
+            "notInstalled": "Not installed"
+        },
         "nanogpt": {
             "description": "Chat with the models your NanoGPT subscription includes. Requests use only your subscription, never pay as you go.",
             "footer": "The key stays on this machine and is never shown again. Every tool a model asks for needs your approval.",
@@ -2297,6 +2380,8 @@
         "noPermissions": "Asks for nothing extra.",
         "removeDescription": "Removes it and what it stored from this computer.",
         "groupDevelopment": "In development",
+        "groupTest": "Test extensions",
+        "testExtension": "Test extension",
         "groupInstalled": "Installed",
         "builtIn": "Built-in",
         "development": "Development",

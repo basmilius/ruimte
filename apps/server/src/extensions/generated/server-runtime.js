@@ -12,6 +12,8 @@ var EXTENSION_ACTIONS = {
   "launch.start": "launches.run",
   "launch.restart": "launches.run",
   "launch.stop": "launches.run",
+  "launch.create": "launches.write",
+  "launch.edit": "launches.write",
   "routine.list": "routines.read",
   "routine.run": "routines.run",
   "routine.pause": "routines.run",
@@ -29,7 +31,8 @@ var EXTENSION_ACTIONS = {
   "device.inspect": "devices.control",
   "device.screenshot": "devices.control",
   "device.tap": "devices.control",
-  "device.launch": "devices.control"
+  "device.launch": "devices.control",
+  "chat.inspect": "chats.read"
 };
 
 // packages/contracts/src/extension-client.ts
@@ -38,7 +41,8 @@ var MACHINE_AREAS = {
   routine: "routines",
   artifact: "artifacts",
   browser: "browser",
-  device: "devices"
+  device: "devices",
+  chat: "chats"
 };
 function extensionActionCall(action) {
   const dot = action.indexOf(".");
@@ -54,6 +58,7 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   "git.log": "git.read",
   "terminals.read": "terminals.read",
   "terminals.open": "canvas.write",
+  "terminals.write": "terminals.write",
   "database.connections": "database.read",
   "database.query": "database.read",
   "chats.list": "chats.read",
@@ -83,6 +88,72 @@ var EXTENSION_CLIENT_PERMISSIONS = {
   Chat: "agents.start",
   ...Object.fromEntries(Object.entries(EXTENSION_ACTIONS).map(([action, permission]) => [extensionActionCall(action), permission]))
 };
+function missingPermissionMessage(extension, permission) {
+  return `${extension} did not ask for the permission ${permission} in its manifest`;
+}
+
+// packages/contracts/src/extension-providers.ts
+var EXTENSION_PROVIDER_POINTS = {
+  terminalProfiles: { define: "defineTerminalProfile", permission: "terminals.profiles", proposed: true },
+  launchSources: { define: "defineLaunchSource", permission: "launches.provide", proposed: true },
+  problemSources: { define: "defineProblemSource", permission: "problems.provide", proposed: true },
+  machineSources: { define: "defineMachineSource", permission: "machines.provide", proposed: true },
+  notificationChannels: { define: "defineNotificationChannel", permission: "notifications.provide", proposed: true },
+  uiSources: { define: "defineUiSource", permission: "ui.provide", proposed: true },
+  references: { define: "defineReference", permission: "composer.provide", proposed: true },
+  slashCommands: { define: "defineSlashCommand", permission: "composer.provide", proposed: true },
+  agentProviders: { define: "defineAgentProvider", permission: "agents.provide", proposed: true }
+};
+var MAX_AGENT_KIND = 32;
+function extensionAgentKind(extension, provider) {
+  const kind = `x-${`${extension}-${provider}`.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
+  return kind.length <= MAX_AGENT_KIND ? kind : null;
+}
+var EXTENSION_CLIENT_POINTS = {
+  projectSettings: { define: "defineProjectSettings", proposed: true },
+  languages: { define: "defineLanguage", proposed: true },
+  editorDecorations: { define: "defineEditorDecoration", proposed: true }
+};
+var MAX_LANGUAGE_GRAMMAR_BYTES = 512 * 1024;
+var EXTENSION_PROPOSED_PARTS = [
+  ...Object.keys(EXTENSION_PROVIDER_POINTS).filter((kind) => EXTENSION_PROVIDER_POINTS[kind]?.proposed === true),
+  ...Object.keys(EXTENSION_CLIENT_POINTS).filter((kind) => EXTENSION_CLIENT_POINTS[kind]?.proposed === true)
+];
+function projectSettingKey(projectId, key) {
+  return `project:${projectId}:setting.${key}`;
+}
+function pointOf(kind) {
+  return Object.hasOwn(EXTENSION_PROVIDER_POINTS, kind) ? EXTENSION_PROVIDER_POINTS[kind] ?? null : null;
+}
+function providerPointOf(define) {
+  const kind = Object.keys(EXTENSION_PROVIDER_POINTS).find((each) => EXTENSION_PROVIDER_POINTS[each]?.define === define);
+  const point = kind === undefined ? null : pointOf(kind);
+  return kind === undefined || point === null ? null : { kind, point };
+}
+function providerRefusal(manifest, define, id, proposedAllowed) {
+  const found = providerPointOf(define);
+  if (found === null) {
+    return `${define} registers nothing this Ruimte takes from an extension`;
+  }
+  const { kind, point } = found;
+  if (point.proposed && !(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  if (point.proposed && !proposedAllowed) {
+    return `${define} is still proposed, which an installed extension cannot use`;
+  }
+  return (manifest.provides?.[kind] ?? []).includes(id) ? null : `${define} got ${id}, which manifest.json does not list under provides.${kind}`;
+}
+function clientPointRefusal(manifest, define, proposedAllowed) {
+  const kind = Object.keys(EXTENSION_CLIENT_POINTS).find((each) => EXTENSION_CLIENT_POINTS[each]?.define === define);
+  if (kind === undefined || EXTENSION_CLIENT_POINTS[kind]?.proposed !== true) {
+    return null;
+  }
+  if (!(manifest.proposed ?? []).includes(kind)) {
+    return `${define} is still proposed; name ${kind} under proposed in manifest.json`;
+  }
+  return proposedAllowed ? null : `${define} is still proposed, which an installed extension cannot use`;
+}
 
 // apps/server/src/extensions/policy.ts
 var STORAGE_ASKS = new Set(["storage.get", "storage.set", "storage.delete"]);
@@ -128,7 +199,28 @@ function createServerApi(options) {
   const listeners = new Map;
   const tools = new Map;
   const nodeContexts = new Map;
+  const profiles = new Map;
+  const launchSources = new Map;
+  const launchWatches = new Map;
+  const machineSources = new Map;
+  const machineStarts = new Map;
+  const notificationChannels = new Map;
+  const uiSources = new Map;
+  const references = new Map;
+  const slashCommands = new Map;
+  let agentsDescribed = Promise.resolve();
+  const fileWatches = new Map;
+  let nextFileWatch = 1;
   const typed = (method, args) => ask(method, args);
+  const mayDefine = (define, permission, id) => {
+    if (!permissions.has(permission)) {
+      throw new Error(missingPermissionMessage(options.provides.id, permission));
+    }
+    const refused = providerRefusal({ ...options.provides, permissions: { [permission]: "" } }, define, id, options.proposedAllowed);
+    if (refused !== null) {
+      throw new Error(refused);
+    }
+  };
   const server = {
     machine: {
       platform: options.platform,
@@ -177,6 +269,122 @@ function createServerApi(options) {
         return;
       })
     },
+    defineTerminalProfile(profile) {
+      mayDefine("defineTerminalProfile", "terminals.profiles", profile.id);
+      profiles.set(profile.id, profile);
+      send({
+        type: "profile",
+        id: profile.id,
+        title: profile.title,
+        ...profile.icon === undefined ? {} : { icon: profile.icon },
+        available: profile.available !== undefined
+      });
+    },
+    defineLaunchSource(source) {
+      mayDefine("defineLaunchSource", "launches.provide", source.id);
+      launchSources.set(source.id, source);
+      send({ type: "launchSource", id: source.id, title: source.title, watches: source.watch !== undefined });
+    },
+    defineProblemSource(source) {
+      mayDefine("defineProblemSource", "problems.provide", source.id);
+      send({ type: "problemSource", id: source.id, title: source.title });
+    },
+    defineMachineSource(source) {
+      mayDefine("defineMachineSource", "machines.provide", source.id);
+      machineSources.set(source.id, source);
+      send({ type: "machineSource", id: source.id, title: source.title });
+    },
+    defineNotificationChannel(channel) {
+      mayDefine("defineNotificationChannel", "notifications.provide", channel.id);
+      notificationChannels.set(channel.id, channel);
+      send({ type: "notificationChannel", id: channel.id, title: channel.title });
+    },
+    defineUiSource(source) {
+      mayDefine("defineUiSource", "ui.provide", source.id);
+      uiSources.set(source.id, source);
+      send({
+        type: "uiSource",
+        id: source.id,
+        description: source.description,
+        ...source.parameters === undefined ? {} : { parameters: source.parameters }
+      });
+    },
+    defineReference(reference) {
+      mayDefine("defineReference", "composer.provide", reference.id);
+      references.set(reference.id, reference);
+      send({ type: "reference", id: reference.id, title: reference.title });
+    },
+    defineSlashCommand(command) {
+      mayDefine("defineSlashCommand", "composer.provide", command.name);
+      slashCommands.set(command.name, command);
+      send({ type: "slashCommand", name: command.name, description: command.description });
+    },
+    defineAgentProvider(provider) {
+      mayDefine("defineAgentProvider", "agents.provide", provider.id);
+      if (extensionAgentKind(options.provides.id, provider.id) === null) {
+        throw new Error(`defineAgentProvider ${provider.id}: the id of the extension and this id are together at most 29 characters`);
+      }
+      const spawn = provider.spawn();
+      const describe = (models) => send({ type: "agentProvider", id: provider.id, description: { name: provider.name, protocol: provider.protocol, spawn, models } });
+      if (provider.models === undefined) {
+        describe([]);
+        return;
+      }
+      const listed = (async () => provider.models?.() ?? [])().then(describe, (e) => {
+        options.log.error(`The models of ${provider.id} could not be listed:`, e);
+        describe([]);
+      });
+      agentsDescribed = Promise.all([agentsDescribed, listed]).then(() => {
+        return;
+      });
+    },
+    problems: {
+      report: async (project, source, reported) => mapResult(await ask("problems.report", [project.id, source, reported]), () => {
+        return;
+      }),
+      clear: async (project, source) => mapResult(await ask("problems.clear", [project.id, source]), () => {
+        return;
+      })
+    },
+    files: {
+      readText: (project, path) => typed("files.readText", [project.id, path]),
+      list: (project, folder) => typed("files.list", [project.id, folder]),
+      async watch(project, path, listener) {
+        const watch = nextFileWatch;
+        nextFileWatch += 1;
+        fileWatches.set(watch, listener);
+        const watching = await ask("files.watch", [project.id, path, watch]);
+        if (!watching.ok) {
+          fileWatches.delete(watch);
+          return watching;
+        }
+        const stop = () => {
+          if (fileWatches.delete(watch)) {
+            ask("files.unwatch", [watch]);
+          }
+        };
+        return { ok: true, value: stop };
+      }
+    },
+    terminals: {
+      read: (terminal) => typed("terminals.read", [terminal.id]),
+      async open({ project, profile, title, cwd, near }) {
+        const beside = near?.[0]?.id;
+        const opened = await typed("terminals.open", [
+          {
+            projectId: project.id,
+            ...profile === undefined ? {} : { profile },
+            ...title === undefined ? {} : { title },
+            ...cwd === undefined ? {} : { cwd },
+            ...beside === undefined ? {} : { beside }
+          }
+        ]);
+        return mapResult(opened, ({ nodeId }) => ({ id: nodeId }));
+      },
+      write: async (terminal, text) => mapResult(await ask("terminals.write", [terminal.id, text]), () => {
+        return;
+      })
+    },
     defineAgentTool(tool) {
       tools.set(tool.id, tool);
       send({ type: "tool", name: tool.id, description: tool.description, parameters: tool.parameters ?? { type: "object", properties: {} } });
@@ -190,9 +398,14 @@ function createServerApi(options) {
       })().catch((e) => options.log.error(`${task.id} failed:`, e)));
     },
     defineServer: (api) => api,
-    onEvent(name, listener) {
+    onEvent(name, listener, filter) {
       const group = listeners.get(name) ?? new Set;
-      const heard = listener;
+      const only = filter?.project?.id;
+      const heard = only === undefined ? listener : (payload) => {
+        if (payload.project?.id === only) {
+          listener(payload);
+        }
+      };
       group.add(heard);
       listeners.set(name, group);
       send({ type: "subscribe", name });
@@ -211,6 +424,15 @@ function createServerApi(options) {
       set: (key, value) => options.storage.set(key, value),
       delete: (key) => options.storage.delete(key)
     },
+    projectSettings: {
+      async get(project, key) {
+        const refused = clientPointRefusal(options.provides, "defineProjectSettings", options.proposedAllowed);
+        if (refused !== null) {
+          throw new Error(refused);
+        }
+        return await options.storage.get(projectSettingKey(project.id, key));
+      }
+    },
     secrets: {
       get: async (key) => await options.secrets.get(key),
       set: (key, value) => options.secrets.set(key, value)
@@ -219,6 +441,7 @@ function createServerApi(options) {
   };
   return {
     server,
+    agentsDescribed: () => agentsDescribed,
     runTool(name, input, context) {
       const tool = tools.get(name);
       if (tool === undefined) {
@@ -227,10 +450,102 @@ function createServerApi(options) {
       return tool.run(input, context);
     },
     readNodeContext: (nodeType, data) => nodeContexts.get(nodeType)?.({ data }) ?? [],
+    askProfile(id, method, input) {
+      const profile = profiles.get(id);
+      if (profile === undefined) {
+        throw new MissingHandler(`No terminal profile ${id}`);
+      }
+      if (method === "available") {
+        return profile.available?.(input) ?? true;
+      }
+      return profile.spawn(input);
+    },
+    async askLaunchSource(id, method, project) {
+      const source = launchSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No launch source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      const key = `${id}
+${project.id}`;
+      const stop = launchWatches.get(key);
+      launchWatches.delete(key);
+      stop?.();
+      if (method === "watch" && source.watch !== undefined) {
+        launchWatches.set(key, await source.watch(project, () => send({ type: "launchesChanged", source: id, projectId: project.id })));
+      }
+      return null;
+    },
+    async askMachineSource(id, method, { project, candidate, run }) {
+      const source = machineSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No machine source ${id}`);
+      }
+      if (method === "list") {
+        return source.list(project);
+      }
+      if (candidate === undefined || run === undefined) {
+        throw new TypeError("A start names a place and a number");
+      }
+      const abort = new AbortController;
+      machineStarts.set(run, abort);
+      try {
+        return await source.start(candidate, {
+          project,
+          report: (line) => send({ type: "machineReport", run, line: String(line) }),
+          signal: abort.signal
+        });
+      } finally {
+        machineStarts.delete(run);
+      }
+    },
+    abortMachineStart(run) {
+      machineStarts.get(run)?.abort();
+    },
+    async deliverNotification(id, notification) {
+      const channel = notificationChannels.get(id);
+      if (channel === undefined) {
+        throw new MissingHandler(`No notification channel ${id}`);
+      }
+      await channel.deliver(notification);
+      return null;
+    },
+    readUiSource(id, args, project) {
+      const source = uiSources.get(id);
+      if (source === undefined) {
+        throw new MissingHandler(`No UI source ${id}`);
+      }
+      return source.read(args, { project });
+    },
+    askReference(id, method, { project, item }) {
+      const reference = references.get(id);
+      if (reference === undefined) {
+        throw new MissingHandler(`No reference ${id}`);
+      }
+      if (method === "list") {
+        return reference.list({ project });
+      }
+      if (item === undefined) {
+        throw new TypeError("A read names the thing to read");
+      }
+      return reference.read(item, { project });
+    },
+    expandCommand(name, args, project) {
+      const command = slashCommands.get(name);
+      if (command === undefined) {
+        throw new MissingHandler(`No slash command ${name}`);
+      }
+      return command.run(args, { project });
+    },
     deliver(name, payload) {
       for (const listener of listeners.get(name) ?? []) {
         listener(payload);
       }
+    },
+    fileChanged(watch) {
+      fileWatches.get(watch)?.();
     }
   };
 }
@@ -331,6 +646,8 @@ var core = createServerApi({
   dataFolder: folder,
   platform: process.platform,
   permissions: new Set(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? "[]")),
+  provides: { id: process.env.RUIMTE_EXTENSION_ID ?? "", ...JSON.parse(process.env.RUIMTE_EXTENSION_PROVIDES ?? "{}") },
+  proposedAllowed: process.env.RUIMTE_EXTENSION_PROPOSED === "1",
   ask,
   clock: { every: (ms, run) => void setInterval(run, ms) },
   send,
@@ -373,6 +690,47 @@ function handle(message) {
       await loaded;
       return core.runTool(message.method, message.payload, message.context);
     });
+  } else if (message.type === "profile") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askProfile(message.profile, message.method, message.input);
+    });
+  } else if (message.type === "launchSource") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askLaunchSource(message.source, message.method, message.input);
+    });
+  } else if (message.type === "machineSource") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askMachineSource(message.source, message.method, message.input);
+    });
+  } else if (message.type === "notificationChannel") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.deliverNotification(message.channel, message.input);
+    });
+  } else if (message.type === "uiSource") {
+    answer(message.id, async () => {
+      await loaded;
+      const { args, project } = message.input;
+      return core.readUiSource(message.source, args, project);
+    });
+  } else if (message.type === "reference") {
+    answer(message.id, async () => {
+      await loaded;
+      return core.askReference(message.source, message.method, message.input);
+    });
+  } else if (message.type === "slashCommand") {
+    answer(message.id, async () => {
+      await loaded;
+      const { args, project } = message.input;
+      return core.expandCommand(message.source, args, project);
+    });
+  } else if (message.type === "machineAbort") {
+    loaded.then(() => core.abortMachineStart(message.run));
+  } else if (message.type === "fileChanged") {
+    core.fileChanged(message.watch);
   } else if (message.type === "nodeContext") {
     answer(message.id, async () => {
       await loaded;

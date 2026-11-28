@@ -15,6 +15,7 @@ import { MACHINE_ARGUMENT } from './machine-argument';
 import { decideMachineMode, hasInstallTraces, machineModeFile, parseModeOverride } from './machine-mode';
 import { installAgentActivity } from './main/activity';
 import { serveDevExtensionFiles } from './main/dev-extension-files';
+import { installDevcontainers } from './main/devcontainers';
 import { installDialogs } from './main/dialogs';
 import { ClientExtensions, installExtensions } from './main/extensions';
 import { installGuests, isBrowserGuest, isPreviewGuest, routePreviewLinks, sealPreviewSession } from './main/guests';
@@ -42,11 +43,12 @@ import { allowAppPermission, appSubframeNavigation } from './web-guards';
 const { app, BrowserWindow, dialog, ipcMain, nativeTheme, powerMonitor, protocol, screen, session, shell, webContents } = electron;
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
-// quitting on that app's single instance lock or talking to its daemon.
+// quitting on that app's single instance lock or talking to its daemon. `RUIMTE_USER_DATA` gives a second one a
+// profile and a lock of its own, such as one in machine mode `none` beside the dev app.
 const defaultPort = app.isPackaged ? DEFAULT_PORT : DEV_PORT;
 if (!app.isPackaged) {
     app.setName('Ruimte Dev');
-    app.setPath('userData', join(app.getPath('appData'), 'Ruimte Dev'));
+    app.setPath('userData', process.env.RUIMTE_USER_DATA || join(app.getPath('appData'), 'Ruimte Dev'));
 }
 // Before the app is ready, so the crash handler watches every process from the first one on.
 startTelemetry();
@@ -371,6 +373,16 @@ const secrets = installSecrets(
     localMachine ? { hand: (key) => handVoiceKey(machine.daemonPort, key), clear: () => clearVoiceKey(machine.daemonPort) } : null
 );
 installSpeech(ipc, { ruimteHome, repoRoot, send: (channel, payload) => windows.send(channel, payload), windows: () => windows.all() });
+if (machineMode === 'none' && (process.platform === 'darwin' || process.platform === 'linux')) {
+    installDevcontainers(ipc, {
+        userData: app.getPath('userData'),
+        home: app.getPath('home'),
+        // A checkout puts its own daemon in the container, so what is being worked on is what runs there.
+        checkout: app.isPackaged ? null : repoRoot,
+        version: app.getVersion(),
+        send: (start) => windows.send('devcontainer:changed', start)
+    });
+}
 const login = installLogin(ipc);
 const usage = installUsage(ipc, { mode: machineMode, ruimteHome, signedIn: login.signedIn });
 if (localMachine && process.platform === 'darwin') {

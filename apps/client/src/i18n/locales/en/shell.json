@@ -673,6 +673,8 @@
         "projectIsAFolder": "A project is any folder you work in. Ruimte adds a .ruimte folder to it the first time it opens.",
         "connectMachine": "Connect machine",
         "throughAccount": "Through your account",
+        "devcontainer": "Open a folder in a dev container",
+        "devcontainerHint": "Docker runs it here, with a machine of its own",
         "commandPalette": "Command palette",
         "whatsNew": "What's new"
     },

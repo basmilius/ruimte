@@ -1,0 +1,12 @@
+{
+    "name": "Lintel",
+    "scopeName": "source.lintel",
+    "patterns": [
+        { "name": "comment.line.number-sign.lintel", "match": "#.*$" },
+        { "name": "keyword.control.lintel", "match": "^\\s*(rule|ignore)\\b" },
+        { "name": "constant.language.lintel", "match": "\\b(on|off|error|warning|information)\\b" },
+        { "name": "constant.numeric.lintel", "match": "\\b\\d+\\b" },
+        { "name": "string.quoted.double.lintel", "begin": "\"", "end": "\"" },
+        { "name": "entity.name.tag.lintel", "match": "\\b[a-z][a-z-]*(?=\\s*[:=])" }
+    ]
+}

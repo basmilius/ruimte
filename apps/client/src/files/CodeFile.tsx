@@ -11,6 +11,8 @@ import { InlineEditLayer } from '@/editor-ai/InlineEditLayer';
 import { ReviewBar, ReviewLayer } from '@/editor-ai/ReviewLayer';
 import { useAgentChanges } from '@/editor-ai/use-agent-changes';
 import { useConflictResolution } from '@/editor-ai/use-conflict-resolution';
+import { useEditorDecorations } from '@/extensions/editor-decorations';
+import { useFileLanguage } from '@/extensions/languages';
 import { DraftBar, EditorNotice } from '@/files/DraftBar';
 import { EditorStatusBar } from '@/files/EditorStatusBar';
 import { useFileActions } from '@/files/file-actions';
@@ -266,7 +268,9 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     const tooManyLines = lineCount > HIGHLIGHT_MAX_LINES;
     const bulky = read.size > FS_READ_MAX_TEXT_BYTES;
     const plain = bulky || tooManyLines;
-    const language = plain ? null : (read.language ?? 'text');
+    // What the machine read from the file's name, or the language an extension defined for it.
+    const fileLanguage = useFileLanguage(path, read.language);
+    const language = plain ? null : (fileLanguage ?? 'text');
     // Kept by hand: an effect of `CodeChunk` depends on it.
     const highlight = useMemo(
         () =>
@@ -304,7 +308,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
         const element = surface.current;
         return editor === null || element === null ? undefined : registerFocusedEditor(editor, element);
     }, [editor]);
-    const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : read.language);
+    const editorLanguage = useEditorLanguage(editor, path, plain ? undefined : fileLanguage);
     // What a server gives (code vision, the status) waits for a document one serves.
     const servedLanguage = editorLanguage?.served === true ? editorLanguage : null;
     useCodeVision(servedLanguage);
@@ -318,7 +322,8 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
     }, [editorLanguage, nodeId]);
     const gitBase = useGitBase(path, read.text);
     useChangeMarks(editor, gitBase);
-    const agentChanges = useAgentChanges(editor, path, plain ? undefined : read.language);
+    useEditorDecorations(editor, path);
+    const agentChanges = useAgentChanges(editor, path, plain ? undefined : fileLanguage);
     const conflict = useConflictResolution(editor, path);
     const folder = useProject((s) => s.current?.folder ?? null);
     // The Chats project has no databases, so its files read SQL against none.
@@ -350,7 +355,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
                         endpointId={editing.endpointId}
                         path={path}
                         disk={disk}
-                        language={plain ? undefined : read.language}
+                        language={plain ? undefined : fileLanguage}
                         wrap={wrap}
                         indentation={editing.indentation}
                         rightMargin={editing.rightMargin}
@@ -468,7 +473,7 @@ export function CodeFile({ path, read, toolbarExtra, onEditor, frame }: CodeFile
                     editor={editor}
                     language={servedLanguage}
                     path={path}
-                    languageId={plain ? undefined : read.language}
+                    languageId={plain ? undefined : fileLanguage}
                     indentation={editing.indentation}
                     encoding={read.encoding}
                     lineEnding={lineEndingOf(read.text)}

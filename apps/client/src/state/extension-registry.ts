@@ -1,4 +1,4 @@
-import type { ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
+import type { EditorDecorationMark, ExtensionManifest, ExtensionSlotName, ExtensionTheme } from '@ruimte/contracts';
 import type { LucideIcon } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { create } from 'zustand';
@@ -207,6 +207,49 @@ interface ExtensionSchemaContribution {
     groups: readonly SettingGroup[];
 }
 
+/* The section an extension has in the settings of a project, whose pane reads the project from the dialog it draws in. */
+export interface ProjectSettingsContribution {
+    // The id of the extension, which has one section.
+    id: string;
+    icon: LucideIcon;
+    title: string;
+    description: string;
+    fields: readonly SettingField[];
+    groups: readonly SettingGroup[];
+    component: ComponentType;
+}
+
+/* A language an extension defined: the files it covers. Its grammar waits with the highlighter (`code-highlighter.ts`). */
+export interface LanguageContribution {
+    // `<extension id>/<language>`.
+    id: string;
+    // What the highlighter and a language server know it by.
+    language: string;
+    name: string;
+    extensions: readonly string[];
+    filenames: readonly string[];
+}
+
+/* Marks an extension puts in the margin of an editor, asked per file. It is told the file and nothing of what is in it. */
+export interface EditorDecorationContribution {
+    // `<extension id>/<decoration>`.
+    id: string;
+    provide(file: { path: string; name: string; extension: string }): Promise<readonly EditorDecorationMark[]>;
+    /* Calls back when the extension said its marks changed, until the function it answers is called. */
+    onRefresh(listener: () => void): () => void;
+    onFailure(text: string): void;
+}
+
+/* The section of an extension among those of a project's settings, which no section of Ruimte's own is named like. */
+export function projectSettingsSectionId(id: string): string {
+    return `extension:${id}`;
+}
+
+/* The row of one field in that section, which a search of the dialog leads to. */
+export function projectSettingRowId(id: string, key: string): string {
+    return `${projectSettingsSectionId(id)}.${key}`;
+}
+
 interface BuiltInContribution {
     id: string;
     manifest: ExtensionManifest;
@@ -236,6 +279,9 @@ export interface Contributions {
     commands: readonly CommandContribution[];
     extensionSettings: readonly ExtensionSettingsContribution[];
     extensionSchemas: readonly ExtensionSchemaContribution[];
+    projectSettings: readonly ProjectSettingsContribution[];
+    languages: readonly LanguageContribution[];
+    editorDecorations: readonly EditorDecorationContribution[];
 }
 
 type ContributionKind = keyof Contributions;
@@ -261,7 +307,10 @@ export const useContributions = create<Contributions>(() => ({
     extensionViews: [],
     commands: [],
     extensionSettings: [],
-    extensionSchemas: []
+    extensionSchemas: [],
+    projectSettings: [],
+    languages: [],
+    editorDecorations: []
 }));
 
 /* Whether a stored entry is an extension's: every Ruimte keeps it as an unknown kind, so it survives one without the extension. */

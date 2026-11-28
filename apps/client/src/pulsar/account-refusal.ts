@@ -14,6 +14,8 @@ export function accountRefusalText(error: unknown): string | null {
             return i18next.t('machines:account.refusal.onlyOnMachine');
         case 'machine-has-account':
             return i18next.t('machines:account.refusal.machineHasAccount');
+        case 'other-account':
+            return i18next.t('machines:account.refusal.otherAccount');
         case 'machine-on-other-account':
             return i18next.t('machines:account.refusal.listedElsewhere');
         default:

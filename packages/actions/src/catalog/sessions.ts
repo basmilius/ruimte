@@ -19,6 +19,7 @@ import {
     givenName,
     forActors,
     PERSON_VOICE_AND_AGENT,
+    PERSON_VOICE_AND_EXTENSION,
     chatTarget,
     terminalTarget,
     chatNamed,
@@ -77,7 +78,8 @@ export const SESSIONS_ACTIONS = {
             'Reads what an AI Chat runs on and what waits in it: CLI, model and options, permission mode, whether a turn runs, queued messages, questions and approvals waiting for the user, sub-agents, background tasks, the last finished turn and where a fork came from. The thread itself is only known while the chat is open in this window.',
         effect: 'read',
         domain: 'sessions',
-        actors: PERSON_AND_VOICE,
+        // An extension reads it through `machine-actions.ts`, which hands on no text of a question, an approval or the queue.
+        actors: PERSON_VOICE_AND_EXTENSION,
         input: z.object({ chatId: chatTarget }),
         output: chatNamed.extend({
             provider: AgentKindSchema,

@@ -20,6 +20,7 @@ import {
     type LaunchConfigOverlay,
     type LaunchFileEntry,
     type LaunchesDocument,
+    type LaunchSourceRef,
     type LaunchSuggestion,
     type LaunchesPrivateFile,
     type LaunchesSharedFile
@@ -45,6 +46,7 @@ import {
 } from '../projects/project-files.ts';
 import type { SessionSink } from '../wire.ts';
 import { detectLaunches } from './detect.ts';
+import type { ListedLaunch } from './sources.ts';
 
 const LAUNCHES_FILE = 'launches.json';
 
@@ -99,6 +101,21 @@ export interface ResolvedLaunch {
     url: string | null;
     port: number | null;
     approved: boolean;
+
+    /* Set for a launch a source of an extension lists: the source, and the digest of what it read, which the approval covers as well. */
+    sourced?: { source: LaunchSourceRef; fingerprint: string };
+}
+
+/*
+ * What the store needs of the launch sources of extensions (`sources.ts`): what they list in a project, read when the
+ * project's launches load and kept until the project is let go of.
+ */
+interface SourcedLaunches {
+    follow(projectId: string): void;
+    settled(projectId: string): Promise<void>;
+    refresh(projectId: string): Promise<void>;
+    listed(projectId: string): readonly ListedLaunch[];
+    release(projectId: string): void;
 }
 
 interface LoadedLaunches {
@@ -180,6 +197,14 @@ function sortedEnv(env: Record<string, string>): [string, string][] {
 
 /* The digest of a launch that may run in a worktree at all, refused for any other. */
 function worktreesDigestIn(resolved: ResolvedLaunch): string {
+    // The approval for worktrees covers no fingerprint, so what a source read could change under it.
+    if (resolved.sourced !== undefined) {
+        throw new LaunchError(
+            'launch-not-a-task',
+            `${resolved.launch.name} comes from an extension, and only a launch of the project's own runs after a chat settles`
+        );
+    }
+
     if (resolved.launch.kind !== 'task' || resolved.command.trim() === '') {
         throw new LaunchError('launch-not-a-task', `${resolved.launch.name} is no task with a command, and only a task runs after a chat settles`);
     }
@@ -190,13 +215,18 @@ function worktreesDigestIn(resolved: ResolvedLaunch): string {
     return digest;
 }
 
-/* Everything that decides what runs, approved as one, so a change to any of it asks again. */
-function digestOf(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
-    return JSON.stringify([resolved.command, resolved.cwd, sortedEnv(resolved.env)]);
+/*
+ * Everything that decides what runs, approved as one, so a change to any of it asks again. For a launch of a source
+ * that is also what the source read to describe it: the command can stay the same while the file behind it changed.
+ */
+function digestOf(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env' | 'sourced'>): string {
+    const run = [resolved.command, resolved.cwd, sortedEnv(resolved.env)];
+
+    return JSON.stringify(resolved.sourced === undefined ? run : [...run, 'source', resolved.sourced.fingerprint]);
 }
 
 /* A short fingerprint of everything a launch's approval covers, for an id that has to name exactly what was listed. */
-export function launchDigest(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env'>): string {
+export function launchDigest(resolved: Pick<ResolvedLaunch, 'command' | 'cwd' | 'env' | 'sourced'>): string {
     return createHash('sha256').update(digestOf(resolved)).digest('hex').slice(0, 32);
 }
 
@@ -212,6 +242,7 @@ export class LaunchStore {
     private readonly approvals: LaunchApprovals;
     private readonly secrets: LaunchSecrets | null;
     private readonly afterSettle: AfterSettleChoices | null;
+    private readonly sources: SourcedLaunches | null;
     private readonly seams: WatchSeams;
     private readonly sinks = new ClientSinks();
     private readonly loaded = new Map<string, LoadedLaunches>();
@@ -222,12 +253,14 @@ export class LaunchStore {
         approvals: LaunchApprovals;
         secrets?: LaunchSecrets;
         afterSettle?: AfterSettleChoices;
+        sources?: SourcedLaunches;
         seams?: WatchSeams;
     }) {
         this.projects = options.projects;
         this.approvals = options.approvals;
         this.secrets = options.secrets ?? null;
         this.afterSettle = options.afterSettle ?? null;
+        this.sources = options.sources ?? null;
         this.seams = options.seams ?? SYSTEM_WATCH;
     }
 
@@ -363,7 +396,8 @@ export class LaunchStore {
             const state = await this.load(projectId);
             await this.takeOutsideEdits(projectId, state);
             const current = this.resolvedAll(projectId, state).find((resolved) => resolved.launch.id === launchId);
-            if (!current || current.launch.kind === 'group') {
+            // A launch of a source is in no file, so there is nowhere to write the reference.
+            if (!current || current.launch.kind === 'group' || current.sourced !== undefined) {
                 throw new LaunchError('launch-not-found', `This project has no launch ${launchId} to keep a secret for`);
             }
             if (isSecretReference(current.env[variable])) {
@@ -397,6 +431,43 @@ export class LaunchStore {
             }
             this.emitChanged(projectId, state);
         });
+    }
+
+    /*
+     * A person's yes to everything one source of an extension lists in the project, as it stands now. A launch whose
+     * fingerprint changes afterwards, or one the source lists later, asks again.
+     */
+    approveSource(projectId: string, extension: string, source: string): Promise<void> {
+        return this.writes.run(async () => {
+            const state = await this.load(projectId);
+
+            for (const resolved of this.resolvedAll(projectId, state)) {
+                if (resolved.sourced?.source.extension === extension && resolved.sourced.source.id === source) {
+                    await this.approvals.approve(state.folder, approvalKeyOf(resolved.launch.id), digestOf(resolved));
+                }
+            }
+
+            this.emitChanged(projectId, state);
+        });
+    }
+
+    /* What a source lists in a project changed, so every client reads the launches again. */
+    sourcesChanged(projectId: string): void {
+        const state = this.loaded.get(projectId);
+
+        if (state !== undefined) {
+            this.emitChanged(projectId, state);
+        }
+    }
+
+    /*
+     * Before a start: a launch of a source is read from its source again, so what starts and what a person approved is
+     * what the source reads now, also for one that has no watch.
+     */
+    async fresh(projectId: string, launchId: string): Promise<void> {
+        if (this.sources?.listed(projectId).some((listed) => listed.id === launchId) === true) {
+            await this.sources.refresh(projectId);
+        }
     }
 
     /*
@@ -452,7 +523,11 @@ export class LaunchStore {
         });
     }
 
-    resolveAll(projectId: string): Promise<ResolvedLaunch[]> {
+    /* With what the sources of extensions list, waited for outside the queue of writes: a slow source holds up no save. */
+    async resolveAll(projectId: string): Promise<ResolvedLaunch[]> {
+        await this.writes.run(() => this.load(projectId));
+        await this.sources?.settled(projectId);
+
         return this.writes.run(async () => this.resolvedAll(projectId, await this.load(projectId)));
     }
 
@@ -470,13 +545,17 @@ export class LaunchStore {
         );
     }
 
-    resolve(projectId: string, launchId: string): Promise<ResolvedLaunch> {
+    async resolve(projectId: string, launchId: string): Promise<ResolvedLaunch> {
+        await this.writes.run(() => this.load(projectId));
+        await this.sources?.settled(projectId);
+
         return this.writes.run(async () => this.resolvedOne(projectId, await this.load(projectId), launchId));
     }
 
     /* Stops watching a project the last client closed; the next read loads it again. */
     closeProject(projectId: string): void {
         closeLoaded(this.loaded, projectId);
+        this.sources?.release(projectId);
     }
 
     closeAll(): void {
@@ -486,6 +565,44 @@ export class LaunchStore {
     }
 
     private resolvedAll(projectId: string, state: LoadedLaunches): ResolvedLaunch[] {
+        const own = this.resolvedOwn(projectId, state);
+        const taken = new Set(own.map((resolved) => resolved.launch.id));
+        // A launch of the project's own files keeps its id against one a source lists under the same.
+        const sourced = (this.sources?.listed(projectId) ?? [])
+            .filter((listed) => !taken.has(listed.id))
+            .map((listed) => this.resolvedSourced(projectId, state, listed));
+
+        return [...own, ...sourced];
+    }
+
+    private resolvedSourced(projectId: string, state: LoadedLaunches, listed: ListedLaunch): ResolvedLaunch {
+        const { id, name, kind, command, cwd, env, url, port, source, fingerprint } = listed;
+        const inside = relative(state.folder, cwd).split(sep).join('/');
+        const resolved = {
+            projectId,
+            folder: state.folder,
+            launch: {
+                id,
+                name,
+                kind,
+                command,
+                ...(inside === '' ? {} : { cwd: inside }),
+                ...(Object.keys(env).length === 0 ? {} : { env }),
+                ...(url === null ? {} : { url })
+            },
+            shared: false,
+            cwd,
+            command,
+            env,
+            url,
+            port,
+            sourced: { source, fingerprint }
+        };
+
+        return { ...resolved, approved: this.approvals.has(state.folder, approvalKeyOf(id), digestOf(resolved)) };
+    }
+
+    private resolvedOwn(projectId: string, state: LoadedLaunches): ResolvedLaunch[] {
         const sharedIds = new Set(launchesOf(state.shared).map((launch) => launch.id));
         return ordered(state).map((launch) => {
             const shared = sharedIds.has(launch.id);
@@ -517,14 +634,24 @@ export class LaunchStore {
                 approvedIds.add(entry.launch.id);
             }
         }
+        const sourced = resolved.flatMap(({ launch, sourced: from }) =>
+            from === undefined || launch.kind === 'group'
+                ? []
+                : [{ id: launch.id, name: launch.name, kind: launch.kind, command: launch.command ?? '', ...sourcedRest(launch), source: from.source }]
+        );
+
         return {
             rev: state.rev,
-            launches: resolved.map(({ launch, shared }) => {
-                const overlay = shared ? state.overlays[launch.id] : undefined;
-                return { ...launch, shared, ...(overlay ? { overlay } : {}) };
-            }),
+            // Only what the files hold: a client saves this list whole, and a launch of a source is in no file.
+            launches: resolved
+                .filter((entry) => entry.sourced === undefined)
+                .map(({ launch, shared }) => {
+                    const overlay = shared ? state.overlays[launch.id] : undefined;
+                    return { ...launch, shared, ...(overlay ? { overlay } : {}) };
+                }),
             approved: resolved.filter((entry) => approvedIds.has(entry.launch.id)).map((entry) => entry.launch.id),
-            ...this.afterSettleOf(projectId, state.folder, resolved)
+            ...this.afterSettleOf(projectId, state.folder, resolved),
+            ...(sourced.length === 0 ? {} : { sourced })
         };
     }
 
@@ -571,6 +698,7 @@ export class LaunchStore {
         takePrivate(state, own);
         this.loaded.set(projectId, state);
         this.watch(projectId, state);
+        this.sources?.follow(projectId);
         return state;
     }
 
@@ -600,6 +728,14 @@ export class LaunchStore {
         state.settle = settle;
         state.watchers = watchers;
     }
+}
+
+function sourcedRest(launch: LaunchConfig): Pick<LaunchConfig, 'cwd' | 'env' | 'url'> {
+    return {
+        ...(launch.cwd === undefined ? {} : { cwd: launch.cwd }),
+        ...(launch.env === undefined ? {} : { env: launch.env }),
+        ...(launch.url === undefined ? {} : { url: launch.url })
+    };
 }
 
 function secretSlotsOf(launches: readonly ResolvedLaunch[]): { launchId: string; variable: string }[] {

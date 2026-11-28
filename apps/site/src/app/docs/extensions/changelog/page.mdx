@@ -6,6 +6,73 @@ export const metadata = { title: 'Changes to the API' };
 
 API version `1` is a preview. It goes to a small group of invited developers first, and it can still change before Ruimte offers extensions to everyone. Every change lands on this page, newest first, with what an extension has to do about it.
 
+## 1, preview, a started machine joins the account (November 2026)
+
+- `inside` replaces `login` in what `start` of a machine source answers. It says how Ruimte runs a command where the new machine lives. With it, the new machine joins the person's account on their approval of the start, with no page and no code.
+- An extension that answered `login` answers `inside` now: the program without the `ruimte login` at its end, such as `docker exec dev`. Ruimte ignores a `login` it is still handed, and the machine then joins no account.
+
+## 1, preview, agent providers (November 2026)
+
+- `defineAgentProvider` in `server/` offers an agent that speaks ACP in the model pickers. You describe its program and Ruimte starts it for a chat. It is a proposed part, behind the new permission `agents.provide`.
+- An extension needs no change.
+
+## 1, preview, marks in the editor's margin (November 2026)
+
+- `defineEditorDecoration` in `client/` marks lines beside the line numbers of an open file, in a kind Ruimte colors. It reads only: it is told which file and nothing of what is in it. It is a proposed part, `editorDecorations`, and takes no permission.
+- An extension needs no change.
+
+## 1, preview, languages (November 2026)
+
+- `defineLanguage` in `client/` names the files of a language of your own and the TextMate grammar that colors them in the editor and the viewer. It is a proposed part, `languages`, and takes no permission.
+- An extension needs no change.
+
+## 1, preview, settings of a project (November 2026)
+
+- `defineProjectSettings` in `client/` adds a section to the settings of a project, with fields Ruimte draws. `useProjectSetting` reads a field for the project in front, and `projectSettings.get` reads it in `server/`. It is a proposed part, `projectSettings`, and takes no permission.
+- An extension needs no change.
+
+## 1, preview, references and slash commands from the machine (November 2026)
+
+- `defineReference` and `defineSlashCommand` also exist in `server/`. What they offer after `#` and `/` shows in every client of the machine, also one that did not load your `client/`. Both are proposed parts, behind the new permission `composer.provide`.
+- The ones in `client/` stay as they are. An extension needs no change.
+
+## 1, preview, live data for a chat (November 2026)
+
+- `defineUiSource` in `server/` gives the blocks an agent writes in a chat live data of your extension, drawn by the components Ruimte has. It is a proposed part, behind the new permission `ui.provide`.
+- An extension needs no change.
+
+## 1, preview, notification channels (November 2026)
+
+- `defineNotificationChannel` in `server/` delivers what Ruimte tells a person about their agents somewhere else. Ruimte decides when, as for a push to a phone, and a person turns the channel on under Settings, Notifications. It is a proposed part, behind the new permission `notifications.provide`.
+- An extension needs no change.
+
+## 1, preview, machine sources (November 2026)
+
+- `defineMachineSource` in `server/` lists places where Ruimte can start a machine, and describes the programs that start one. Ruimte runs them after the person approved them, and the new machine joins the account through its own `ruimte login`. It is a proposed part, behind the new permission `machines.provide`.
+- An extension needs no change.
+
+## 1, preview, what a chat waits on (November 2026)
+
+- `chats.inspect` reads what a chat runs on and whether it waits for an approval or an answer, with `chats.read`. In `server/` it is the machine action `chat.inspect`.
+
+## 1, preview, launch sources and problems (November 2026)
+
+- `defineLaunchSource` in `server/` lists launches Ruimte starts, each only after the person approved its command, folder, variables and fingerprint. It is a proposed part, behind `launches.provide`.
+- `defineProblemSource` and `problems` in `server/` report problems that show with the editor's own and that agents read. Both are a proposed part, behind `problems.provide`.
+- `files` is in `server/` as well, where `readText`, `list` and `watch` name the project.
+- `onEvent` in `server/` hears `launch.status` with `launches.read`, and `project.opened` and `project.closed` with the new permission `projects.read`. It takes a third argument that narrows an event to one project.
+- `launches.create` and `launches.edit` add and change a launch, with the new permission `launches.write`. Neither approves it.
+- A launch in `launches.list` has a `source`, which is `null` for a launch of the project's own files.
+- An extension needs no change.
+
+## 1, preview, terminals and proposed parts (November 2026)
+
+- `terminals.open` in the client now answers a promise. The machine makes the terminal and starts it, so a write right after it lands. An extension that read its answer without `await` adds one.
+- `terminals.write` types into a terminal the extension opened itself, with the new permission `terminals.write`. Every other terminal answers `refused`.
+- `terminals` is in `server/` as well, where `open` names the project.
+- The manifest takes `provides` and `proposed`. A proposed part works under `ruimte extension dev` and can change in any release. An installed extension that names one does not load.
+- `defineTerminalProfile` in `server/` adds a kind of terminal to the menu of a new terminal. It is the first proposed part, behind `terminals.profiles`.
+
 ## 1, preview, agents, the canvas and settings (November 2026)
 
 - `useAgent` reads one agent: its status, what it works on (`activity`), whether a wait was `snoozed`, and its folder and branch. Its `provider` can now be `null`. A chat or a design started on the default CLI has none until it reports which CLI it runs on. A terminal has an agent only once its CLI reported, so its `provider` is never `null`. In the test host an agent's `provider` is `null` unless the test names one, where it was `'claude'` before. `useSubagents` lists a chat's sub-agents at work, and `useProviders` the agents a person can start. The first two need `agents.status`.

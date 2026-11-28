@@ -2,9 +2,10 @@
  * What an extension may do, decided without doing it: the host refuses with it, and `ruimte extension test` holds an
  * author's code to the same answers. Pure, so both carry it, and it imports nothing that needs zod.
  */
-import type { AgentInfo, ChatInfo, ExtensionManifest } from '@ruimte/contracts';
-import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
+import type { AgentInfo, ChatInfo, ExtensionManifest, LaunchStatus } from '@ruimte/contracts';
+import { extensionCallPermission, missingPermissionMessage } from '@ruimte/contracts/extension-client';
 import { extensionActionPermission } from '@ruimte/contracts/extension-permissions';
+import { providedIds } from '@ruimte/contracts/extension-providers';
 import { extensionAgentStatus, extensionChatOf, type ExtensionErrorCode } from '@ruimte/contracts/extension-results';
 
 /* Why the host does not do what an extension asked, under the code it reads. */
@@ -32,6 +33,21 @@ const SERVER_EVENTS: Readonly<Record<string, { permission: string; payload(paylo
             nodeId: sessionId,
             status: extensionAgentStatus(agent?.status, (agent?.requests?.length ?? 0) > 0)
         })
+    },
+    // Not the session it runs in nor where: its output is `launch.read`'s to give.
+    'launch.status': {
+        permission: 'launches.read',
+        payload: ({ projectId, launchId, state, exitCode }: LaunchStatus) => ({ project: { id: projectId }, launch: launchId, state, exitCode })
+    },
+    'project.opened': {
+        permission: 'projects.read',
+        payload: ({ project }: { project: { id: string; name: string; folder: string } }) => ({
+            project: { id: project.id, name: project.name, folder: project.folder }
+        })
+    },
+    'project.closed': {
+        permission: 'projects.read',
+        payload: ({ projectId }: { projectId: string }) => ({ project: { id: projectId } })
     }
 };
 
@@ -98,7 +114,56 @@ export function askRefusal(id: string, method: string, args: readonly unknown[],
         return missingPermission(id, 'languages.servers', permissions);
     }
 
-    return missingPermission(id, method === 'chats.list' || method === 'chats.read' ? 'chats.read' : method, permissions);
+    // Stopping a watch is part of having one.
+    if (method === 'files.unwatch') {
+        return missingPermission(id, 'files.read', permissions);
+    }
+
+    return missingPermission(id, extensionCallPermission(method) ?? method, permissions);
+}
+
+/* What the machine keeps of a terminal an extension had a hand in; null for one a person or an agent opened. */
+export interface TerminalRecord {
+    openedBy?: string | undefined;
+}
+
+/*
+ * Why an extension may not type into a terminal: it did not open that terminal itself, by the machine's own record and
+ * never by what the extension says, or an agent in it waits for the person, whose answer stays theirs.
+ */
+export function terminalWriteRefusal(id: string, nodeId: string, record: TerminalRecord | null, awaitsPerson: boolean): Refusal | null {
+    if (record?.openedBy !== id) {
+        return { code: 'refused', message: `${id} did not open the terminal ${nodeId}, so it cannot type into it` };
+    }
+
+    if (awaitsPerson) {
+        return { code: 'refused', message: `An agent in the terminal ${nodeId} waits for the person, so nothing is typed into it` };
+    }
+
+    return null;
+}
+
+type ProvidingManifest = Pick<ExtensionManifest, 'id' | 'permissions' | 'provides' | 'proposed'>;
+
+/* Why an extension may not act for one thing of a kind it supplies: without the permission, or an id its manifest may not supply here. */
+function providedRefusal(manifest: ProvidingManifest, kind: string, permission: string, what: string, id: string, proposedAllowed: boolean): Refusal | null {
+    const missing = missingPermission(manifest.id, permission, permissionsOf(manifest));
+
+    if (missing !== null) {
+        return missing;
+    }
+
+    return providedIds(manifest, kind, proposedAllowed).includes(id) ? null : { code: 'not-found', message: `${manifest.id} supplies no ${what} ${id}` };
+}
+
+/* Why a terminal cannot run a profile of an extension: one its manifest may not supply here. Null when it can. */
+export function terminalProfileRefusal(manifest: ProvidingManifest, profile: string, proposedAllowed: boolean): Refusal | null {
+    return providedRefusal(manifest, 'terminalProfiles', 'terminals.profiles', 'terminal profile', profile, proposedAllowed);
+}
+
+/* Why an extension cannot report or clear problems under a source: one its manifest may not supply here. Null when it can. */
+export function problemSourceRefusal(manifest: ProvidingManifest, source: string, proposedAllowed: boolean): Refusal | null {
+    return providedRefusal(manifest, 'problemSources', 'problems.provide', 'problem source', source, proposedAllowed);
 }
 
 // A loop of an extension and a chat costs the person's plan, so a chat stops listening well before that hurts.

@@ -211,8 +211,9 @@ export const cases: WriteCases = {
         }
     },
     'launch.create': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { name: 'Dev', kind: 'service', command: 'bun dev', url: 'http://localhost:5173', env: { PORT: '5173' } },
+        restricted: { shared: { value: true, actors: ['person', 'agent'] } },
         refused: {
             'a kind of launch it has not': { name: 'Dev', kind: 'daemon', command: 'bun dev' },
             'a blank name': { name: ' ', kind: 'task', command: 'bun test' },
@@ -221,7 +222,7 @@ export const cases: WriteCases = {
         }
     },
     'launch.edit': {
-        actors: ['person', 'agent'],
+        actors: ['person', 'agent', 'extension'],
         input: { launch: 'dev', command: 'bun run dev', env: { DEBUG: null } },
         refused: { 'no launch': { command: 'bun run dev' }, 'an empty command': { launch: 'dev', command: ' ' } }
     },

@@ -141,11 +141,24 @@ Each of these calls the machine action of the same name, so `launches.start({ la
 
 | Object | Calls | Permissions |
 | --- | --- | --- |
-| `launches` | `list`, `read`, `start`, `restart`, `stop` | `launches.read` to read, `launches.run` for the rest |
+| `launches` | `list`, `read`, `start`, `restart`, `stop`, `create`, `edit` | `launches.read` to read, `launches.write` for `create` and `edit`, `launches.run` for the rest |
 | `routines` | `list`, `run`, `pause`, `resume` | `routines.read` to list, `routines.run` for the rest |
 | `artifacts` | `list`, `read`, `publish` | `artifacts.read` to read, `artifacts.write` to publish |
 | `browser` | `inspect`, `navigate`, `back`, `forward`, `reload`, `screenshot` | `browser.control` |
 | `devices` | `list`, `inspect`, `screenshot`, `tap`, `launch` | `devices.control` |
+
+`launches.create` adds a launch to the person's own launches, and `launches.edit` changes one. Neither approves anything. The launch starts only after the person approved it from the launch menu, and `launches.start` answers `refused` until then:
+
+```ts
+const added = await launches.create({
+    name: 'Preview',
+    kind: 'service',
+    command: 'bun run preview',
+    url: 'http://localhost:4173'
+});
+```
+
+Each launch in `launches.list` has a `source`: the title of the [launch source](/docs/extensions/server#launch-sources) that lists it, or `null` for a launch of the project's own files. A launch of a source cannot be edited.
 
 A browser or device takes the node it is on:
 
@@ -179,7 +192,23 @@ The same `key` adds a new version to the same artifact. Pass a `requestId` of yo
 
 ## Terminals
 
-`terminals.read(node)` answers what a terminal shows, with `terminals.read`. `terminals.open()` opens a shell beside the nodes you name, with `canvas.write`. Only a person types into a terminal.
+`terminals.read(node)` answers what a terminal shows, with `terminals.read`.
+
+`terminals.open()` opens a terminal on the canvas in front, beside the nodes you name, with `canvas.write`. The machine makes the terminal and starts it, so the call answers a promise. With `profile` it runs a [terminal profile](/docs/extensions/server#terminal-profiles) of your extension instead of a plain shell.
+
+`terminals.write(terminal, text)` types into a terminal, with `terminals.write`. The text goes in as it is, so end a line with `\n` to run it:
+
+```ts
+const opened = await terminals.open({
+    title: 'Build'
+});
+
+if (opened.ok) {
+    await terminals.write(opened.value, 'make build\n');
+}
+```
+
+An extension types only into a terminal it opened itself. The machine writes down who opened a terminal when it makes it, and goes by that record alone. `write` answers `refused` for every other terminal, also one a person opened with your profile. It answers `refused` in your own terminal as well while an agent there waits for the person, since that answer is theirs.
 
 ## Context
 

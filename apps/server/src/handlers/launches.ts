@@ -37,6 +37,11 @@ function registerRequests(dispatcher: Dispatcher, { store, runner }: LaunchesDep
         return {};
     });
 
+    dispatcher.register('launches.approveSource', async (payload) => {
+        await store.approveSource(payload.projectId, payload.extension, payload.source);
+        return {};
+    });
+
     dispatcher.register('launch.start', (payload) =>
         runner.start(payload.projectId, payload.launchId, { actor: 'person', approve: payload.approve, replace: payload.replace })
     );

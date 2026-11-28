@@ -366,6 +366,17 @@
     "event.endpoint.changed #/properties/agentIntegrations/properties/providers/items/properties/state": ["off", "on", "unset"],
     "event.endpoint.changed #/properties/keepAwake": ["always", "off", "working"],
     "event.endpoint.changed #/properties/nameSource": ["chosen", "default"],
+    "event.extension.machineChanged #/properties/candidate/properties/join": ["joined", "signed"],
+    "event.extension.machineChanged #/properties/candidate/properties/state": [
+        "done",
+        "failed",
+        "held",
+        "idle",
+        "joining",
+        "preparing",
+        "starting",
+        "stopped"
+    ],
     "event.git.progress #/properties/phase": [
         "branch",
         "commit",
@@ -387,6 +398,7 @@
     "event.launch.status #/properties/kind": ["group", "service", "task"],
     "event.launch.status #/properties/state": ["exited", "running", "starting", "stopping"],
     "event.launches.changed #/properties/document/properties/launches/items/properties/kind": ["group", "service", "task"],
+    "event.launches.changed #/properties/document/properties/sourced/items/properties/kind": ["service", "task"],
     "event.plan.changed #/properties/plan/properties/items/items/oneOf/0/properties/items/items/oneOf/1/properties/by": ["agent", "person"],
     "event.plan.changed #/properties/plan/properties/items/items/oneOf/0/properties/items/items/oneOf/1/properties/checks": ["agent", "anyone", "person"],
     "event.plan.changed #/properties/plan/properties/items/items/oneOf/0/properties/items/items/oneOf/1/properties/state": [
@@ -1401,6 +1413,28 @@
     "request.endpoint.settings.result #/properties/terminalShell": ["cmd", "git-bash", "powershell", "wsl"],
     "request.extension.install.result #/properties/status": ["crashed", "disabled", "idle", "running"],
     "request.extension.list.result #/properties/extensions/items/properties/status": ["crashed", "disabled", "idle", "running"],
+    "request.extension.machineList.result #/properties/candidates/items/properties/join": ["joined", "signed"],
+    "request.extension.machineList.result #/properties/candidates/items/properties/state": [
+        "done",
+        "failed",
+        "held",
+        "idle",
+        "joining",
+        "preparing",
+        "starting",
+        "stopped"
+    ],
+    "request.extension.machineStart.result #/properties/candidate/properties/join": ["joined", "signed"],
+    "request.extension.machineStart.result #/properties/candidate/properties/state": [
+        "done",
+        "failed",
+        "held",
+        "idle",
+        "joining",
+        "preparing",
+        "starting",
+        "stopped"
+    ],
     "request.fs.list.result #/properties/entries/items/properties/kind": ["directory", "file", "other", "symlink"],
     "request.git.blame.result #/properties/omitted": ["too-large", "untracked"],
     "request.git.blob.result #/properties/omitted": ["binary", "gitlink", "missing", "not-file", "too-large"],
@@ -1508,6 +1542,7 @@
         "vscode-launch"
     ],
     "request.launches.read.result #/properties/launches/items/properties/kind": ["group", "service", "task"],
+    "request.launches.read.result #/properties/sourced/items/properties/kind": ["service", "task"],
     "request.peer.artifactGet.result #/properties/versions/items/properties/origin/properties/provenance/properties/maker": ["agent", "person", "routine"],
     "request.peer.artifactGet.result #/properties/versions/items/properties/provenance/properties/maker": ["agent", "person", "routine"],
     "request.peer.artifactList.result #/properties/artifacts/items/properties/latest/properties/origin/properties/provenance/properties/maker": [

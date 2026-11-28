@@ -10,6 +10,8 @@ export const EXTENSION_ACTIONS: Readonly<Record<ExtensionActionName, string>> = 
     'launch.start': 'launches.run',
     'launch.restart': 'launches.run',
     'launch.stop': 'launches.run',
+    'launch.create': 'launches.write',
+    'launch.edit': 'launches.write',
     'routine.list': 'routines.read',
     'routine.run': 'routines.run',
     'routine.pause': 'routines.run',
@@ -27,7 +29,8 @@ export const EXTENSION_ACTIONS: Readonly<Record<ExtensionActionName, string>> = 
     'device.inspect': 'devices.control',
     'device.screenshot': 'devices.control',
     'device.tap': 'devices.control',
-    'device.launch': 'devices.control'
+    'device.launch': 'devices.control',
+    'chat.inspect': 'chats.read'
 };
 
 /* Every permission a manifest may ask for, beside `net:<host>`. Each opens something; a name not here opens nothing. */
@@ -43,9 +46,19 @@ export const EXTENSION_PERMISSIONS: readonly string[] = [
     'languages.servers',
     'launches.read',
     'launches.run',
+    'launches.write',
+    'launches.provide',
     'routines.read',
     'routines.run',
+    'problems.provide',
+    'machines.provide',
+    'notifications.provide',
+    'ui.provide',
+    'composer.provide',
+    'projects.read',
     'terminals.read',
+    'terminals.write',
+    'terminals.profiles',
     'files.read',
     'files.write',
     'git.read',
@@ -55,6 +68,7 @@ export const EXTENSION_PERMISSIONS: readonly string[] = [
     'agents.start',
     'agents.status',
     'agents.tools',
+    'agents.provide',
     'usage.read',
     'clock'
 ];

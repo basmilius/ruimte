@@ -28,6 +28,12 @@
         "cancel": "Annuleren",
         "confirm": "Starten"
     },
+    "source": {
+        "from": "Van {{name}}",
+        "approveTitle": "Een commando van {{name}} uitvoeren?",
+        "approveDescription": "{{name}} las deze launch uit een bestand in het project. Hij draait pas op deze machine als je hem goedkeurt, en vraagt het opnieuw als dat bestand verandert.",
+        "approveAll": "Alles van {{name}} goedkeuren"
+    },
     "busy": {
         "title": "Poort {{port}} is bezet",
         "description": "{{other}} stoppen en {{name}} starten?",

@@ -85,12 +85,20 @@ export class RuimteProject {
                 ...(panelBodyHeight === undefined ? {} : { panelBodyHeight }),
                 onPanelResize: writePanelHeight,
                 // Machine reports include documents held by other clients, which the shared editor does not own.
-                problemSource: (listener) =>
-                    transport.on('language.diagnostics', (event) => {
+                problemSource: (listener) => {
+                    const stop = transport.on('language.diagnostics', (event) => {
                         if (event.projectId === projectId) {
                             listener({ path: event.path, server: event.server, diagnostics: event.diagnostics as Diagnostic[] });
                         }
-                    }),
+                    });
+
+                    // What extensions reported before this window listened comes in as the same event, once asked for.
+                    if (machineAnswers(transport.connection, 'language.reportedProblems')) {
+                        void fireAndForget('language.reportedProblems', transport.request('language.reportedProblems', { projectId }));
+                    }
+
+                    return stop;
+                },
                 /*
                  * Asks the machine for the problems of every file its servers know. The reports come in as `language.diagnostics`
                  * events, through `problemSource`, so nothing is read from the answer but whether a server took part.

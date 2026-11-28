@@ -1,10 +1,15 @@
 import { Skeleton, Button, ErrorBoundary, Icon, SectionLabel } from '@adecore/ui';
 import { MasterDetail, MasterItem } from '@adecore/ui/settings';
 import { Laptop, Plus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isDesktop } from '@/desktop/bridge';
 import { AccountAvatar } from '@/machine-ui/AccountAvatar';
+import { DevcontainerDetail } from '@/machine-ui/DevcontainerDetail';
+import { useDevcontainers, useWatchDevcontainers } from '@/machine-ui/devcontainers';
+import { candidateKey, useMachineCandidates } from '@/machine-ui/machine-candidates';
+import { ProjectCandidateDetail } from '@/machine-ui/MachineCandidateDetail';
+import { MachineCandidateItem } from '@/machine-ui/MachineCandidateItem';
 import { MachineDetail } from '@/machine-ui/MachineDetail';
 import { MachineListItem } from '@/machine-ui/MachineListItem';
 import { RuimteAccountDetail } from '@/machine-ui/RuimteAccountDetail';
@@ -49,18 +54,45 @@ export function MachinesPane() {
     const current = currentPick(picked, entries, offersThisComputer);
     const currentEntry = current.kind === 'machine' ? (entries.find((entry) => entry.id === current.id) ?? null) : null;
 
+    // A place an extension can start a machine in is no machine yet, so it is picked apart from the machines and wins while it is listed.
+    const { projectId, candidates } = useMachineCandidates();
+    const [pickedCandidate, setPickedCandidate] = useState<string | null>(null);
+    const currentCandidate = candidates.find((candidate) => candidateKey(candidate) === pickedCandidate) ?? null;
+    const pick = (next: MachinePick): void => {
+        setPickedCandidate(null);
+        setPicked(next);
+    };
+
+    // A folder this app starts in a dev container itself, which shows the same way; a folder just picked comes into view.
+    useWatchDevcontainers();
+    const devcontainers = useDevcontainers((s) => s.starts);
+    const focusedDevcontainer = useDevcontainers((s) => s.focused);
+    const currentDevcontainer = devcontainers.find((start) => candidateKey(start.candidate) === pickedCandidate) ?? null;
+    const listedCandidates = [...candidates, ...devcontainers.map((start) => start.candidate)];
+    const [seenFocus, setSeenFocus] = useState<typeof focusedDevcontainer>(null);
+    if (focusedDevcontainer !== seenFocus) {
+        setSeenFocus(focusedDevcontainer);
+        const focused = devcontainers.find((start) => start.id === focusedDevcontainer?.id);
+        if (focused !== undefined) {
+            setPickedCandidate(candidateKey(focused.candidate));
+        }
+    }
+
     const [seenTarget, setSeenTarget] = useState<string | null>(null);
     if (target !== seenTarget) {
         setSeenTarget(target);
         const next = target === null ? null : pickForTarget(target, entries, currentEntry, windowEndpointId);
         if (next !== null) {
+            setPickedCandidate(null);
             setPicked(next);
         }
     }
 
+    const shown = currentCandidate === null && currentDevcontainer === null ? current.kind : 'candidate';
+
     const list = (
         <>
-            <MasterItem selected={current.kind === 'account'} onSelect={() => setPicked({ kind: 'account' })} className="min-h-14">
+            <MasterItem selected={shown === 'account'} onSelect={() => pick({ kind: 'account' })} className="min-h-14">
                 <AccountAvatar account={signedIn ? account : null} />
                 <span className="flex min-w-0 grow flex-col">
                     <span className="truncate text-sm text-text">{t('machines.account.row')}</span>
@@ -72,7 +104,7 @@ export function MachinesPane() {
                 </span>
             </MasterItem>
             {offersThisComputer && (
-                <MasterItem selected={current.kind === 'this-computer'} onSelect={() => setPicked({ kind: 'this-computer' })} className="mt-1 min-h-14">
+                <MasterItem selected={shown === 'this-computer'} onSelect={() => pick({ kind: 'this-computer' })} className="mt-1 min-h-14">
                     <span className="grid size-7.5 shrink-0 place-items-center rounded-lg bg-surface-hover">
                         <Icon icon={Laptop} size={16} className="text-text-muted" />
                     </span>
@@ -84,7 +116,7 @@ export function MachinesPane() {
             )}
             <div className="mt-2 flex min-w-0 shrink-0 items-center gap-2 border-t border-border pt-2.5 pl-3">
                 <SectionLabel className="grow">{t('machines.title')}</SectionLabel>
-                <Button size="sm" onClick={() => setPicked({ kind: 'account' })}>
+                <Button size="sm" onClick={() => pick({ kind: 'account' })}>
                     <Icon icon={Plus} size={14} />
                     {t('machines.add.short')}
                 </Button>
@@ -99,8 +131,8 @@ export function MachinesPane() {
                 <MachineListItem
                     key={entry.id}
                     entry={entry}
-                    selected={current.kind === 'machine' && current.id === entry.id}
-                    onSelect={() => setPicked({ kind: 'machine', id: entry.id })}
+                    selected={shown === 'machine' && current.kind === 'machine' && current.id === entry.id}
+                    onSelect={() => pick({ kind: 'machine', id: entry.id })}
                 />
             ))}
             {signedIn && machines === null && machinesError === null && (
@@ -109,6 +141,25 @@ export function MachinesPane() {
                     <Skeleton className="w-24" />
                 </div>
             )}
+            {listedCandidates.map((candidate, index) => {
+                const before = listedCandidates[index - 1]?.source;
+                const opensSource = before?.extension !== candidate.source.extension || before.id !== candidate.source.id;
+
+                return (
+                    <Fragment key={candidateKey(candidate)}>
+                        {opensSource && (
+                            <div className="mt-2 flex min-w-0 shrink-0 items-center border-t border-border pt-2.5 pl-3">
+                                <SectionLabel className="grow">{t('machines.sources.title', { source: candidate.source.title })}</SectionLabel>
+                            </div>
+                        )}
+                        <MachineCandidateItem
+                            candidate={candidate}
+                            selected={shown === 'candidate' && pickedCandidate === candidateKey(candidate)}
+                            onSelect={() => setPickedCandidate(candidateKey(candidate))}
+                        />
+                    </Fragment>
+                );
+            })}
             {signedIn && machinesError !== null && (
                 <p className="px-3 py-2 text-xs break-words text-status-error" role="alert">
                     {machinesError}
@@ -123,9 +174,13 @@ export function MachinesPane() {
             listLabel={t('machines.listLabel')}
             list={list}
             detail={
-                <ErrorBoundary label={t('machines.failed')} resetKeys={[current.kind, currentEntry?.id]}>
+                <ErrorBoundary label={t('machines.failed')} resetKeys={[shown, currentEntry?.id, pickedCandidate]}>
                     <div className="flex min-w-0 flex-col gap-7">
-                        {current.kind === 'this-computer' ? (
+                        {currentDevcontainer !== null ? (
+                            <DevcontainerDetail key={currentDevcontainer.id} start={currentDevcontainer} />
+                        ) : currentCandidate !== null && projectId !== null ? (
+                            <ProjectCandidateDetail key={candidateKey(currentCandidate)} projectId={projectId} candidate={currentCandidate} />
+                        ) : current.kind === 'this-computer' ? (
                             <ThisComputerDetail />
                         ) : currentEntry !== null ? (
                             <MachineDetail key={currentEntry.id} entry={currentEntry} />

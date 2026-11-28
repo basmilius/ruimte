@@ -25,6 +25,7 @@ import { fsArea } from '../handlers/fs.ts';
 import { gitArea } from '../handlers/git.ts';
 import { languageArea } from '../handlers/language.ts';
 import { launchesArea } from '../handlers/launches.ts';
+import { machineSourcesArea } from '../handlers/machine-sources.ts';
 import { planArea } from '../handlers/plan.ts';
 import { processesArea } from '../handlers/processes.ts';
 import { proposalsArea } from '../handlers/project-proposals.ts';
@@ -158,10 +159,11 @@ export function daemonAreas(input: AreaInput, later: AreaLater): Area[] {
         drawingArea({ store: projects.drawings }),
         diagramArea({ store: projects.diagrams }),
         launchesArea({ store: launches.store, runner: launches.runner }),
+        machineSourcesArea({ sources: extensions.machineSources }),
         databaseConnectionsLifecycle(databases.connections),
         templateArea({ store: templates.store }),
         databaseArea({ service: databases.service, connections: databases.connections, agents: databases.agents, sql: databases.sqlAnalysis }),
-        languageArea({ host: language.host }),
+        languageArea({ host: language.host, reported: extensions.problems }),
         editorAssistArea({ model: language.editorAssist }),
         provenanceArea({ provenance: language.provenance, machineHome: machine.machineHome }),
         fsArea(fsDeps(input)),

@@ -71,7 +71,7 @@ const routineNamed = (output: { routineId: string; title: string }) => ({ id: ou
 const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish'>]: Entry<Name, ActionName> } = {
     'launch.list': entry('launch.list', {
         input: () => ({}),
-        output: ({ launches }) => ({ launches: launches.map(({ launchId, ...launch }) => ({ id: launchId, ...launch })) })
+        output: ({ launches }) => ({ launches: launches.map(({ launchId, source, ...launch }) => ({ id: launchId, ...launch, source: source ?? null })) })
     }),
     'launch.read': entry('launch.read', {
         input: ({ launch, tail }) => ({ launch, tail: tail ?? null }),
@@ -83,6 +83,9 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
         input: ({ launch }) => ({ launch }),
         output: ({ launchId, name, stopping }) => ({ id: launchId, name, stopping })
     }),
+    // Never `shared`: which file a launch lives in is a person's, so an extension's launch goes in this person's own.
+    'launch.create': entry('launch.create', { input: (input) => input, output: launchNamed }),
+    'launch.edit': entry('launch.edit', { input: (input) => input, output: launchNamed }),
     'routine.list': entry('routine.list', { input: () => ({}), output: ({ routines }) => ({ routines: routines.map(routineOf) }) }),
     'routine.run': entry('routine.run', {
         input: ({ routine }) => ({ routineId: routine }),
@@ -155,7 +158,23 @@ const MACHINE_ACTIONS: { [Name in Exclude<ExtensionActionName, 'artifact.publish
         output: ({ nodeId, path, width, height }) => ({ node: { id: nodeId }, path, width, height })
     }),
     'device.tap': entry('device.tap', { input: (input) => ({ ...node(input), x: input.x, y: input.y }), output: ({ nodeId }) => ({ node: { id: nodeId } }) }),
-    'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) })
+    'device.launch': entry('device.launch', { input: (input) => ({ ...node(input), app: input.app }), output: ({ nodeId }) => ({ node: { id: nodeId } }) }),
+    // Counts and a kind only: the words of a question, an approval or a queued message are for who may answer them.
+    'chat.inspect': entry('chat.inspect', {
+        input: ({ chat }) => ({ chatId: chat }),
+        output: (output) => ({
+            id: output.chatId,
+            title: output.chat,
+            provider: output.provider,
+            model: output.model,
+            mode: output.runtimeMode,
+            working: output.working,
+            queued: output.queue.length,
+            waitsOn: output.approvals.length > 0 ? 'approval' : output.questions.length > 0 ? 'question' : null,
+            subagents: output.subagents.length,
+            background: output.tasks.length
+        })
+    })
 };
 
 export function outputOf<Action extends ActionName>(result: ActionResult<Action>): ActionOutput<Action> {

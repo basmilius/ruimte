@@ -66,6 +66,27 @@ async function chatOfSession(context: ServerActionContext, chatId: string): Prom
     return { ...chat, project: content.name ?? projectId };
 }
 
+/*
+ * The chat `chat.inspect` reads: Voice's as above, and for an extension a chat of the project its call came from and
+ * no other, on this machine. Only that one action is open to an extension, so nothing else here asks this way.
+ */
+async function inspectedChat(context: ServerActionContext, chatId: string): Promise<VoiceAgentPlace & { project: string }> {
+    if (context.extension !== true) {
+        return chatOfSession(context, chatId);
+    }
+
+    const { host, place } = context;
+    const located = host.projects.machineOfNode(chatId) === null ? host.projects.locate(chatId) : null;
+    const content = located?.projectId === place.projectId ? await host.projects.read(place.projectId) : null;
+    const chat = content === null ? null : projectChat(content, chatId);
+
+    if (content === null || chat === null) {
+        throw new ToolRefusal('not-found', `${chatId} is no chat of this project on this machine`);
+    }
+
+    return { ...chat, project: content.name ?? place.projectId };
+}
+
 /* The projects Voice may move to: those in use on this machine, or only the current one for a session that moves nowhere. */
 async function openProjectsOf(voice: VoiceCaller, context: ServerActionContext): Promise<VoiceOpenProject[]> {
     if (voice.projects !== undefined) {
@@ -258,7 +279,7 @@ export const voiceActions: ActionHandlers<ServerActionContext> = {
         return { output: resolveIn(content, context.place.canvasId, { ...input, target }) };
     },
     'chat.inspect': async ({ chatId }, { context }) => {
-        const chat = await chatOfSession(context, chatId);
+        const chat = await inspectedChat(context, chatId);
         const info = await context.host.chatThreads?.info?.(chatId);
         if (!info) {
             throw new ToolRefusal('chat-not-started', `“${chat.name}” has not started yet, so there is nothing to inspect`);

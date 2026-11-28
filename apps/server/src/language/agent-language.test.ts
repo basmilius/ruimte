@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { DatabaseConnection, LanguageRequestResult } from '@ruimte/contracts';
+import type { ReportedProblems } from '../extensions/problems.ts';
 import { AgentLanguage, characterColumn, hoverText, locationsOf, symbolsOf, utf16Column } from './agent-language.ts';
 import type { AgentDocument, LanguageHost } from './host.ts';
 import type { SqlFileContext } from './sql-file-context.ts';
@@ -68,6 +69,8 @@ interface RigOptions {
     text?: string;
     program?: string;
     workspace?: ReturnType<LanguageHost['cachedWorkspaceProblems']>;
+    /* What the problem sources of extensions hold, per file. */
+    reported?: ReportedProblems[];
 }
 
 function rig(options: RigOptions = {}): Rig {
@@ -100,6 +103,10 @@ function rig(options: RigOptions = {}): Rig {
                 }) as never,
             programOf: () => options.program ?? null,
             cachedWorkspaceProblems: () => options.workspace ?? { servers: [], pulled: true, files: 0, reports: [] }
+        },
+        reported: {
+            sourcesOf: () => (options.reported ?? []).map(({ server, title }) => ({ server, title })),
+            of: () => options.reported ?? []
         },
         sql: { fileContext: async () => context },
         readText: async () => text
@@ -279,6 +286,40 @@ describe('the problems of the whole project', () => {
 
         expect(answer.pulled).toBe(false);
         expect(answer.diagnostics.map((diagnostic) => diagnostic.message)).toEqual(['seen']);
+    });
+
+    test('lists what a problem source of an extension reported beside the servers, under its source, also with no server running', async () => {
+        const lintel: ReportedProblems = {
+            server: 'dev.lintel/rules',
+            title: 'Lintel',
+            path: 'src/a.ts',
+            absolutePath: '/work/src/a.ts',
+            problems: [{ line: 3, column: 5, severity: 'warning', message: 'A TODO is left here', code: 'todo' }]
+        };
+        const alone = await rig({ reported: [lintel] }).agent.problems(PLACE, 'chat-1', null);
+        const beside = await rig({
+            text: 'abc\n',
+            reported: [lintel],
+            workspace: { servers: ['typescript'], pulled: true, files: 1, reports: [report('src/a.ts', 'typescript', problem('from the server'))] }
+        }).agent.problems(PLACE, 'chat-1', null);
+
+        expect(alone.servers).toEqual([{ kind: 'extension', process: 'dev.lintel/rules' }]);
+        expect(alone.diagnostics).toEqual([
+            {
+                path: 'src/a.ts',
+                line: 3,
+                column: 5,
+                endLine: 3,
+                endColumn: 5,
+                severity: 'warning',
+                server: 'dev.lintel/rules',
+                source: 'Lintel',
+                code: 'todo',
+                message: 'A TODO is left here'
+            }
+        ]);
+        expect(beside.files).toBe(1);
+        expect(beside.diagnostics.map((diagnostic) => `${diagnostic.line} ${diagnostic.source}`)).toEqual(['1 ts', '3 Lintel']);
     });
 
     test('refuses when no running server reports for the whole project', async () => {

@@ -126,6 +126,7 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/csp": "workspace:*",
         "@ruimte/desktop-bridge": "workspace:*",
+        "@ruimte/devcontainer": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "@ruimte/telemetry": "workspace:*",
@@ -272,6 +273,94 @@
         "wrangler": "^4.168.0",
       },
     },
+    "extensions/dev/beacon": {
+      "name": "@ruimte/extension-dev-beacon",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.5",
+        "@types/react": "^19.3.3",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/boardwalk": {
+      "name": "@ruimte/extension-dev-boardwalk",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.5",
+        "@types/react": "^19.3.3",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/harbor": {
+      "name": "@ruimte/extension-dev-harbor",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.5",
+        "@types/react": "^19.3.3",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/lintel": {
+      "name": "@ruimte/extension-dev-lintel",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.5",
+      },
+    },
+    "extensions/dev/pulseboard": {
+      "name": "@ruimte/extension-dev-pulseboard",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.5",
+        "@types/react": "^19.3.3",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/dev/trackline": {
+      "name": "@ruimte/extension-dev-trackline",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/extension": "workspace:*",
+        "react": "^19.3.1",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "^21.0.4",
+        "@types/bun": "^1.4.5",
+        "@types/react": "^19.3.3",
+        "react-dom": "^19.3.1",
+      },
+    },
+    "extensions/devcontainers": {
+      "name": "@ruimte/extension-devcontainers",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/devcontainer": "workspace:*",
+        "@ruimte/extension": "workspace:*",
+      },
+    },
     "extensions/limits": {
       "name": "@ruimte/extension-limits",
       "version": "0.0.0",
@@ -301,19 +390,6 @@
         "@types/react": "^19.3.3",
       },
     },
-    "extensions/poc/agents": {
-      "name": "@ruimte/extension-poc-agents",
-      "version": "0.0.0",
-      "dependencies": {
-        "@ruimte/extension": "workspace:*",
-        "react": "^19.3.1",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "^21.0.4",
-        "@types/react": "^19.3.3",
-        "react-dom": "^19.3.1",
-      },
-    },
     "extensions/poc/broken": {
       "name": "@ruimte/extension-poc-broken",
       "version": "0.0.0",
@@ -327,17 +403,6 @@
     },
     "extensions/poc/broken-load": {
       "name": "@ruimte/extension-poc-broken-load",
-      "version": "0.0.0",
-      "dependencies": {
-        "@ruimte/extension": "workspace:*",
-        "react": "^19.3.1",
-      },
-      "devDependencies": {
-        "@types/react": "^19.3.3",
-      },
-    },
-    "extensions/poc/chat": {
-      "name": "@ruimte/extension-poc-chat",
       "version": "0.0.0",
       "dependencies": {
         "@ruimte/extension": "workspace:*",
@@ -385,18 +450,6 @@
         "@types/react": "^19.3.3",
       },
     },
-    "extensions/poc/server": {
-      "name": "@ruimte/extension-poc-server",
-      "version": "0.0.0",
-      "dependencies": {
-        "@ruimte/extension": "workspace:*",
-        "react": "^19.3.1",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.4.5",
-        "@types/react": "^19.3.3",
-      },
-    },
     "extensions/poc/surfaces": {
       "name": "@ruimte/extension-poc-surfaces",
       "version": "0.0.0",
@@ -417,19 +470,6 @@
       },
       "devDependencies": {
         "@types/react": "^19.3.3",
-      },
-    },
-    "extensions/poc/workspace": {
-      "name": "@ruimte/extension-poc-workspace",
-      "version": "0.0.0",
-      "dependencies": {
-        "@ruimte/extension": "workspace:*",
-        "react": "^19.3.1",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "^21.0.4",
-        "@types/react": "^19.3.3",
-        "react-dom": "^19.3.1",
       },
     },
     "extensions/theme-umbra": {
@@ -486,6 +526,14 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.5",
+        "typescript": "^7.0.2",
+      },
+    },
+    "packages/devcontainer": {
+      "name": "@ruimte/devcontainer",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.5",
         "typescript": "^7.0.2",
@@ -1340,19 +1388,31 @@
 
     "@ruimte/desktop-bridge": ["@ruimte/desktop-bridge@workspace:packages/desktop-bridge"],
 
+    "@ruimte/devcontainer": ["@ruimte/devcontainer@workspace:packages/devcontainer"],
+
     "@ruimte/extension": ["@ruimte/extension@workspace:packages/extension"],
+
+    "@ruimte/extension-dev-beacon": ["@ruimte/extension-dev-beacon@workspace:extensions/dev/beacon"],
+
+    "@ruimte/extension-dev-boardwalk": ["@ruimte/extension-dev-boardwalk@workspace:extensions/dev/boardwalk"],
+
+    "@ruimte/extension-dev-harbor": ["@ruimte/extension-dev-harbor@workspace:extensions/dev/harbor"],
+
+    "@ruimte/extension-dev-lintel": ["@ruimte/extension-dev-lintel@workspace:extensions/dev/lintel"],
+
+    "@ruimte/extension-dev-pulseboard": ["@ruimte/extension-dev-pulseboard@workspace:extensions/dev/pulseboard"],
+
+    "@ruimte/extension-dev-trackline": ["@ruimte/extension-dev-trackline@workspace:extensions/dev/trackline"],
+
+    "@ruimte/extension-devcontainers": ["@ruimte/extension-devcontainers@workspace:extensions/devcontainers"],
 
     "@ruimte/extension-limits": ["@ruimte/extension-limits@workspace:extensions/limits"],
 
     "@ruimte/extension-pets": ["@ruimte/extension-pets@workspace:extensions/pets"],
 
-    "@ruimte/extension-poc-agents": ["@ruimte/extension-poc-agents@workspace:extensions/poc/agents"],
-
     "@ruimte/extension-poc-broken": ["@ruimte/extension-poc-broken@workspace:extensions/poc/broken"],
 
     "@ruimte/extension-poc-broken-load": ["@ruimte/extension-poc-broken-load@workspace:extensions/poc/broken-load"],
-
-    "@ruimte/extension-poc-chat": ["@ruimte/extension-poc-chat@workspace:extensions/poc/chat"],
 
     "@ruimte/extension-poc-contract": ["@ruimte/extension-poc-contract@workspace:extensions/poc/contract"],
 
@@ -1360,13 +1420,9 @@
 
     "@ruimte/extension-poc-machine": ["@ruimte/extension-poc-machine@workspace:extensions/poc/machine"],
 
-    "@ruimte/extension-poc-server": ["@ruimte/extension-poc-server@workspace:extensions/poc/server"],
-
     "@ruimte/extension-poc-surfaces": ["@ruimte/extension-poc-surfaces@workspace:extensions/poc/surfaces"],
 
     "@ruimte/extension-poc-themes": ["@ruimte/extension-poc-themes@workspace:extensions/poc/themes"],
-
-    "@ruimte/extension-poc-workspace": ["@ruimte/extension-poc-workspace@workspace:extensions/poc/workspace"],
 
     "@ruimte/extension-theme-umbra": ["@ruimte/extension-theme-umbra@workspace:extensions/theme-umbra"],
 

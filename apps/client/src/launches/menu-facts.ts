@@ -1,6 +1,6 @@
 import type { MenuFacts, MenuHost } from '@/commands/menu-context';
 import { afterSettleCandidates, chosenLaunchId } from '@/launches/actions';
-import { launchViews } from '@/launches/model';
+import { launchViews, shownLaunches } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { currentEndpointId } from '@/state/current-endpoint';
 import { endpointKey } from '@/state/keys';
@@ -34,7 +34,7 @@ export function launchFacts(_host: MenuHost): Pick<MenuFacts, 'launches' | 'chos
     const views = launchViews(document, statuses[key] ?? {});
 
     return {
-        launches: document.launches.map((launch) => ({ id: launch.id, name: launch.name, live: views.get(launch.id)?.live === true })),
+        launches: shownLaunches(document).map((launch) => ({ id: launch.id, name: launch.name, live: views.get(launch.id)?.live === true })),
         chosenLaunch: chosenLaunchId(),
         afterSettle: {
             tasks: afterSettleCandidates(document).map((launch) => ({ id: launch.id, name: launch.name })),

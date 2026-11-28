@@ -39,6 +39,66 @@ export const metadata = { title: 'The manifest' };
 | `themes` | The paths of its theme files. See [Themes](/docs/extensions/themes). |
 | `activation` | When the client part loads. Without it, with the app. |
 | `autostart` | Starts the server part with the machine, for an extension that follows events with no client open. |
+| `provides` | What it supplies to Ruimte, per kind, by id. See [What it provides](#what-it-provides). |
+| `proposed` | The proposed parts of the API it uses, by name. See [Proposed parts](#proposed-parts). |
+
+## What it provides
+
+`provides` lists what an extension supplies, per kind, by id:
+
+```json
+{
+    "permissions": {
+        "terminals.profiles": "Adds a shell in a service to the menu of a new terminal"
+    },
+    "provides": {
+        "terminalProfiles": ["service-shell"]
+    },
+    "proposed": ["terminalProfiles"]
+}
+```
+
+Ruimte reads the list without starting the server part, so a provider shows before that process runs. The process starts once someone needs the provider. The server part registers each id it lists, and an id the manifest does not list is refused.
+
+| Kind | Registered with | Permission |
+| --- | --- | --- |
+| `terminalProfiles` | [`defineTerminalProfile`](/docs/extensions/server#terminal-profiles) | `terminals.profiles` |
+| `launchSources` | [`defineLaunchSource`](/docs/extensions/server#launch-sources) | `launches.provide` |
+| `problemSources` | [`defineProblemSource`](/docs/extensions/server#problems) | `problems.provide` |
+| `machineSources` | [`defineMachineSource`](/docs/extensions/server#machine-sources) | `machines.provide` |
+| `notificationChannels` | [`defineNotificationChannel`](/docs/extensions/server#notification-channels) | `notifications.provide` |
+| `uiSources` | [`defineUiSource`](/docs/extensions/server#live-data-for-a-chat) | `ui.provide` |
+| `references` | [`defineReference`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
+| `slashCommands` | [`defineSlashCommand`](/docs/extensions/server#references-and-slash-commands) | `composer.provide` |
+| `agentProviders` | [`defineAgentProvider`](/docs/extensions/server#agent-providers) | `agents.provide` |
+
+## Proposed parts
+
+A proposed part is open before its shape is settled. It can change or go in any release of Ruimte, also within API version `1`.
+
+- Name every proposed part you use under `proposed`. A call to one the manifest does not name is refused.
+- A proposed part works under `ruimte extension dev` and in the extensions Ruimte ships. An extension a person installed cannot use one.
+- `ruimte extension pack` builds the pack and warns that an install refuses it. `ruimte extension publish` stops.
+- An installed extension that names one does not load. Settings, Extensions shows why on its row.
+
+The machine decides this on where it knows an extension came from, never on the manifest.
+
+| Part | What it opens |
+| --- | --- |
+| `terminalProfiles` | `provides.terminalProfiles` and `defineTerminalProfile` |
+| `launchSources` | `provides.launchSources` and `defineLaunchSource` |
+| `problemSources` | `provides.problemSources`, `defineProblemSource` and `problems` |
+| `machineSources` | `provides.machineSources` and `defineMachineSource` |
+| `notificationChannels` | `provides.notificationChannels` and `defineNotificationChannel` |
+| `uiSources` | `provides.uiSources` and `defineUiSource` |
+| `references` | `provides.references` and `defineReference` in `server/` |
+| `slashCommands` | `provides.slashCommands` and `defineSlashCommand` in `server/` |
+| `agentProviders` | `provides.agentProviders` and `defineAgentProvider` |
+| `projectSettings` | [`defineProjectSettings`](/docs/extensions/settings#settings-of-a-project) and `useProjectSetting` in `client/`, `projectSettings` in `server/` |
+| `languages` | [`defineLanguage`](/docs/extensions/surfaces#languages) in `client/` |
+| `editorDecorations` | [`defineEditorDecoration`](/docs/extensions/surfaces#marks-in-the-editors-margin) in `client/` |
+
+A proposed part of `client/` lists nothing under `provides` and takes no permission of its own. Its name under `proposed` is enough.
 
 ## The mark
 
@@ -60,20 +120,29 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | --- | --- |
 | `canvas.write` | Create, change, link and arrange nodes. Opening a terminal also needs it. |
 | `views.write` | Create and rename views. |
-| `files.read` | Read and list files in the project folder. |
+| `files.read` | Read, list and follow files in the project folder. |
 | `files.write` | Write files in the project folder. |
 | `git.read` | Read status, diffs and the log. |
 | `database.read` | Run one read-only `SELECT` or `WITH` statement on a project's database. |
 | `context.read` | Read what an agent would read of nodes and views. |
-| `chats.read` | List chats and read their threads. |
+| `chats.read` | List chats, read their threads and see what each runs on and whether it waits. |
 | `chats.send` | Send a message to a chat, which wakes it. |
 | `agents.run` | Run a hidden prompt on one of the person's CLIs. |
 | `agents.start` | Start a chat a person sees, supervised at most. |
 | `agents.status` | Read what every agent is doing. |
 | `agents.tools` | Offer agents a tool. |
+| `agents.provide` | Offer an agent of your own in the model pickers, which Ruimte starts for a chat. |
 | `usage.read` | Read how much of their plans the person used. |
 | `launches.read` | List and read launches. |
 | `launches.run` | Start, restart and stop launches. |
+| `launches.write` | Add and change launches, which wait for the person's approval. |
+| `launches.provide` | List launches Ruimte finds for a project, each started only after the person approved it. |
+| `problems.provide` | Report problems that show with the editor's own. |
+| `machines.provide` | List places where Ruimte can start a machine, each started only after the person approved what runs. |
+| `notifications.provide` | Deliver what Ruimte tells the person about their agents, once they turned the channel on. |
+| `ui.provide` | Give the blocks an agent writes in a chat live data to draw. |
+| `composer.provide` | Offer things after `#` and commands after `/` in a chat from the machine. |
+| `projects.read` | Hear when a project opens and closes. |
 | `routines.read` | List routines. |
 | `routines.run` | Run, pause and resume routines. |
 | `artifacts.read` | List and read what is in Output. |
@@ -81,11 +150,13 @@ Reading what is on screen needs no permission. Everything else does, and the API
 | `browser.control` | Read and drive any browser node of the project. |
 | `devices.control` | Read and operate any simulator or phone node of the project. |
 | `terminals.read` | Read a terminal's screen. |
+| `terminals.write` | Type into a terminal the extension opened itself. |
+| `terminals.profiles` | Add a kind of terminal to the menu of a new terminal. |
 | `languages.servers` | Add a language server, which starts without asking. |
 | `clock` | Run work on a clock of its own. |
 | `net:<host>` | Let a `frame` surface reach that host over HTTPS, such as `net:api.example.com`. |
 
-`ruimte extension pack` refuses a name that is not in this table, and a `net:` that names no host. Ruimte refuses to install such a pack as well.
+`ruimte extension pack` refuses a name that is not in this table, a `net:` that names no host, and a `provides` or `proposed` that names something Ruimte does not know. Ruimte refuses to install such a pack as well.
 
 Write the reason for a person: "Writes the summary as a note", not "Needs canvas access". They read it before installing, and again under Settings, Extensions:
 

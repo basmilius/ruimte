@@ -1,5 +1,6 @@
 import { uiSessionNote } from '@adecore/intelligent-ui/text';
 import { DESIGN_ASSET_MAX_BYTES, DESIGN_PAGE_MAX_BYTES, type ContextSource } from '@ruimte/contracts';
+import { EXTENSION_UI_SOURCE } from '@ruimte/contracts/extension-providers';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
 import { NODE_NEW_KINDS } from '../canvas/node-kinds.ts';
 import { tableKinds } from '../providers/table.ts';
@@ -67,13 +68,35 @@ const VISUAL_FILES_NOTE = "Write a visual's page with `visual_write`, never in t
 
 const VISUAL_LAYOUT_NOTE = 'Keep the page responsive and check it with `visual_preview` at 360 and 1200 pixels wide.';
 
+interface ExtensionSourceNote {
+    name: string;
+    description: string;
+}
+
+// A prompt names this many sources of extensions; `ui_catalog` lists them all.
+const EXTENSION_SOURCES_TOLD = 12;
+
 const UI_DETAIL_HINT = '`ui_catalog` gives props and rules';
 
 /*
  * The catalog of UI blocks and how to use it, said only to an agent a person reads in a thread: a
  * hidden task child's answer reaches its parent as text, where a block would be source.
  */
-function uiNote(databases: boolean, uiFence: string | undefined): string {
+/* What a chat is told of the sources extensions add: a name and a few words each, and where their arguments are. */
+function extensionSourcesNote(sources: readonly ExtensionSourceNote[]): string {
+    if (sources.length === 0) {
+        return '';
+    }
+
+    const named = sources
+        .slice(0, EXTENSION_SOURCES_TOLD)
+        .map(({ name, description }) => `${name} (${description})`)
+        .join(', ');
+
+    return ` Extensions add sources, read as @Query("${EXTENSION_UI_SOURCE}", {source: "<name>", args: {...}}): ${named}. \`ui_catalog\` lists their arguments.`;
+}
+
+function uiNote(databases: boolean, uiFence: string | undefined, extensionSources: readonly ExtensionSourceNote[]): string {
     // The default name of the library would teach a fence the chat core does not compile.
     if (uiFence === undefined) {
         throw new Error('A chat told about UI blocks needs the fence its core compiles them under (ChatCore.uiFence)');
@@ -89,18 +112,18 @@ function uiNote(databases: boolean, uiFence: string | undefined): string {
             'Children sit in their parent, a Stat in Stats: Column in Table, Option in Segmented, Select or Radio, Item in Checklist, Event in Timeline, Place in Map, Image in Gallery, Entry in EntityList, Pane in Columns, Alternative in Alternatives with Pro and Con in it, Branch and Leaf in Tree.',
             'Show an image or model file of your own with `chat_attach` and `attachment=<id>`.',
             'Each items={$rows} as="row" names each item, read without $ as {row.name}. Chart data rows are {label: "Core", passed: 32, failed: 1}. File and Diff paths, and file links, are relative to your working folder; a Node id is one a Ruimte tool printed.',
-            `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.`
+            `Live data: $name = @Query("source", {args}), with these sources and arguments: ${sources}. git.status gives the branch, ahead, behind, counts per state and the first files.${databases ? ' database.query rows are records for Table and Chart.' : ''} Sources are literal; arguments may reference local inputs. Queries only read, never start work or run writes.${extensionSourcesNote(extensionSources)}`
         ].join(' ')
     );
 }
 
 /* What an AI chat is told while visual replies are on; `ui` adds the block catalog, which keeps pages for what it cannot draw. */
-function visualNote(ui: boolean, databases: boolean, uiFence: string | undefined): string {
+function visualNote(ui: boolean, databases: boolean, uiFence: string | undefined, extensionSources: readonly ExtensionSourceNote[]): string {
     const page = ui
         ? 'Keep an HTML visual for what the catalog cannot draw (a free diagram, a collage, a mockup, local images): show a self-contained page above your reply'
         : 'When a chart, a table, a diagram, a collage of images or a mockup would say more than prose, show a self-contained HTML page above your reply';
     return [
-        ...(ui ? [uiNote(databases, uiFence)] : []),
+        ...(ui ? [uiNote(databases, uiFence, extensionSources)] : []),
         `${page} with \`visual_show\`, and let the reply add only what the page does not say.`,
         VISUAL_FILES_NOTE,
         VISUAL_LAYOUT_NOTE
@@ -149,7 +172,8 @@ export function toolsNote({
     visuals = false,
     databases = false,
     reach = false,
-    uiFence
+    uiFence,
+    extensionSources = []
 }: {
     depth: number;
     standalone?: boolean;
@@ -162,12 +186,15 @@ export function toolsNote({
 
     /* The fence the chat core compiles UI blocks under; a chat with visuals is told about blocks, so it needs it. */
     uiFence?: string;
+
+    /* The UI sources extensions supply, which a chat told about blocks is told of too. */
+    extensionSources?: readonly ExtensionSourceNote[];
 }): string {
     // A task child at any depth answers its parent, never a person reading blocks.
     const ui = depth === 0;
     const closing = [
         ...(reach ? [REACH_NOTE] : []),
-        ...(visuals ? [visualNote(ui, databases, uiFence)] : []),
+        ...(visuals ? [visualNote(ui, databases, uiFence, extensionSources)] : []),
         ...(databases ? [databaseNote(visuals && ui)] : []),
         ...(computer ? [COMPUTER_NOTE] : []),
         ...(device ? [DEVICE_NOTE] : []),
@@ -342,12 +369,14 @@ export interface ChatPromptOptions {
     /* The fence the chat core compiles UI blocks under (`ChatCore.uiFence`), which the note about blocks teaches. */
     uiFence?: string;
 
+    extensionSources?: readonly ExtensionSourceNote[];
+
     design?: { folder: string; onCanvas: boolean } | null;
 }
 
 /* The part of a chat's prompt that is about Ruimte's tools, without the names of what is linked. */
-export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, uiFence, design }: ChatPromptOptions): string {
-    const tools = toolsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach, uiFence });
+export function chatNote({ sources, depth, standalone, computer, visuals, databases, reach, uiFence, extensionSources, design }: ChatPromptOptions): string {
+    const tools = toolsNote({ depth, standalone, computer, device: linksDevice(sources), visuals, databases, reach, uiFence, extensionSources });
 
     return design === null || design === undefined ? tools : `${tools} ${designNote(design.folder, design.onCanvas)}`;
 }

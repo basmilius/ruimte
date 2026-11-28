@@ -9,7 +9,9 @@ function installed(id: string, name: string, dev: boolean): InstalledClientExten
     return { manifest: { id, name, version: '1.0.0', api: 1, publisher: 'Acme' }, base: `/__extensions/${id}/x/`, enabled: true, hasClient: true, dev };
 }
 
-const INSTALLED = [installed('acme.store', 'From the store', false), installed('acme.dev', 'Being built', true)];
+const INSTALLED = [installed('acme.store', 'From the store', false), installed('acme.dev', 'Being built', true), installed('poc.probe', 'Probe', true)];
+// As the machine tells it: the manifest of `acme.dev` could say anything and stays a dev link.
+const PROVENANCE = { 'acme.store': 'installed', 'acme.dev': 'dev-link', 'poc.probe': 'development' } as const;
 
 function buttonNamed(root: ParentNode, name: string): HTMLButtonElement | undefined {
     return [...root.querySelectorAll('button')].find((button) => button.textContent === name);
@@ -47,24 +49,74 @@ const before = windowWithBridge.ruimteDesktop;
 beforeEach(() => {
     mounted = mount();
     windowWithBridge.ruimteDesktop = { extensions: { list: async () => INSTALLED } };
-    useInstalledExtensions.setState({ installed: INSTALLED, failures: {} });
+    useInstalledExtensions.setState({ installed: INSTALLED, failures: {}, provenance: PROVENANCE });
 });
 afterEach(async () => {
     await mounted.unmount();
     windowWithBridge.ruimteDesktop = before;
-    useInstalledExtensions.setState({ installed: [], failures: {} });
+    useInstalledExtensions.setState({ installed: [], failures: {}, provenance: {} });
 });
 
 describe('the list of extensions', () => {
-    test('has the store, then what you are building, what you installed and what is built in', async () => {
+    test('has the store, then what you are building, the test extensions, what you installed and what is built in', async () => {
         await mounted.render(<ExtensionsPane />);
         await until(() => mounted.host.textContent?.includes('Being built') ?? false);
 
         const nav = mounted.host.querySelector('nav')?.textContent ?? '';
-        const places = ['Browse store', 'In development', 'Being built', 'Installed', 'From the store', 'Built-in', 'Pets'].map((word) => nav.indexOf(word));
+        const places = ['Browse store', 'In development', 'Being built', 'Test extensions', 'Probe', 'Installed', 'From the store', 'Built-in', 'Pets'].map(
+            (word) => nav.indexOf(word)
+        );
 
         expect(places).not.toContain(-1);
         expect(places).toEqual([...places].sort((left, right) => left - right));
+    });
+
+    test('lists the test extensions by name, whatever order the machine linked them in', async () => {
+        const tests = [installed('dev.trackline', 'Trackline', true), installed('dev.beacon', 'Beacon', true), installed('dev.lintel', 'Lintel', true)];
+
+        windowWithBridge.ruimteDesktop = { extensions: { list: async () => tests } };
+        useInstalledExtensions.setState({
+            installed: tests,
+            provenance: { 'dev.trackline': 'development', 'dev.beacon': 'development', 'dev.lintel': 'development' }
+        });
+        await mounted.render(<ExtensionsPane />);
+        await until(() => mounted.host.textContent?.includes('Trackline') ?? false);
+
+        const nav = mounted.host.querySelector('nav')?.textContent ?? '';
+        const places = ['Beacon', 'Lintel', 'Trackline'].map((word) => nav.indexOf(word));
+
+        expect(places).toEqual([...places].sort((left, right) => left - right));
+    });
+
+    test('has no group of test extensions on a machine that names none', async () => {
+        useInstalledExtensions.setState({ provenance: { 'acme.dev': 'dev-link', 'poc.probe': 'dev-link' } });
+        await mounted.render(<ExtensionsPane />);
+        await until(() => mounted.host.textContent?.includes('Being built') ?? false);
+
+        expect(mounted.host.querySelector('nav')?.textContent).not.toContain('Test extensions');
+        expect(mounted.host.querySelector('nav')?.textContent).toContain('Probe');
+    });
+
+    test('lets a person turn a test extension on and off, and leaves a dev link to its run', async () => {
+        const turned: [string, boolean][] = [];
+        const enabledSwitch = () => mounted.host.querySelector<HTMLElement>('[role="switch"][aria-label="On"]');
+
+        windowWithBridge.ruimteDesktop = {
+            extensions: { list: async () => INSTALLED, setEnabled: async (id: string, enabled: boolean) => void turned.push([id, enabled]) }
+        };
+        await mounted.render(<ExtensionsPane />);
+        buttonNamed(mounted.host, 'Being built')?.click();
+        await until(() => enabledSwitch() !== null);
+
+        expect(enabledSwitch()?.hasAttribute('data-disabled')).toBe(true);
+
+        buttonNamed(mounted.host, 'Probe')?.click();
+        await until(() => mounted.host.textContent?.includes('Test extension') ?? false);
+        await until(() => enabledSwitch()?.hasAttribute('data-disabled') === false);
+        enabledSwitch()?.click();
+        await until(() => turned.length === 1);
+
+        expect(turned).toEqual([['poc.probe', false]]);
     });
 });
 

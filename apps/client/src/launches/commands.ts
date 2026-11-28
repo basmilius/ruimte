@@ -13,7 +13,7 @@ import {
     stopChosenLaunch,
     stopLaunch
 } from '@/launches/actions';
-import { launchViews } from '@/launches/model';
+import { launchViews, shownLaunches } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { endpointKey } from '@/state/keys';
 import { isScratchProject, useProject } from '@/state/project';
@@ -76,7 +76,7 @@ export function launchPaletteRows(moment: CommandMoment): Command[] {
     const { key, document } = found;
     const views = launchViews(document, useLaunches.getState().statuses[key] ?? {});
 
-    return document.launches.flatMap((launch): Command[] =>
+    return shownLaunches(document).flatMap((launch): Command[] =>
         views.get(launch.id)?.live === true
             ? [
                   {

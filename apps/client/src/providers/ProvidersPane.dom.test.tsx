@@ -116,6 +116,14 @@ describe('the providers list in Settings, Providers', () => {
         expect(document.querySelector('[role="dialog"] section[aria-label="Ready"]')).toBeNull();
     });
 
+    test("an extension's agent whose program is not here is not ready, though it runs in no terminal", async () => {
+        await openProviders([{ ...NANOGPT, kind: 'x-dev-beacon-inspector', name: 'Beacon Inspector', version: '0.1.0' }]);
+        const group = (): HTMLElement | null => document.querySelector<HTMLElement>('[role="dialog"] section[aria-label="Needs setup"]');
+        await until(() => group()?.textContent?.includes('Beacon Inspector') === true);
+        expect(group()?.textContent).toContain('Beacon InspectorNot installed');
+        expect(document.querySelector('[role="dialog"] section[aria-label="Ready"]')).toBeNull();
+    });
+
     test('an agy too old for chats needs setup, says to update it and offers no chat server', async () => {
         const tooOld = { ...ANTIGRAVITY, installed: true, version: '1.4.0', capabilities: { ...ANTIGRAVITY.capabilities, chat: false } };
         await openProviders([tooOld], { provider: 'antigravity', state: 'unsupported', version: '', installed: null });

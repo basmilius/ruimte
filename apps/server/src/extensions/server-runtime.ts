@@ -8,7 +8,17 @@ import { Console } from 'node:console';
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type * as PublicServer from '../../../../packages/extension/server';
-import { callHandler, createServerApi, MissingHandler, ownValue, parseKeyValues, type KeyValues } from './server-api.ts';
+import {
+    callHandler,
+    createServerApi,
+    MissingHandler,
+    ownValue,
+    parseKeyValues,
+    type KeyValues,
+    type LaunchSourceMethod,
+    type MachineSourceAsk,
+    type ReferenceAsk
+} from './server-api.ts';
 
 type Result<Value> = PublicServer.Result<Value>;
 
@@ -139,6 +149,8 @@ const core = createServerApi({
     dataFolder: folder,
     platform: process.platform,
     permissions: new Set<string>(JSON.parse(process.env.RUIMTE_EXTENSION_PERMISSIONS ?? '[]') as string[]),
+    provides: { id: process.env.RUIMTE_EXTENSION_ID ?? '', ...(JSON.parse(process.env.RUIMTE_EXTENSION_PROVIDES ?? '{}') as object) },
+    proposedAllowed: process.env.RUIMTE_EXTENSION_PROPOSED === '1',
     ask,
     clock: { every: (ms, run) => void setInterval(run, ms) },
     send,
@@ -174,6 +186,12 @@ interface Incoming {
     node: string;
     data: unknown;
     context: { caller: string };
+    profile: string;
+    source: string;
+    channel: string;
+    watch: number;
+    run: number;
+    input: unknown;
     // The daemon answers under a code of `ExtensionErrorCode`, or `invalid-input` for an argument of the wrong shape.
     result?: unknown;
     error?: string;
@@ -204,6 +222,57 @@ function handle(message: Incoming): void {
 
             return core.runTool(message.method, message.payload, message.context);
         });
+    } else if (message.type === 'profile') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askProfile(message.profile, message.method as 'available' | 'spawn', message.input);
+        });
+    } else if (message.type === 'launchSource') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askLaunchSource(message.source, message.method as LaunchSourceMethod, message.input as PublicServer.ProjectInfo);
+        });
+    } else if (message.type === 'machineSource') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askMachineSource(message.source, message.method as 'list' | 'start', message.input as MachineSourceAsk);
+        });
+    } else if (message.type === 'notificationChannel') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.deliverNotification(message.channel, message.input as PublicServer.Notification);
+        });
+    } else if (message.type === 'uiSource') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            const { args, project } = message.input as { args: Record<string, PublicServer.Json>; project: PublicServer.ProjectInfo };
+
+            return core.readUiSource(message.source, args, project);
+        });
+    } else if (message.type === 'reference') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            return core.askReference(message.source, message.method as 'list' | 'read', message.input as ReferenceAsk);
+        });
+    } else if (message.type === 'slashCommand') {
+        void answer(message.id, async () => {
+            await loaded;
+
+            const { args, project } = message.input as { args: string; project: PublicServer.ProjectInfo };
+
+            return core.expandCommand(message.source, args, project);
+        });
+    } else if (message.type === 'machineAbort') {
+        // Behind the same wait as the start it stops, so a stop that came in with its ask still finds it.
+        void loaded.then(() => core.abortMachineStart(message.run));
+    } else if (message.type === 'fileChanged') {
+        core.fileChanged(message.watch);
     } else if (message.type === 'nodeContext') {
         void answer(message.id, async () => {
             await loaded;

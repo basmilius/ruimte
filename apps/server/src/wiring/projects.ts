@@ -15,6 +15,7 @@ import { failTasksOfClosedProject } from '../tasks/closed-project.ts';
 import type { AgentWorkBundle } from './agent-work.ts';
 import type { AgentStores, AgentsBundle } from './agents.ts';
 import type { DatabasesBundle } from './databases.ts';
+import type { ExtensionsBundle } from './extensions.ts';
 import type { LanguageBundle } from './language.ts';
 import type { LaunchesBundle } from './launches.ts';
 import type { DaemonSeams } from './seams.ts';
@@ -49,6 +50,7 @@ interface ProjectsInput {
     seams: Pick<DaemonSeams, 'projectStore'>;
     later: {
         launches(): LaunchesBundle;
+        extensions(): ExtensionsBundle;
         work(): AgentWorkBundle;
         databases(): DatabasesBundle;
         language(): LanguageBundle;
@@ -88,10 +90,18 @@ export async function wireProjects({ home, machineId, machineHome, stores, agent
                     .catch((e: unknown) => console.error(`Approving the mode of ${nodeId} failed:`, errorText(e)));
             }
         },
+        // The two moments a project starts and stops running anything here, which an extension that follows projects hears as well.
         launches: {
-            opened: (projectId) => void later.launches().runner.opened(projectId),
+            opened: (projectId) => {
+                later.extensions().projectOpened(projectId);
+                void later.launches().runner.opened(projectId);
+            },
             running: (projectId) => later.launches().runner.running(projectId),
-            end: (projectId) => later.launches().runner.end(projectId)
+            end: (projectId) => {
+                later.extensions().projectClosed(projectId);
+
+                return later.launches().runner.end(projectId);
+            }
         },
         language: { end: (projectId) => later.language().host.end(projectId) },
         provenance: { forget: (projectId) => later.language().provenance.forget(projectId) },

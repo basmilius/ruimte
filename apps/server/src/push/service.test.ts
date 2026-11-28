@@ -1104,6 +1104,7 @@ describe('a person at a desktop', () => {
     let now: number;
     let timers: { at: number; run: () => void }[];
     let held: PushService;
+    let told: { title: string; body: string; project: { id: string }; node: { id: string }; reason: string }[];
 
     const advance = async (ms: number): Promise<void> => {
         now += ms;
@@ -1116,10 +1117,13 @@ describe('a person at a desktop', () => {
     beforeEach(() => {
         now = NOW;
         timers = [];
+        told = [];
         held = new PushService({
             auth,
             identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
             now: () => now,
+            projectOf: (nodeId) => (nodeId === 'loose' ? null : 'project'),
+            channels: (notification) => told.push(notification),
             send: async (push) => {
                 pushes.push(push);
                 return 204;
@@ -1187,6 +1191,40 @@ describe('a person at a desktop', () => {
         held.reportPresence('desktop', false);
         await held.settled();
         expect(pushes.length).toBe(2);
+    });
+
+    test('tells a notification channel when a phone would hear, with the reason, and never while the person is at the desk', async () => {
+        status('running', 'node', held);
+        status('needs-you', 'node', held);
+        status('running', 'other', held);
+        status('idle', 'other', held);
+        await advance(30_000);
+        expect(told).toEqual([]);
+        held.reportPresence('desktop', true);
+        await advance(30_000);
+        // The finished turn came due at the desk and went nowhere; the wait is still unread.
+        expect(told).toEqual([
+            { title: 'Secret project', body: 'The agent needs your attention.', project: { id: 'project' }, node: { id: 'node' }, reason: 'needsYou' }
+        ]);
+        held.reportPresence('desktop', false);
+        status('running', 'other', held);
+        status('idle', 'other', held);
+        await held.settled();
+        expect(told.map((notification) => [notification.node.id, notification.reason])).toEqual([
+            ['node', 'needsYou'],
+            ['other', 'done']
+        ]);
+    });
+
+    test('tells a notification channel nothing of a wait the desktop read, or of a node in no project', async () => {
+        status('running', 'node', held);
+        status('needs-you', 'node', held);
+        held.read('node', held.attention.snapshot().find((candidate) => candidate.nodeId === 'node')!.issuedAt);
+        held.reportPresence('desktop', false);
+        status('running', 'loose', held);
+        status('needs-you', 'loose', held);
+        await held.settled();
+        expect(told).toEqual([]);
     });
 
     test('sends what it held once the presence lapses unrenewed', async () => {

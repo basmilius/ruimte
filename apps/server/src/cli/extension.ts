@@ -5,7 +5,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import * as prompts from '@clack/prompts';
-import { EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH } from '@ruimte/contracts';
+import { EXTENSION_LINK_PATH, EXTENSION_UNLINK_PATH, proposedPackWarning } from '@ruimte/contracts';
 import { Command } from 'commander';
 import { bestEffort } from '../best-effort.ts';
 // @ts-expect-error Bun hands over the file's text, so a compiled daemon carries it; TypeScript only knows the module.
@@ -315,6 +315,13 @@ async function test(args: string[]): Promise<number> {
 async function publish(): Promise<void> {
     const packed = await packExtension('.');
     const { manifest } = packed;
+    const proposed = proposedPackWarning(manifest);
+
+    // The store installs what it lists, so a pack an install refuses has no place there.
+    if (proposed !== null) {
+        throw new Error(proposed);
+    }
+
     const fork = spawnSync('gh', ['repo', 'fork', STORE_REPOSITORY, '--clone=false', '--default-branch-only'], { encoding: 'utf8' });
 
     if (fork.status !== 0 && !/already exists/.test(`${fork.stdout}${fork.stderr}`)) {
@@ -399,8 +406,13 @@ export async function runExtension(args: readonly string[], options: LocalDaemon
         .description('Build a .rex')
         .action(async () => {
             const packed = await packExtension('.');
+            const proposed = proposedPackWarning(packed.manifest);
 
             console.log(`Checked manifest.json, api ${packed.manifest.api}\n${packed.path} (${Math.ceil(packed.bytes / 1024)} KB)\nsha256 ${packed.sha256}`);
+
+            if (proposed !== null) {
+                console.warn(proposed);
+            }
         });
     program.command('publish').description('Pack and open a pull request on the store').action(publish);
     program

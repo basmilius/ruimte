@@ -28,6 +28,7 @@ import { FS_REQUEST_SCHEMAS, FS_EVENT_SCHEMAS } from './fs.ts';
 import { GIT_REQUEST_SCHEMAS, GIT_EVENT_SCHEMAS } from './git.ts';
 import { LANGUAGE_REQUEST_SCHEMAS, LANGUAGE_EVENT_SCHEMAS } from './language.ts';
 import { LAUNCHES_REQUEST_SCHEMAS, LAUNCHES_EVENT_SCHEMAS } from './launches.ts';
+import { MACHINE_SOURCE_REQUEST_SCHEMAS, MACHINE_SOURCE_EVENT_SCHEMAS } from './machine-sources.ts';
 import { MACHINE_UPDATE_REQUEST_SCHEMAS, MACHINE_UPDATE_EVENT_SCHEMAS } from './machine-update.ts';
 import { NANOGPT_REQUEST_SCHEMAS } from './nanogpt.ts';
 import { PEER_REQUEST_SCHEMAS, PEER_EVENT_SCHEMAS } from './peer.ts';
@@ -119,6 +120,7 @@ export type { WireDegradation } from '@adecore/agent-contracts/tolerance';
 export { TextModelChoiceSchema, type TextModelChoice } from './text-model.ts';
 export * from './launches.ts';
 export * from './launch-rules.ts';
+export * from './machine-sources.ts';
 export * from './secrets.ts';
 export * from './live-stream.ts';
 export * from './live-frame.ts';
@@ -173,6 +175,8 @@ export * from './extension-actions.ts';
 export * from './extension-client.ts';
 export * from './extension-pack.ts';
 export * from './extension-permissions.ts';
+export * from './extension-problems.ts';
+export * from './extension-providers.ts';
 export * from './extension-results.ts';
 export * from './voice.ts';
 export * from './voice-languages.ts';
@@ -222,6 +226,7 @@ export const REQUEST_SCHEMAS = {
     ...SQL_BINDING_REQUEST_SCHEMAS,
     ...EDITOR_ASSIST_REQUEST_SCHEMAS,
     ...LAUNCHES_REQUEST_SCHEMAS,
+    ...MACHINE_SOURCE_REQUEST_SCHEMAS,
     ...DATABASE_REQUEST_SCHEMAS,
     ...FS_REQUEST_SCHEMAS,
     ...BYTES_REQUEST_SCHEMAS,
@@ -278,6 +283,7 @@ export const EVENT_SCHEMAS = {
     ...SQL_BINDING_EVENT_SCHEMAS,
     ...EDITOR_ASSIST_EVENT_SCHEMAS,
     ...LAUNCHES_EVENT_SCHEMAS,
+    ...MACHINE_SOURCE_EVENT_SCHEMAS,
     ...DATABASE_EVENT_SCHEMAS,
     ...FS_EVENT_SCHEMAS,
     ...GIT_EVENT_SCHEMAS,

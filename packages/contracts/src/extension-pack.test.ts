@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { extensionManifestProblem, readExtensionPack } from './extension-pack.ts';
+import { EXTENSION_PROPOSED_PARTS } from './extension-providers.ts';
 import { EXTENSION_API_VERSION } from './extension.ts';
 
 const gunzip = (bytes: Uint8Array): Uint8Array => gunzipSync(bytes);
@@ -69,6 +70,36 @@ describe('a pack read whole', () => {
             ok: false,
             code: 'pack-manifest',
             message: expect.stringContaining('chat.send is not a permission')
+        });
+    });
+
+    test('refuses a pack that uses a proposed part, since a pack is read to install it', async () => {
+        const proposed = {
+            permissions: { 'terminals.profiles': 'Adds a shell' },
+            provides: { terminalProfiles: ['service-shell'] },
+            proposed: ['terminalProfiles']
+        };
+
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf(proposed) }), gunzip)).toEqual({
+            ok: false,
+            code: 'pack-manifest',
+            message:
+                'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+        });
+        // The same manifest holds together, so a dev link takes it.
+        expect(extensionManifestProblem({ id: 'acme.pack', name: 'Pack', version: '0.1.0', api: EXTENSION_API_VERSION, ...proposed })).toBeNull();
+    });
+
+    test('refuses a manifest whose provides and proposed do not hold together, wherever it comes in', async () => {
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ provides: { terminalProfiles: ['shell'] } }) }), gunzip)).toEqual({
+            ok: false,
+            code: 'pack-manifest',
+            message:
+                'acme.pack: provides.terminalProfiles needs the permission terminals.profiles; provides.terminalProfiles is still proposed; name terminalProfiles under proposed'
+        });
+        expect(await readExtensionPack(packOf({ 'manifest.json': manifestOf({ proposed: ['teleport'] }) }), gunzip)).toMatchObject({
+            ok: false,
+            message: `acme.pack: teleport is not a proposed part this Ruimte knows (${EXTENSION_PROPOSED_PARTS.join(', ')})`
         });
     });
 

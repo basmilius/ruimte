@@ -8,6 +8,15 @@ import { ARTIFACT_LIMITS, ArtifactKeySchema, ArtifactRequestIdSchema, KnownArtif
 const NodeRefSchema = z.object({ id: z.string().min(1) });
 const nodeInput = z.object({ node: NodeRefSchema });
 const launchInput = z.object({ launch: z.string().trim().min(1) });
+const launchFieldName = z.string().trim().min(1).max(200);
+// What an extension gives a launch it adds or changes. Which file it lives in stays a person's, and so does a variable that holds a secret.
+const launchRunInput = {
+    command: z.string().trim().min(1).optional(),
+    cwd: z.string().trim().min(1).optional(),
+    url: z.string().trim().min(1).optional(),
+    env: z.record(z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/), z.string().nullable()).optional(),
+    members: z.array(z.string().trim().min(1)).min(1).optional()
+};
 const routineInput = z.object({ routine: z.string().min(1) });
 const publishedName = z.string().min(1).max(ARTIFACT_LIMITS.fileNameLength);
 // A file an extension publishes goes in the call itself: it has no upload route of its own.
@@ -23,6 +32,8 @@ export const EXTENSION_ACTION_INPUTS = {
     'launch.start': launchInput,
     'launch.restart': launchInput,
     'launch.stop': launchInput,
+    'launch.create': z.object({ name: launchFieldName, kind: z.enum(['service', 'task', 'group']), ...launchRunInput }),
+    'launch.edit': launchInput.extend({ name: launchFieldName.optional(), ...launchRunInput }),
     'routine.list': z.object({}),
     'routine.run': routineInput,
     'routine.pause': routineInput,
@@ -49,7 +60,8 @@ export const EXTENSION_ACTION_INPUTS = {
     'device.inspect': nodeInput,
     'device.screenshot': nodeInput,
     'device.tap': nodeInput.extend({ x: z.number().min(0), y: z.number().min(0) }),
-    'device.launch': nodeInput.extend({ app: z.string().trim().min(1).max(256) })
+    'device.launch': nodeInput.extend({ app: z.string().trim().min(1).max(256) }),
+    'chat.inspect': z.object({ chat: z.string().min(1) })
 } as const;
 
 export type ExtensionActionName = keyof typeof EXTENSION_ACTION_INPUTS;
@@ -87,6 +99,7 @@ export interface ExtensionLaunchSummary {
     port: number | null;
     url: string | null;
     members: string[];
+    source: string | null;
 }
 
 export interface ExtensionRoutineSummary {
@@ -142,12 +155,28 @@ export interface ExtensionDeviceState {
     can: { shot: boolean; input: boolean; type: boolean; launch: boolean };
 }
 
+/* What a chat runs on and whether something waits in it, without a word of what waits: answering stays the person's. */
+export interface ExtensionChatState {
+    id: string;
+    title: string;
+    provider: string;
+    model: string;
+    mode: string;
+    working: boolean;
+    queued: number;
+    waitsOn: 'approval' | 'question' | null;
+    subagents: number;
+    background: number;
+}
+
 export interface ExtensionActionOutputs {
     'launch.list': { launches: ExtensionLaunchSummary[] };
     'launch.read': { id: string; name: string; text: string | null };
     'launch.start': { id: string; name: string };
     'launch.restart': { id: string; name: string };
     'launch.stop': { id: string; name: string; stopping: number };
+    'launch.create': { id: string; name: string };
+    'launch.edit': { id: string; name: string };
     'routine.list': { routines: ExtensionRoutineSummary[] };
     'routine.run': { id: string; title: string; runId: string };
     'routine.pause': { id: string; title: string };
@@ -172,6 +201,7 @@ export interface ExtensionActionOutputs {
     'device.screenshot': { node: NodeRef; path: string; width: number; height: number };
     'device.tap': { node: NodeRef };
     'device.launch': { node: NodeRef };
+    'chat.inspect': ExtensionChatState;
 }
 
 export type ExtensionActionOutput<Name extends ExtensionActionName> = ExtensionActionOutputs[Name];

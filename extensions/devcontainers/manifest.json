@@ -1,0 +1,18 @@
+{
+    "id": "ruimte.devcontainers",
+    "name": "Dev Containers",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Containers",
+    "description": "Starts a machine of Ruimte in the dev container of a project, from its devcontainer.json, and puts it on your account.",
+    "color": "#1d4ed8",
+    "permissions": {
+        "files.read": "Reads devcontainer.json and the Dockerfile it names in the project folder",
+        "machines.provide": "Lists the dev container of a project as a place Ruimte can start a machine in"
+    },
+    "provides": {
+        "machineSources": ["devcontainer"]
+    },
+    "proposed": ["machineSources"]
+}

@@ -51,13 +51,14 @@ clientContract(async (permissions, seed = {}) => {
     const asked = Promise.withResolvers<void>();
     const start = Promise.withResolvers<void>();
     const host = await createTestHost({
-        manifest: { name: NAME, permissions },
+        manifest: { name: NAME, permissions, ...(seed.proposed === undefined ? {} : { proposed: seed.proposed }) },
         project: { ...SEED.project, views, nodes: [SEED.node, ...nodes] },
         machine: SEED.machine,
         ...(seed.providers === undefined ? {} : { providers: seed.providers }),
         ...(seed.visible === undefined ? {} : { canvas: { visible: seed.visible } }),
         answers: {
             ...(seed.server === undefined ? {} : { server: seed.server }),
+            ...(seed.actions === undefined ? {} : { 'machine.run': seed.actions }),
             ...(seed.stream === undefined
                 ? {}
                 : {
@@ -111,9 +112,21 @@ clientContract(async (permissions, seed = {}) => {
         notes: () => host.canvas.notes().map(({ title, text }) => ({ title, text })),
         links: () => host.canvas.links(),
         failures: () => host.notifications.flatMap(({ text, detail }) => (detail === undefined ? [] : [{ text, detail }])),
+        typed: () => host.terminals.flatMap((terminal) => terminal.written.map((text) => ({ terminal: terminal.id, text }))),
         focused: () => [...host.focused],
         // An extension under test is never one Ruimte ships, which alone gets a section of its own.
-        settingsSections: () => []
+        settingsSections: () => [],
+        projectSettings: () => host.definitions.flatMap(({ kind, definition }) => (kind === 'projectSettings' ? [definition.title ?? NAME] : [])),
+        languageOf: (path) => host.languageOf(path),
+        openEditor: async (path) => {
+            const editor = host.openEditor(path);
+
+            return {
+                marks: () => editor.decorations().map(({ line, endLine, kind }) => ({ line, endLine, kind })),
+                close: async () => editor.close()
+            };
+        },
+        chooseProjectSetting: async (key, value) => host.setProjectSetting(key, value)
     };
 });
 

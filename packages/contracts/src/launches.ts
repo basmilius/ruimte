@@ -83,6 +83,31 @@ export const LaunchAfterSettleSchema = z.object({
     approved: z.boolean()
 });
 
+/* Which source of which extension lists a launch, and what a person calls that source. */
+export const LaunchSourceRefSchema = z.object({
+    extension: z.string().min(1),
+    id: z.string().min(1),
+    title: z.string().min(1)
+});
+export type LaunchSourceRef = z.infer<typeof LaunchSourceRefSchema>;
+
+/*
+ * A launch a source of an extension lists. It lives in no file: it is there while its source lists it, so a save never
+ * holds one and a client keeps it apart from the launches it edits.
+ */
+export const SourcedLaunchSchema = z.object({
+    id: z.string().min(1),
+    name: z.string().trim().min(1),
+    kind: z.enum(['service', 'task']),
+    command: z.string(),
+    // Relative to the project folder, POSIX; absent is the project folder itself.
+    cwd: z.string().optional(),
+    env: LaunchConfigEnvSchema.optional(),
+    url: z.string().optional(),
+    source: LaunchSourceRefSchema
+});
+export type SourcedLaunch = z.infer<typeof SourcedLaunchSchema>;
+
 export const LaunchesDocumentSchema = z.object({
     rev: z.number().int().nonnegative(),
     // In the order of the menu.
@@ -90,7 +115,9 @@ export const LaunchesDocumentSchema = z.object({
     // The launches a person on this machine approved as they stand now; a group is approved when all it starts is.
     approved: z.array(z.string()),
     // Absent while nothing is chosen, and from a daemon before it.
-    afterSettle: LaunchAfterSettleSchema.optional()
+    afterSettle: LaunchAfterSettleSchema.optional(),
+    // What the launch sources of extensions list now, after the launches of the files; absent while none lists any.
+    sourced: z.array(SourcedLaunchSchema).optional()
 });
 export type LaunchesDocument = z.infer<typeof LaunchesDocumentSchema>;
 
@@ -141,6 +168,13 @@ export const LaunchesAfterSettlePayloadSchema = z.object({
     launchId: z.string().min(1).nullable()
 });
 
+/* A person's yes to everything one source lists in the project, as it stands now. */
+export const LaunchesApproveSourcePayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    extension: z.string().min(1),
+    source: z.string().min(1)
+});
+
 export const LaunchStartPayloadSchema = z.object({
     projectId: ProjectIdSchema,
     launchId: z.string().min(1),
@@ -157,7 +191,9 @@ export const LaunchHeldSchema = z.object({
     // Absolute, where it would run.
     cwd: z.string(),
     // The variables it would run with, which the approval covers as well; absent when it sets none.
-    env: LaunchConfigEnvSchema.optional()
+    env: LaunchConfigEnvSchema.optional(),
+    // The source that lists it, for a launch of an extension; the approval then covers what that source read as well.
+    source: LaunchSourceRefSchema.optional()
 });
 export type LaunchHeld = z.infer<typeof LaunchHeldSchema>;
 
@@ -262,6 +298,8 @@ export const LAUNCHES_REQUEST_SCHEMAS = {
     'launches.detect': { payload: LaunchesDetectPayloadSchema, result: LaunchesDetectResultSchema },
     // A person's choice, which approves the task for the project's worktrees as it stands now.
     'launches.afterSettle': { payload: LaunchesAfterSettlePayloadSchema, result: EmptySchema },
+    // A person's yes to every launch a source lists now; one whose file changes afterwards asks again.
+    'launches.approveSource': { payload: LaunchesApproveSourcePayloadSchema, result: EmptySchema },
     'launch.start': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
     'launch.restart': { payload: LaunchStartPayloadSchema, result: LaunchStartResultSchema },
     'launch.stop': { payload: LaunchStopPayloadSchema, result: EmptySchema },

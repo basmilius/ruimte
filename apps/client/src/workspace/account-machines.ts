@@ -1,7 +1,7 @@
 import { messageOf } from '@adecore/ui';
 import { AddressBookRequestError, type Machine } from '@ruimte/pulsar';
 import i18next from 'i18next';
-import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { endpointForAccountMachine, rowForAccountMachine, usePulsarMachines } from '@/state/pulsar-machines';
 import { serverInfoOf, useServers } from '@/state/server';
 import { transportFor } from '@/transport/index';
@@ -18,7 +18,7 @@ export async function refreshAccountMachines(): Promise<void> {
 }
 
 /* A refusal to put a machine on an account in the words of this client; anything else as it came. */
-async function withRefusalText<T>(work: () => Promise<T>): Promise<T> {
+export async function withRefusalText<T>(work: () => Promise<T>): Promise<T> {
     try {
         return await work();
     } catch (e) {
@@ -43,6 +43,51 @@ export async function addMachineToAccount(endpointId: string): Promise<void> {
     }
     await withRefusalText(() => withAccessToken((client, token) => client.registerMachine(token, registration)));
     await refreshAccountMachines();
+}
+
+/* A place a source of an extension started a machine in, as the requests about it name it. */
+export interface StartedMachine {
+    projectId: string;
+    extension: string;
+    source: string;
+    candidate: string;
+}
+
+// The joins under way, so two parts of the window that look at the same place post one registration.
+const joins = new Map<string, Promise<void>>();
+
+async function postStartedMachine(started: StartedMachine): Promise<void> {
+    const account = usePulsarAccount.getState().account;
+    const link = transportFor(LOCAL_ENDPOINT_ID);
+
+    if (!account || !link) {
+        throw new Error(i18next.t('machines:account.signInAndConnect'));
+    }
+
+    const { registration } = await withRefusalText(() => link.request('extension.machineRegistration', { ...started, accountId: account.id }));
+
+    await withRefusalText(() => withAccessToken((client, token) => client.registerMachine(token, registration)));
+    await link.request('extension.machineJoined', started);
+    await refreshAccountMachines();
+}
+
+/*
+ * The machine a start made signed itself onto the account, and this client posts that with its own session, as it
+ * does for the machine it runs beside. The machine on this computer only hands the registration over.
+ */
+export function joinStartedMachine(started: StartedMachine): Promise<void> {
+    const key = [started.projectId, started.extension, started.source, started.candidate].join('\n');
+    const under = joins.get(key);
+
+    if (under !== undefined) {
+        return under;
+    }
+
+    const join = postStartedMachine(started).finally(() => joins.delete(key));
+
+    joins.set(key, join);
+
+    return join;
 }
 
 /*

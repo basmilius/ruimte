@@ -1,4 +1,5 @@
 import { extensionPermissionProblems } from './extension-permissions.ts';
+import { extensionProvidesProblems, proposedRefusal } from './extension-providers.ts';
 import { clashingPackPath, EXTENSION_API_VERSION, ExtensionManifestSchema, ExtensionPackSchema, isSafePackPath, type ExtensionManifest } from './extension.ts';
 
 const TOO_LARGE_MESSAGE = 'This pack unpacks to more than an extension may hold';
@@ -41,8 +42,9 @@ interface ManifestWords {
 }
 
 /*
- * What a manifest must meet wherever it comes from: the API version of this Ruimte, and permissions it knows. Refused
- * when it comes in, never when it loads, so one already installed keeps working on a Ruimte that knows less.
+ * What a manifest must meet wherever it comes from: the API version of this Ruimte, permissions it knows, and a
+ * `provides` and `proposed` that hold together. Refused when it comes in, never when it loads, so one already installed
+ * keeps working on a Ruimte that knows less.
  */
 export function extensionManifestProblem(manifest: ExtensionManifest, words: ManifestWords = {}): ExtensionPackProblem | null {
     const { subject = manifest.id, refusesApi = THIS_RUIMTE } = words;
@@ -51,7 +53,7 @@ export function extensionManifestProblem(manifest: ExtensionManifest, words: Man
         return { code: 'pack-api', message: refusesApi(manifest) };
     }
 
-    const problems = extensionPermissionProblems(manifest.permissions);
+    const problems = [...extensionPermissionProblems(manifest.permissions), ...extensionProvidesProblems(manifest)];
 
     return problems.length > 0 ? { code: 'pack-manifest', message: `${subject}: ${problems.join('; ')}` } : null;
 }
@@ -111,7 +113,14 @@ function readUnzipped(unzipped: Uint8Array, refusesApi: ApiRefusal): ExtensionPa
 
     const problem = extensionManifestProblem(manifest.data, { refusesApi });
 
-    return problem === null ? { ok: true, manifest: manifest.data, files: pack.data.files } : { ok: false, ...problem };
+    if (problem !== null) {
+        return { ok: false, ...problem };
+    }
+
+    // A pack is read to install it, and what a person installed never runs a proposed part.
+    const proposed = proposedRefusal(manifest.data, 'installed');
+
+    return proposed === null ? { ok: true, manifest: manifest.data, files: pack.data.files } : { ok: false, code: 'pack-manifest', message: proposed };
 }
 
 /*

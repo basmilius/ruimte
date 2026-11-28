@@ -59,8 +59,19 @@ interface PushServiceOptions {
     snoozes?: Snoozes;
     schedule?: (delayMs: number, run: () => void) => () => void;
     limitContext?: (chatId: string) => LimitContext | null;
+    /* Hears each alert as it goes out to the phones, once, for the notification channels of extensions. */
+    channels?: (notification: ChannelAlert) => void;
 
     clock?: Clock;
+}
+
+/* An alert as a notification channel gets it: what the push says, and why it went out. */
+interface ChannelAlert {
+    title: string;
+    body: string;
+    project: { id: string };
+    node: { id: string };
+    reason: 'needsYou' | 'done' | 'limit';
 }
 
 interface Delivery {
@@ -169,6 +180,8 @@ export class PushService {
     private readonly processAlertIds = new Set<string>();
     /* The usage limits already pushed, by `limitKey`, with the time each lifts; a restart forgets them and costs one push more at most. */
     private readonly limitAlerts = new Map<string, number>();
+    /* The usage limits the notification channels of extensions heard of, by `limitKey`, with the time each lifts. */
+    private readonly channelLimits = new Map<string, number>();
     /*
      * The limits whose alert is on its way, with the chats that stopped on the same limit meanwhile and wait to
      * see whether it reaches a phone, each with the time it stopped. A chat waits as a node id and is looked at
@@ -934,6 +947,7 @@ export class PushService {
 
         try {
             const projectId = this.options.projectOf?.(content.nodeId) ?? null;
+            this.tellChannels(content, issuedAt, preference, ledger, delivery, projectId);
             for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
                 if (
                     (session !== undefined && sessionId !== session) ||
@@ -978,6 +992,43 @@ export class PushService {
                 this.settleLimit(limit, sent || withheld);
             }
         }
+    }
+
+    /*
+     * Past the same waits a phone's push is: the desk, a snooze and an approval answered meanwhile. What is a phone's own
+     * (its quiet hours, what it follows, the app in front) does not hold a channel, and a second round for one phone whose
+     * quiet hours ended tells no channel again. A process warning has no reason a channel knows, so it stays here.
+     */
+    private tellChannels(
+        content: PushAlertContent,
+        issuedAt: number,
+        preference: PushNotifyKind,
+        ledger: boolean,
+        delivery: Delivery,
+        projectId: string | null
+    ): void {
+        const reason = delivery.limit ? 'limit' : preference === 'needs-you' ? 'needsYou' : preference === 'turn' ? 'done' : null;
+
+        if (
+            this.options.channels === undefined ||
+            reason === null ||
+            projectId === null ||
+            delivery.session !== undefined ||
+            (ledger && this.attention.isRead(content.nodeId, issuedAt))
+        ) {
+            return;
+        }
+
+        if (delivery.limit) {
+            // A limit no phone heard of is raised again for the next chat on it, and a channel heard it the first time.
+            if ((this.channelLimits.get(delivery.limit.key) ?? 0) > this.now()) {
+                return;
+            }
+
+            this.channelLimits.set(delivery.limit.key, delivery.limit.until);
+        }
+
+        this.options.channels({ title: content.title, body: content.body, project: { id: projectId }, node: { id: content.nodeId }, reason });
     }
 
     private async deliverActivity(nodeId: string, activity: PushActivityContent): Promise<void> {

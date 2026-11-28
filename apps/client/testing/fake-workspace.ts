@@ -7,7 +7,7 @@ import { dropMachine, enterWorkspace, showStart } from '@/workspace/connections'
 import { connectFakeMachine, type FakeMachine } from './fake-machine';
 import { closedAfterTest } from './test-scope';
 
-const FAKE_PROJECT: ProjectSummary = {
+export const FAKE_PROJECT: ProjectSummary = {
     projectId: 'project-atlas',
     name: 'Atlas',
     color: '#000',

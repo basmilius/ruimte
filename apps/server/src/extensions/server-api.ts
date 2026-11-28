@@ -3,6 +3,8 @@
  * daemon, its clock, where it says things and where it keeps its values. The process an extension runs in hands in
  * pipes and files (`server-runtime.ts`); `createTestServer` hands in memory and a clock a test turns.
  */
+import { missingPermissionMessage } from '@ruimte/contracts/extension-client';
+import { clientPointRefusal, extensionAgentKind, projectSettingKey, providerRefusal } from '@ruimte/contracts/extension-providers';
 import type * as PublicServer from '../../../../packages/extension/server';
 import { everyMs, SCHEDULE_NEEDS_CLOCK } from './policy.ts';
 
@@ -22,12 +24,31 @@ interface ServerClock {
 export type ServerMessage =
     | { type: 'tool'; name: string; description: string; parameters: unknown }
     | { type: 'subscribe'; name: string }
+    // A terminal profile it defined; `available` says whether it has a say in where the profile shows.
+    | { type: 'profile'; id: string; title: string; icon?: string; available: boolean }
+    // A launch source it defined; `watches` says whether it tells when its list changed.
+    | { type: 'launchSource'; id: string; title: string; watches: boolean }
+    // What a launch source said through the `changed` of its `watch`.
+    | { type: 'launchesChanged'; source: string; projectId: string }
+    | { type: 'problemSource'; id: string; title: string }
+    | { type: 'machineSource'; id: string; title: string }
+    // A line a machine source reported while it described a start, by the number the machine asked under.
+    | { type: 'machineReport'; run: number; line: string }
+    | { type: 'notificationChannel'; id: string; title: string }
+    | { type: 'uiSource'; id: string; description: string; parameters?: object }
+    | { type: 'reference'; id: string; title: string }
+    | { type: 'slashCommand'; name: string; description: string }
+    // An agent it describes for the machine to start: its name, how it speaks, its program and the models it names.
+    | { type: 'agentProvider'; id: string; description: unknown }
     | { type: 'emit'; name: string; payload: unknown };
 
 interface ServerApiOptions {
     dataFolder: string;
     platform: string;
     permissions: ReadonlySet<string>;
+    /* What its manifest lists under `provides` and `proposed`, and whether a proposed part works for where it came from. */
+    provides: { id: string; provides?: Readonly<Record<string, readonly string[]>> | undefined; proposed?: readonly string[] | undefined };
+    proposedAllowed: boolean;
     /*
      * The daemon holds what this process does not: the person's agents and chats. It checks the permission too, and
      * its refusal answers as a Result. Only an argument of the wrong shape throws, as the extension's own mistake.
@@ -45,12 +66,55 @@ export class MissingHandler extends Error {}
 
 export interface ServerCore {
     server: typeof PublicServer;
+    /* Settles once every agent provider the module defined said what it is, which one that lists its models does a moment later. */
+    agentsDescribed(): Promise<void>;
     runTool(name: string, input: unknown, context: { caller: string }): unknown;
     readNodeContext(nodeType: string, data: unknown): unknown;
+    /* Asks a terminal profile where it shows, or what it starts. */
+    askProfile(id: string, method: 'available' | 'spawn', input: unknown): unknown;
+    /* Asks a launch source what it lists in a project, or to start or stop telling when that changes. */
+    askLaunchSource(id: string, method: LaunchSourceMethod, project: PublicServer.ProjectInfo): unknown;
     deliver(name: string, payload: unknown): void;
+    /* Asks a machine source what it lists in a project, or what starts a machine in one of those places. */
+    askMachineSource(id: string, method: 'list' | 'start', input: MachineSourceAsk): unknown;
+    /* The person stopped the start a machine source describes under this number. */
+    abortMachineStart(run: number): void;
+    /* Hands a notification channel what to tell a person, and settles once the channel did. */
+    deliverNotification(id: string, notification: PublicServer.Notification): unknown;
+    /* Asks a UI source what a block shows, with the arguments the block wrote. */
+    readUiSource(id: string, args: Record<string, PublicServer.Json>, project: PublicServer.ProjectInfo): unknown;
+    /* Asks a reference what it lists for `#`, or the text of one thing it listed. */
+    askReference(id: string, method: 'list' | 'read', input: ReferenceAsk): unknown;
+    /* Asks a slash command what it puts in the prompt. */
+    expandCommand(name: string, args: string, project: PublicServer.ProjectInfo): unknown;
+    /* A file or folder `files.watch` follows changed, by the number the watch asked under. */
+    fileChanged(watch: number): void;
+}
+
+export type LaunchSourceMethod = 'list' | 'watch' | 'unwatch';
+
+export interface MachineSourceAsk {
+    project: PublicServer.ProjectInfo;
+    // Only a start names these: the place as the machine read it from `list`, and the number its reports go under.
+    candidate?: PublicServer.MachineCandidate;
+    run?: number;
+}
+
+export interface ReferenceAsk {
+    project: PublicServer.ProjectInfo;
+    // Only a read names the thing, as `list` answered it.
+    item?: PublicServer.ReferenceItem;
 }
 
 type Listener = (payload: unknown) => void;
+type TerminalProfile = Parameters<typeof PublicServer.defineTerminalProfile>[0];
+type LaunchSource = Parameters<typeof PublicServer.defineLaunchSource>[0];
+type MachineSource = Parameters<typeof PublicServer.defineMachineSource>[0];
+type NotificationChannel = Parameters<typeof PublicServer.defineNotificationChannel>[0];
+type UiSource = Parameters<typeof PublicServer.defineUiSource>[0];
+type Reference = Parameters<typeof PublicServer.defineReference>[0];
+type SlashCommand = Parameters<typeof PublicServer.defineSlashCommand>[0];
+type AgentProvider = Parameters<typeof PublicServer.defineAgentProvider>[0];
 
 interface Ref {
     id: string;
@@ -91,7 +155,35 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
     const listeners = new Map<string, Set<Listener>>();
     const tools = new Map<string, { run(input: unknown, context: { caller: string }): unknown }>();
     const nodeContexts = new Map<string, (node: { data: unknown }) => unknown>();
+    const profiles = new Map<string, TerminalProfile>();
+    const launchSources = new Map<string, LaunchSource>();
+    // What stops a launch source's watch of a project, by source and project.
+    const launchWatches = new Map<string, () => void>();
+    const machineSources = new Map<string, MachineSource>();
+    // What aborts the signal of a start a machine source describes, by the number the machine asked under.
+    const machineStarts = new Map<number, AbortController>();
+    const notificationChannels = new Map<string, NotificationChannel>();
+    const uiSources = new Map<string, UiSource>();
+    const references = new Map<string, Reference>();
+    const slashCommands = new Map<string, SlashCommand>();
+    // Settles once every agent provider that lists its models said what it is.
+    let agentsDescribed: Promise<void> = Promise.resolve();
+    const fileWatches = new Map<number, () => void>();
+    let nextFileWatch = 1;
     const typed = <Value>(method: string, args: unknown[]) => ask(method, args) as Promise<Result<Value>>;
+
+    /* A provider registers at the top of the module, where a Result has nobody to read it, so one it may not register throws. */
+    const mayDefine = (define: string, permission: string, id: string): void => {
+        if (!permissions.has(permission)) {
+            throw new Error(missingPermissionMessage(options.provides.id, permission));
+        }
+
+        const refused = providerRefusal({ ...options.provides, permissions: { [permission]: '' } }, define, id, options.proposedAllowed);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
 
     const server = {
         machine: {
@@ -150,6 +242,131 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             read: (chatId: string) => typed<string>('chats.read', [chatId]),
             send: async (chatId: string, text: string) => mapResult(await ask('chats.send', [chatId, text]), () => undefined)
         },
+        defineTerminalProfile(profile: TerminalProfile): void {
+            mayDefine('defineTerminalProfile', 'terminals.profiles', profile.id);
+            profiles.set(profile.id, profile);
+            send({
+                type: 'profile',
+                id: profile.id,
+                title: profile.title,
+                ...(profile.icon === undefined ? {} : { icon: profile.icon }),
+                available: profile.available !== undefined
+            });
+        },
+        defineLaunchSource(source: LaunchSource): void {
+            mayDefine('defineLaunchSource', 'launches.provide', source.id);
+            launchSources.set(source.id, source);
+            send({ type: 'launchSource', id: source.id, title: source.title, watches: source.watch !== undefined });
+        },
+        defineProblemSource(source: { id: string; title: string }): void {
+            mayDefine('defineProblemSource', 'problems.provide', source.id);
+            send({ type: 'problemSource', id: source.id, title: source.title });
+        },
+        defineMachineSource(source: MachineSource): void {
+            mayDefine('defineMachineSource', 'machines.provide', source.id);
+            machineSources.set(source.id, source);
+            send({ type: 'machineSource', id: source.id, title: source.title });
+        },
+        defineNotificationChannel(channel: NotificationChannel): void {
+            mayDefine('defineNotificationChannel', 'notifications.provide', channel.id);
+            notificationChannels.set(channel.id, channel);
+            send({ type: 'notificationChannel', id: channel.id, title: channel.title });
+        },
+        defineUiSource(source: UiSource): void {
+            mayDefine('defineUiSource', 'ui.provide', source.id);
+            uiSources.set(source.id, source);
+            send({
+                type: 'uiSource',
+                id: source.id,
+                description: source.description,
+                ...(source.parameters === undefined ? {} : { parameters: source.parameters })
+            });
+        },
+        defineReference(reference: Reference): void {
+            mayDefine('defineReference', 'composer.provide', reference.id);
+            references.set(reference.id, reference);
+            send({ type: 'reference', id: reference.id, title: reference.title });
+        },
+        defineSlashCommand(command: SlashCommand): void {
+            mayDefine('defineSlashCommand', 'composer.provide', command.name);
+            slashCommands.set(command.name, command);
+            send({ type: 'slashCommand', name: command.name, description: command.description });
+        },
+        defineAgentProvider(provider: AgentProvider): void {
+            mayDefine('defineAgentProvider', 'agents.provide', provider.id);
+
+            if (extensionAgentKind(options.provides.id, provider.id) === null) {
+                throw new Error(`defineAgentProvider ${provider.id}: the id of the extension and this id are together at most 29 characters`);
+            }
+
+            // Described here, once: the machine starts the program for each chat without asking this process again.
+            const spawn = provider.spawn();
+            const describe = (models: { id: string; name: string }[]): void =>
+                send({ type: 'agentProvider', id: provider.id, description: { name: provider.name, protocol: provider.protocol, spawn, models } });
+
+            if (provider.models === undefined) {
+                describe([]);
+
+                return;
+            }
+
+            const listed = (async () => provider.models?.() ?? [])().then(describe, (e: unknown) => {
+                options.log.error(`The models of ${provider.id} could not be listed:`, e);
+                describe([]);
+            });
+
+            agentsDescribed = Promise.all([agentsDescribed, listed]).then(() => undefined);
+        },
+        problems: {
+            report: async (project: Ref, source: string, reported: PublicServer.FileProblems[]) =>
+                mapResult(await ask('problems.report', [project.id, source, reported]), () => undefined),
+            clear: async (project: Ref, source: string) => mapResult(await ask('problems.clear', [project.id, source]), () => undefined)
+        },
+        files: {
+            readText: (project: Ref, path: string) => typed<string>('files.readText', [project.id, path]),
+            list: (project: Ref, folder: string) => typed<PublicServer.FileEntry[]>('files.list', [project.id, folder]),
+            async watch(project: Ref, path: string, listener: () => void) {
+                const watch = nextFileWatch;
+
+                nextFileWatch += 1;
+                // Before the ask, so a change the machine reports with its answer is heard.
+                fileWatches.set(watch, listener);
+
+                const watching = await ask('files.watch', [project.id, path, watch]);
+
+                if (!watching.ok) {
+                    fileWatches.delete(watch);
+
+                    return watching;
+                }
+
+                const stop = (): void => {
+                    if (fileWatches.delete(watch)) {
+                        void ask('files.unwatch', [watch]);
+                    }
+                };
+
+                return { ok: true as const, value: stop };
+            }
+        },
+        terminals: {
+            read: (terminal: Ref) => typed<string>('terminals.read', [terminal.id]),
+            async open({ project, profile, title, cwd, near }: PublicServer.OpenTerminal) {
+                const beside = near?.[0]?.id;
+                const opened = await typed<{ nodeId: string }>('terminals.open', [
+                    {
+                        projectId: project.id,
+                        ...(profile === undefined ? {} : { profile }),
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { cwd }),
+                        ...(beside === undefined ? {} : { beside })
+                    }
+                ]);
+
+                return mapResult(opened, ({ nodeId }) => ({ id: nodeId }));
+            },
+            write: async (terminal: Ref, text: string) => mapResult(await ask('terminals.write', [terminal.id, text]), () => undefined)
+        },
         defineAgentTool(tool: { id: string; description: string; parameters?: unknown; run(input: never, context: { caller: string }): unknown }): void {
             tools.set(tool.id, tool as { run(input: unknown, context: { caller: string }): unknown });
             send({ type: 'tool', name: tool.id, description: tool.description, parameters: tool.parameters ?? { type: 'object', properties: {} } });
@@ -166,10 +383,22 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             );
         },
         defineServer: <Api extends Record<string, (...args: never[]) => Promise<unknown>>>(api: Api): Api => api,
-        onEvent<Name extends keyof PublicServer.ServerEvents>(name: Name, listener: (event: PublicServer.ServerEvents[Name]) => void): () => void {
+        onEvent<Name extends keyof PublicServer.ServerEvents>(
+            name: Name,
+            listener: (event: PublicServer.ServerEvents[Name]) => void,
+            filter?: { project?: Ref }
+        ): () => void {
             const group = listeners.get(name) ?? new Set();
+            const only = filter?.project?.id;
             // The daemon hands on only the payload `ServerEvents` names for this event.
-            const heard = listener as Listener;
+            const heard: Listener =
+                only === undefined
+                    ? (listener as Listener)
+                    : (payload) => {
+                          if ((payload as { project?: Ref }).project?.id === only) {
+                              (listener as Listener)(payload);
+                          }
+                      };
 
             group.add(heard);
             listeners.set(name, group);
@@ -191,6 +420,18 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             set: <Value>(key: string, value: Value) => options.storage.set(key, value),
             delete: (key: string) => options.storage.delete(key)
         },
+        projectSettings: {
+            // The client's section writes the key into what this extension stores, so the read needs no ask of its own.
+            async get<Value extends boolean | string>(project: Ref, key: string) {
+                const refused = clientPointRefusal(options.provides, 'defineProjectSettings', options.proposedAllowed);
+
+                if (refused !== null) {
+                    throw new Error(refused);
+                }
+
+                return (await options.storage.get(projectSettingKey(project.id, key))) as Value | undefined;
+            }
+        },
         secrets: {
             get: async (key: string) => (await options.secrets.get(key)) as string | undefined,
             set: (key: string, value: string) => options.secrets.set(key, value)
@@ -201,6 +442,7 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
 
     return {
         server,
+        agentsDescribed: () => agentsDescribed,
         runTool(name, input, context) {
             const tool = tools.get(name);
 
@@ -211,10 +453,128 @@ export function createServerApi(options: ServerApiOptions): ServerCore {
             return tool.run(input, context);
         },
         readNodeContext: (nodeType, data) => nodeContexts.get(nodeType)?.({ data }) ?? [],
+        askProfile(id, method, input) {
+            const profile = profiles.get(id);
+
+            if (profile === undefined) {
+                throw new MissingHandler(`No terminal profile ${id}`);
+            }
+
+            if (method === 'available') {
+                return profile.available?.(input as PublicServer.ProjectInfo) ?? true;
+            }
+
+            return profile.spawn(input as { project: PublicServer.ProjectInfo; cwd: string });
+        },
+        async askLaunchSource(id, method, project) {
+            const source = launchSources.get(id);
+
+            if (source === undefined) {
+                throw new MissingHandler(`No launch source ${id}`);
+            }
+
+            if (method === 'list') {
+                return source.list(project);
+            }
+
+            const key = `${id}\n${project.id}`;
+            const stop = launchWatches.get(key);
+
+            // A watch asked for twice is one watch, and one that was never there stops nothing.
+            launchWatches.delete(key);
+            stop?.();
+
+            if (method === 'watch' && source.watch !== undefined) {
+                launchWatches.set(key, await source.watch(project, () => send({ type: 'launchesChanged', source: id, projectId: project.id })));
+            }
+
+            return null;
+        },
+        async askMachineSource(id, method, { project, candidate, run }) {
+            const source = machineSources.get(id);
+
+            if (source === undefined) {
+                throw new MissingHandler(`No machine source ${id}`);
+            }
+
+            if (method === 'list') {
+                return source.list(project);
+            }
+
+            if (candidate === undefined || run === undefined) {
+                throw new TypeError('A start names a place and a number');
+            }
+
+            const abort = new AbortController();
+
+            machineStarts.set(run, abort);
+
+            try {
+                return await source.start(candidate, {
+                    project,
+                    report: (line) => send({ type: 'machineReport', run, line: String(line) }),
+                    signal: abort.signal
+                });
+            } finally {
+                machineStarts.delete(run);
+            }
+        },
+        abortMachineStart(run) {
+            machineStarts.get(run)?.abort();
+        },
+        async deliverNotification(id, notification) {
+            const channel = notificationChannels.get(id);
+
+            if (channel === undefined) {
+                throw new MissingHandler(`No notification channel ${id}`);
+            }
+
+            await channel.deliver(notification);
+
+            return null;
+        },
+        readUiSource(id, args, project) {
+            const source = uiSources.get(id);
+
+            if (source === undefined) {
+                throw new MissingHandler(`No UI source ${id}`);
+            }
+
+            return source.read(args, { project });
+        },
+        askReference(id, method, { project, item }) {
+            const reference = references.get(id);
+
+            if (reference === undefined) {
+                throw new MissingHandler(`No reference ${id}`);
+            }
+
+            if (method === 'list') {
+                return reference.list({ project });
+            }
+
+            if (item === undefined) {
+                throw new TypeError('A read names the thing to read');
+            }
+
+            return reference.read(item, { project });
+        },
+        expandCommand(name, args, project) {
+            const command = slashCommands.get(name);
+
+            if (command === undefined) {
+                throw new MissingHandler(`No slash command ${name}`);
+            }
+
+            return command.run(args, { project });
+        },
         deliver(name, payload) {
             for (const listener of listeners.get(name) ?? []) {
                 listener(payload);
             }
+        },
+        fileChanged(watch) {
+            fileWatches.get(watch)?.();
         }
     };
 }

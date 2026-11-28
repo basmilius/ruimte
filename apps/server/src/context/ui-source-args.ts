@@ -18,6 +18,17 @@ export const UI_SOURCE_ARGS = {
         .strict()
 };
 
+/*
+ * The arguments of the one source that reads from an extension. Apart from the others, since it is said only where an
+ * extension supplies a source, with the names it may take.
+ */
+export const EXTENSION_UI_SOURCE_ARGS = z
+    .object({
+        source: z.string().min(1).max(160),
+        args: z.record(z.string(), z.unknown()).default({})
+    })
+    .strict();
+
 type UiSourceName = keyof typeof UI_SOURCE_ARGS;
 
 /* A source's arguments as a block writes them: each default as it is, and a placeholder where the agent fills one in. */

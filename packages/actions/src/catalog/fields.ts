@@ -116,6 +116,8 @@ export const PERSON_VOICE_AGENT_AND_AUTOMATION: readonly ActionActorKind[] = ['p
 /* What an extension with the permission may run, as an agent's verb, held to the fields an agent gives. */
 export const AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['agent', 'extension'];
 export const PERSON_VOICE_AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'voice', 'agent', 'extension'];
+/* What a person and Voice read of a chat, and an extension with the permission reads a smaller part of. */
+export const PERSON_VOICE_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'voice', 'extension'];
 /* What a person's gesture, an agent's verb and an extension may all do, held to the fields an agent gives. */
 export const PERSON_AGENT_AND_EXTENSION: readonly ActionActorKind[] = ['person', 'agent', 'extension'];
 /* What only a client runs: no agent reaches a client, so an agent is left out. */

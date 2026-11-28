@@ -130,6 +130,32 @@ export function defineReference(reference: {
 }): void;
 /** Opens a changed file with these extensions in your component, with Ruimte's own diff one click away. */
 export function defineDiffViewer(viewer: { id: string; title: string; extensions: string[]; component: LazyComponent<{ file: FileInfo; diff: string }> }): void;
+/**
+ * A language of your own: the files it covers and the TextMate grammar the editor and the viewer color them with, so a
+ * language pack is more than a language server. `id` is what a language server of yours names under `languages`, in
+ * lowercase letters, digits and dashes. `extensions` are without the dot and `filenames` are whole names, such as
+ * `Lintelfile`. `grammar` is the path of a JSON file in your pack, at most 512 KB, read when the first such file opens.
+ * A language Ruimte knows itself keeps its own grammar. Proposed: name `languages` under `proposed` in the manifest.
+ */
+export function defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }): void;
+/** A mark in the margin of the editor, on one line or on every line up to `endLine`. Lines count from 1. */
+export interface EditorDecoration {
+    line: number;
+    endLine?: number;
+    /** What the mark says, which Ruimte draws in a color of its own. */
+    kind: 'info' | 'success' | 'warning' | 'error' | 'muted';
+}
+
+/**
+ * Marks in the margin of the editor, such as coverage or what a linter found. Ruimte asks `provide` for a file when it
+ * opens in an editor, and again for every open file after `refresh()`. It reads only: you are told which file, never
+ * its text or the selection, and change nothing in it. At most 2000 marks per file; a mark with a line below 1 or a
+ * kind Ruimte does not know is left out. Proposed: name `editorDecorations` under `proposed` in the manifest.
+ */
+export function defineEditorDecoration(decoration: { id: string; provide(file: FileInfo): EditorDecoration[] | Promise<EditorDecoration[]> }): {
+    /** The marks changed: Ruimte asks `provide` again for every file that is open in an editor. */
+    refresh(): void;
+};
 /** An icon from your pack, by its path, for files with these extensions. */
 export function defineFileIcon(icon: { extensions: string[]; path: string }): void;
 /** What a person can ask for by voice, through extension.voiceList and extension.voiceRun. It answers in words. Type `Input` after `parameters`, a JSON Schema. */
@@ -189,6 +215,25 @@ export function defineExtensionSettings(
     settings: { component: LazyComponent; keywords?: string[]; section?: SettingsSection } | { fields: SettingField[] } | { groups: SettingGroup[] }
 ): void;
 export function useSetting<Value extends boolean | string>(key: string): Value;
+
+/** A section of a project's settings: `fields` (one card) or `groups` (a card per group) that Ruimte draws. */
+export type ProjectSettings = {
+    /** The name of the section; the name of the extension without one. */
+    title?: string;
+    description?: string;
+    /** A Lucide icon; your `assets/icon.svg` without one. */
+    icon?: string;
+} & ({ fields: SettingField[] } | { groups: SettingGroup[] });
+
+/**
+ * A section in the settings of a project, for a choice that belongs to one project, such as the service its shells open
+ * in. What a person chooses is kept on the machine per project, never in the project file, so every computer that opens
+ * the project reads the same. Read a field with `useProjectSetting`, and from `server/` with `projectSettings.get`.
+ * Proposed: name `projectSettings` under `proposed` in the manifest.
+ */
+export function defineProjectSettings(settings: ProjectSettings): void;
+/** A field of `defineProjectSettings` for the project in front, or its default while a person never chose. */
+export function useProjectSetting<Value extends boolean | string>(key: string): Value;
 export function useMachine(): { id: string };
 export function useTheme(): { side: 'light' | 'dark' };
 /** The chat of this id on the machine in front, or null when it has none. */
@@ -568,12 +613,14 @@ export const git: {
     log(options?: { repository?: string; limit?: number }): Promise<Result<GitCommit[]>>;
 };
 
-/** `list` and `read` need `chats.read`, `send` needs `chats.send`. */
+/** `list`, `read` and `inspect` need `chats.read`, `send` needs `chats.send`. */
 export const chats: {
     list(): Promise<Result<ChatSummary[]>>;
     /** The thread as text, as an agent reads it. */
     read(chatId: string): Promise<Result<string>>;
     send(chatId: string, text: string): Promise<Result<void>>;
+    /** The machine's `chat.inspect`, for a chat of the project in front. */
+    inspect(input: MachineInput<'chat.inspect'>): Promise<Result<MachineOutput<'chat.inspect'>>>;
 };
 
 export interface LaunchSummary {
@@ -589,6 +636,20 @@ export interface LaunchSummary {
     url: string | null;
     /** The launches a group starts. */
     members: string[];
+    /** What a person calls the launch source of an extension that lists it; null for a launch of the project's own files. */
+    source: string | null;
+}
+
+/** What a launch an extension adds or changes runs. A variable set to null is removed, and one that holds a secret stays the person's. */
+export interface LaunchFields {
+    command?: string;
+    /** A folder of the project or of one of its worktrees; the project folder without one. */
+    cwd?: string;
+    /** The address of a service, whose port tells when it is up. */
+    url?: string;
+    env?: Record<string, string | null>;
+    /** The launches a group starts, by id or name, in order. */
+    members?: string[];
 }
 
 export interface RoutineSummary {
@@ -657,6 +718,13 @@ export interface MachineActions {
     'launch.start': { input: { launch: string }; output: { id: string; name: string } };
     'launch.restart': { input: { launch: string }; output: { id: string; name: string } };
     'launch.stop': { input: { launch: string }; output: { id: string; name: string; stopping: number } };
+    /**
+     * Adds a launch to this person's own launches. It starts only after a person approved it on this machine, so `launch.start`
+     * answers `refused` until then.
+     */
+    'launch.create': { input: { name: string; kind: 'service' | 'task' | 'group' } & LaunchFields; output: { id: string; name: string } };
+    /** Changes a launch of the project's files. A change to what it runs waits for a person's approval again. */
+    'launch.edit': { input: { launch: string; name?: string } & LaunchFields; output: { id: string; name: string } };
     'routine.list': { input: {}; output: { routines: RoutineSummary[] } };
     'routine.run': { input: { routine: string }; output: { id: string; title: string; runId: string } };
     'routine.pause': { input: { routine: string }; output: { id: string; title: string } };
@@ -696,19 +764,43 @@ export interface MachineActions {
     'device.tap': { input: { node: NodeRef; x: number; y: number }; output: { node: NodeRef } };
     /** `app` is a bundle id on iOS or a package name on Android. */
     'device.launch': { input: { node: NodeRef; app: string }; output: { node: NodeRef } };
+    /**
+     * What a chat of the project runs on and whether something waits in it. Needs `chats.read`. `waitsOn` says that the agent asked
+     * a question or wants an approval, never what it asked: answering is the person's. `mode` is its permission mode, `queued` the
+     * messages that wait for its turn to end, `background` the commands it left running.
+     */
+    'chat.inspect': { input: { chat: string }; output: ChatState };
+}
+
+export interface ChatState {
+    id: string;
+    title: string;
+    provider: string;
+    model: string;
+    mode: string;
+    working: boolean;
+    queued: number;
+    waitsOn: 'approval' | 'question' | null;
+    subagents: number;
+    background: number;
 }
 
 export type MachineActionName = keyof MachineActions;
 export type MachineInput<Name extends MachineActionName> = MachineActions[Name]['input'];
 export type MachineOutput<Name extends MachineActionName> = MachineActions[Name]['output'];
 
-/** The machine's own actions, in the project in front: `launches.start({ launch })` is `launch.start`. `list` and `read` need `launches.read`, the rest `launches.run`. */
+/**
+ * The machine's own actions, in the project in front: `launches.start({ launch })` is `launch.start`. `list` and `read` need
+ * `launches.read`, `create` and `edit` need `launches.write`, the rest `launches.run`.
+ */
 export const launches: {
     list(): Promise<Result<MachineOutput<'launch.list'>>>;
     read(input: MachineInput<'launch.read'>): Promise<Result<MachineOutput<'launch.read'>>>;
     start(input: MachineInput<'launch.start'>): Promise<Result<MachineOutput<'launch.start'>>>;
     restart(input: MachineInput<'launch.restart'>): Promise<Result<MachineOutput<'launch.restart'>>>;
     stop(input: MachineInput<'launch.stop'>): Promise<Result<MachineOutput<'launch.stop'>>>;
+    create(input: MachineInput<'launch.create'>): Promise<Result<MachineOutput<'launch.create'>>>;
+    edit(input: MachineInput<'launch.edit'>): Promise<Result<MachineOutput<'launch.edit'>>>;
 };
 /** `list` needs `routines.read`, the rest `routines.run`. */
 export const routines: {
@@ -744,8 +836,16 @@ export const devices: {
 export const terminals: {
     /** Needs `terminals.read`. What the terminal shows now. */
     read(terminal: NodeRef): Promise<Result<string>>;
-    /** Needs `canvas.write`. Opens a shell and types nothing: only a person types in a terminal. */
-    open(options?: { title?: string; cwd?: string; near?: NodeRef[] }): Result<NodeRef>;
+    /**
+     * Needs `canvas.write`. Opens a terminal on the canvas in front, beside the first of `near`, and starts it, so `write` reaches it
+     * at once. With `profile` it runs that terminal profile of this extension instead of a plain shell.
+     */
+    open(options?: { profile?: string; title?: string; cwd?: string; near?: NodeRef[] }): Promise<Result<NodeRef>>;
+    /**
+     * Needs `terminals.write`. Types `text` as it is, so end a line with `\n` to run it. Answers `refused` for a terminal this
+     * extension did not open itself, and while an agent in it waits for the person.
+     */
+    write(terminal: NodeRef, text: string): Promise<Result<void>>;
 };
 
 /**

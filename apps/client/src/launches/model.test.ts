@@ -1,6 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitRepo, LaunchConfigEntry, LaunchesDocument, LaunchStatus } from '@ruimte/contracts';
-import { chosenLaunch, headlineOf, launchSections, launchViews, othersOf, outputOf, shortAddress } from './model.ts';
+import {
+    chosenLaunch,
+    headlineOf,
+    launchSections,
+    launchSourceOf,
+    launchViews,
+    oneSourceOf,
+    othersOf,
+    outputOf,
+    shortAddress,
+    shownLaunches,
+    sourceSections
+} from './model.ts';
 
 function launch(id: string, overrides: Partial<LaunchConfigEntry> = {}): LaunchConfigEntry {
     return {
@@ -181,5 +193,49 @@ describe('the menu', () => {
 
     test('an address reads without its scheme', () => {
         expect(shortAddress('http://localhost:8000/')).toBe('localhost:8000');
+    });
+});
+
+describe('the launches an extension lists', () => {
+    const harbor = { extension: 'dev.harbor', id: 'compose', title: 'Harbor' };
+    const tasks = { extension: 'dev.harbor', id: 'tasks', title: 'Harbor tasks' };
+    const document: LaunchesDocument = {
+        rev: 3,
+        launches: [launch('dev')],
+        approved: ['dev', 'dev.harbor:compose:api'],
+        sourced: [
+            { id: 'dev.harbor:compose:web', name: 'web', kind: 'service', command: 'run web', source: harbor },
+            { id: 'dev.harbor:tasks:seed', name: 'seed', kind: 'task', command: 'run seed', source: tasks },
+            { id: 'dev.harbor:compose:api', name: 'api', kind: 'service', command: 'run api', cwd: 'api', source: harbor }
+        ]
+    };
+
+    test('are launches a person starts after the ones of the files, held until approved, and never part of what a save holds', () => {
+        const views = launchViews(document, {});
+
+        expect(shownLaunches(document).map((entry) => entry.id)).toEqual(['dev', 'dev.harbor:compose:web', 'dev.harbor:tasks:seed', 'dev.harbor:compose:api']);
+        expect([...views.values()].map((view) => view.phase)).toEqual(['idle', 'held', 'held', 'idle']);
+        expect(document.launches.map((entry) => entry.id)).toEqual(['dev']);
+        expect(chosenLaunch(document, 'dev.harbor:compose:api')?.cwd).toBe('api');
+        expect(chosenLaunch({ ...document, launches: [] }, undefined)?.id).toBe('dev.harbor:compose:web');
+    });
+
+    test('are grouped under the source that lists them, and named by it', () => {
+        expect(sourceSections(document).map((section) => [section.source.title, section.launches.map((entry) => entry.name)])).toEqual([
+            ['Harbor', ['web', 'api']],
+            ['Harbor tasks', ['seed']]
+        ]);
+        expect(launchSourceOf(document, 'dev.harbor:tasks:seed')).toEqual(tasks);
+        expect(launchSourceOf(document, 'dev')).toBeNull();
+        expect(sourceSections({ rev: 0, launches: [], approved: [] })).toEqual([]);
+    });
+
+    test('are asked about as one source only when everything that waits comes from it', () => {
+        const held = (launchId: string, source?: typeof harbor) => ({ launchId, command: 'run', cwd: '/p', ...(source === undefined ? {} : { source }) });
+
+        expect(oneSourceOf([held('a', harbor), held('b', harbor)])).toEqual(harbor);
+        expect(oneSourceOf([held('a', harbor), held('b', tasks)])).toBeNull();
+        expect(oneSourceOf([held('a', harbor), held('dev')])).toBeNull();
+        expect(oneSourceOf([])).toBeNull();
     });
 });

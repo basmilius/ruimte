@@ -1,0 +1,22 @@
+{
+    "id": "dev.pulseboard",
+    "name": "Pulseboard",
+    "version": "0.1.0",
+    "api": 1,
+    "publisher": "Ruimte",
+    "category": "Activity",
+    "description": "How much your agents did: who works now, the turns of the last two weeks and how far each plan window is used.",
+    "color": "#059669",
+    "autostart": true,
+    "permissions": {
+        "agents.status": "Shows which agents work and which wait for you",
+        "usage.read": "Shows how much of each plan window you have used",
+        "chats.read": "Counts the turns your chats start, and shows whether a waiting chat wants an approval or an answer",
+        "terminals.read": "Counts the turns the agents in your terminals start",
+        "notifications.provide": "Keeps a list of what Ruimte told you while you were away"
+    },
+    "provides": {
+        "notificationChannels": ["log"]
+    },
+    "proposed": ["notificationChannels"]
+}

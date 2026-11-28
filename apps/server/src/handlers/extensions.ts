@@ -1,11 +1,20 @@
 import { homedir } from 'node:os';
 import { cliExecutable, type ChatProvider } from '@adecore/agents/providers';
-import { isCanvasView, sourceOf, type ContextSource, type ExtensionDatabaseValue, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    sourceOf,
+    type ContextSource,
+    type ExtensionDatabaseValue,
+    type ExtensionTerminalProfile,
+    type ProjectNode,
+    type ProjectView
+} from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
 import type { Area } from '../area.ts';
 import { type Dispatcher } from '../dispatcher.ts';
 import { errorText } from '../error-text.ts';
-import type { ExtensionHost } from '../extensions/extension-host.ts';
+import type { ExtensionHost, ExtensionProject } from '../extensions/extension-host.ts';
+import type { NotificationChannels } from '../extensions/notification-channels.ts';
 import { asExtensionRefusal, ExtensionRefusal } from '../extensions/refusal.ts';
 import { oneShotProvider, oneShotRun, runOneShot } from '../git/one-shot.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
@@ -19,6 +28,10 @@ export interface ExtensionHandlerDeps {
     folderOf(projectId: string): string | null;
     readSource(source: ContextSource, projectId: string): Promise<string>;
     providers: ProviderRegistry;
+    terminalProfiles(projectId: string): Promise<ExtensionTerminalProfile[]>;
+    notificationChannels: Pick<NotificationChannels, 'list' | 'set'>;
+    /* A project as an extension is told of it; rejects for one this machine does not have. */
+    projectOf(projectId: string): Promise<ExtensionProject>;
     databaseQuery(projectId: string, connection: string, sql: string): Promise<{ columns: string[]; rows: ExtensionDatabaseValue[][]; hasMore: boolean }>;
 }
 
@@ -135,6 +148,25 @@ export function extensionsArea(deps: ExtensionsDeps): Area {
             registerExtensionAdmin(dispatcher, host);
             // The text of one chat as `chats.read` gives it, so a chat in a view of its own reads as well.
             dispatcher.register('extension.chatRead', async ({ chatId }) => ({ text: await deps.readChat(chatId) }));
+            // What `server/` of the extensions offers after `#` and `/`, for a client that did not load their `client/`.
+            extensionDispatcher.register('extension.composerItems', async ({ projectId }) => host.composerItems(await deps.projectOf(projectId)));
+            extensionDispatcher.register('extension.referenceRead', async ({ projectId, extension, reference, id, name }) => ({
+                text: await host.readReference(extension, reference, { id, name }, await deps.projectOf(projectId))
+            }));
+            extensionDispatcher.register('extension.commandExpand', async ({ projectId, extension, name, args }) => ({
+                text: await host.expandCommand(extension, name, args, await deps.projectOf(projectId))
+            }));
+            // Owner only: a channel carries word of a person's agents out of Ruimte, so only the app on this machine turns one on.
+            dispatcher.register('extension.notificationChannels', async () => ({ channels: await deps.notificationChannels.list() }), { owner: true });
+            dispatcher.register(
+                'extension.notificationChannelSet',
+                ({ extension, channel, on }) => {
+                    deps.notificationChannels.set(extension, channel, on);
+
+                    return {};
+                },
+                { owner: true }
+            );
         },
         stop: [{ phase: 'drain', label: 'Stopping extensions', run: () => host.stopAll() }]
     };
@@ -283,6 +315,14 @@ function registerExtensionCalls(dispatcher: Pick<Dispatcher, 'register'>, host: 
     dispatcher.register('extension.clientFiles', ({ id }) => host.clientFiles(id));
 
     dispatcher.register('extension.agentStart', async ({ id, ...start }) => host.startAgent(id, start));
+
+    dispatcher.register('extension.terminalProfiles', async ({ projectId }) => ({ profiles: await deps.terminalProfiles(projectId) }));
+    dispatcher.register('extension.terminalOpen', async ({ id, ...start }) => host.openTerminal(id, start));
+    dispatcher.register('extension.terminalWrite', async ({ id, nodeId, text }) => {
+        await host.writeTerminal(id, nodeId, text);
+
+        return {};
+    });
 
     dispatcher.register('extension.agentStop', async (payload, client) => {
         streams.stop(client.id, payload.runId);

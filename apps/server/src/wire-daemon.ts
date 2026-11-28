@@ -87,13 +87,14 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     let servedPort: number | null = null;
     provide('actions', createServerActions(AGENT_FEATURES));
     const catalog = buildCatalog(AGENT_TOOLKITS);
-    const extensions = provide('extensions', wireExtensions(home, later));
+    const extensions = provide('extensions', wireExtensions(home, seams, later));
 
     const machineModel = seams.machine.model();
     const machine = provide('machine', await wireMachine(config, later));
     const { identity } = machine;
     seams.redactions.secret(machine.access.localSecret);
     const stores = provide('stores', await loadAgentStores(home, seams.clock));
+    stores.lifecycle.on('placed', (projectId, ids) => extensions.terminals.places(projectId, ids));
     const computer = provide('computer', createComputer(runtime, stores.computerStore, stores.lifecycle, later));
     const stats = provide('stats', await wireUsageStats(home, identity, machine.auth, launcher));
     const providers = provide('providers', await wireProviders(config, () => computer.start(), stats.flush, seams));
@@ -108,7 +109,8 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     const databases = provide('databases', await wireDatabases(home, machine.machineHome, projects.store, later));
     const remote = provide('remote', await wireRemote({ home, identity, machine, outbox: stores.outbox, later }));
     const work = provide('work', wireAgentWork({ home, identity, stores, agents, projects: projects.store, remote, providers, seams, later }));
-    const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, later }));
+    const launches = provide('launches', wireLaunches({ home, stores, agents, work, projects: projects.store, sources: extensions.launchSources, later }));
+    launches.runner.observe((status) => extensions.host.forwardEvent('launch.status', status));
     const secrets = provide('secrets', wireSecrets({ home, stores, agents, launches }));
     const routines = provide('routines', await wireRoutines({ home, machineId: identity.id, stores, agents, projects, launches, artifacts }));
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
@@ -174,7 +176,7 @@ export async function wireDaemon({ runtime, launcher, seams, shutdown }: WireInp
     );
 
     const { sessions, chats } = agents;
-    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage));
+    const push = provide('push', wirePush(home, machine.auth, identity, agents, projects.store, work.snoozes, usage, extensions.notificationChannels));
     sessions.observe((event) => push.consume(event));
     sessions.observe((event) => work.tasks.terminals.sessionEvent(event));
     chats.observe((event) => push.consume(event));

@@ -26,6 +26,82 @@ describe('runMachineAction', () => {
         expect(asked).toEqual([{ action: 'browser.screenshot', input: { nodeId: 'browser-1' } }]);
     });
 
+    test('says of a chat what it runs on and that something waits in it, without a word of what waits or what is queued', async () => {
+        const asked: unknown[] = [];
+        const execute = (async (action: string, input: unknown) => {
+            asked.push({ action, input });
+
+            return {
+                chatId: 'chat-1',
+                chat: 'Import',
+                provider: 'claude',
+                model: 'sonnet',
+                options: {},
+                runtimeMode: 'supervised',
+                status: 'needs-you',
+                working: true,
+                open: true,
+                queue: [{ messageId: 'q1', text: 'Then deploy with the token' }],
+                questions: [{ requestId: 'r2', itemId: 'i2', optional: false, questions: [{ questionId: 'q', header: 'Which', question: 'Which branch?' }] }],
+                approvals: [{ requestId: 'r1', tool: 'Bash', description: 'Deploy the shop' }],
+                subagents: [{ toolUseId: 't1', title: 'Scout', status: 'running', stoppable: false }],
+                tasks: [{ taskId: 'bg-1', kind: 'shell', description: 'Dev server', command: null }],
+                lastTurnId: 'turn-1',
+                forkOf: null
+            };
+        }) as ExecuteAction;
+        const state = await runMachineAction('chat.inspect', { chat: 'chat-1' }, execute, noPublish);
+
+        expect(state).toEqual({
+            id: 'chat-1',
+            title: 'Import',
+            provider: 'claude',
+            model: 'sonnet',
+            mode: 'supervised',
+            working: true,
+            queued: 1,
+            // An approval comes first: it is what holds the turn.
+            waitsOn: 'approval',
+            subagents: 1,
+            background: 1
+        });
+        expect(asked).toEqual([{ action: 'chat.inspect', input: { chatId: 'chat-1' } }]);
+        expect(JSON.stringify(state)).not.toMatch(/Deploy|branch|token|r1|r2|Dev server/);
+        await expect(runMachineAction('chat.inspect', {}, execute, noPublish)).rejects.toMatchObject({ code: 'invalid-input' });
+    });
+
+    test('adds and changes a launch without saying which file it lives in, and lists each launch with its source', async () => {
+        const asked: unknown[] = [];
+        const execute = (async (action: string, input: unknown) => {
+            asked.push({ action, input });
+
+            return action === 'launch.list'
+                ? {
+                      launches: [
+                          { launchId: 'dev.harbor:compose:web', name: 'web', source: 'Harbor' },
+                          { launchId: 'dev', name: 'Dev' }
+                      ]
+                  }
+                : { launchId: 'web', name: 'Web', kind: 'service', shared: false };
+        }) as ExecuteAction;
+        const added = { name: 'Web', kind: 'service', command: 'bun dev', env: { PORT: '5173' } };
+
+        expect(await runMachineAction('launch.create', { ...added, shared: true }, execute, noPublish)).toEqual({ id: 'web', name: 'Web' });
+        expect(await runMachineAction('launch.edit', { launch: 'web', env: { PORT: null } }, execute, noPublish)).toEqual({ id: 'web', name: 'Web' });
+        expect(await runMachineAction('launch.list', {}, execute, noPublish)).toEqual({
+            launches: [
+                { id: 'dev.harbor:compose:web', name: 'web', source: 'Harbor' },
+                { id: 'dev', name: 'Dev', source: null }
+            ]
+        });
+        // `shared` is no field of the extension's input, so it never reaches the action.
+        expect(asked.slice(0, 2)).toEqual([
+            { action: 'launch.create', input: added },
+            { action: 'launch.edit', input: { launch: 'web', env: { PORT: null } } }
+        ]);
+        await expect(runMachineAction('launch.create', { name: 'Web', kind: 'daemon' }, execute, noPublish)).rejects.toMatchObject({ code: 'invalid-input' });
+    });
+
     test('refuses a name outside the list, and an input of the wrong shape as an argument error', async () => {
         const execute = (async () => ({})) as ExecuteAction;
 

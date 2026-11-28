@@ -343,6 +343,7 @@
         "refusal": {
             "onlyOnMachine": "Only the app on that machine can put it on an account.",
             "machineHasAccount": "This machine is on another account. Take it off that account on the machine itself first.",
+            "otherAccount": "The machine on this computer is on another account than the one you are signed in to.",
             "listedElsewhere": "Another account still lists this machine. Remove it there first, from a device signed in to that account."
         }
     },

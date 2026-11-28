@@ -13,7 +13,7 @@ import { openLaunchAddress, showLaunchDevice, startLaunch } from '@/launches/act
 import { deviceTargetOf, matchLaunchDevice, type DeviceTarget } from '@/launches/device-target';
 import { LaunchMenu } from '@/launches/LaunchChip';
 import { LaunchButtons, LaunchStatusIcon } from '@/launches/LaunchControls';
-import { chosenLaunch, othersOf, outputOf, shortAddress, type LaunchView } from '@/launches/model';
+import { chosenLaunch, launchSourceOf, othersOf, outputOf, shortAddress, shownLaunches, type LaunchView } from '@/launches/model';
 import { useAddressReachable, useLaunches, useProjectLaunches } from '@/launches/state';
 import { basenameOf } from '@/paths/file-path';
 import { useEndpointId } from '@/state/current-endpoint';
@@ -63,7 +63,7 @@ export function LaunchesPanel() {
     if (document === null) {
         return <PanelEmpty busy>{t('panel.reading')}</PanelEmpty>;
     }
-    if (document.launches.length === 0) {
+    if (shownLaunches(document).length === 0) {
         return (
             <PanelEmpty
                 scene={<LaunchesScene />}
@@ -171,9 +171,11 @@ function LaunchDevice({ target }: { target: DeviceTarget }) {
 function LaunchOutput({ view }: { view: LaunchView }) {
     const { t } = useTranslation('launches');
     const reachable = useAddressReachable();
+    const { document } = useProjectLaunches();
     const { launch, status } = view;
     const address = view.phase === 'running' && launch.url !== undefined ? launch.url : null;
     const device = launch.command === undefined ? null : deviceTargetOf(launch.command);
+    const source = launchSourceOf(document, launch.id);
 
     return (
         <div className="flex min-h-0 grow flex-col">
@@ -181,6 +183,7 @@ function LaunchOutput({ view }: { view: LaunchView }) {
                 {launch.cwd !== undefined && launch.cwd !== '' && <span className="shrink-0">{launch.cwd}</span>}
                 <span className="shrink-0">$</span>
                 <span className="min-w-0 grow truncate text-text-muted">{launch.command}</span>
+                {source !== null && <span className="shrink-0 font-sans">{t('source.from', { name: source.title })}</span>}
                 {address !== null &&
                     (reachable ? (
                         <button

@@ -1,24 +1,36 @@
-import type { Area } from '../area.ts';
+import type { Area, EventSource } from '../area.ts';
 import type { Dispatcher } from '../dispatcher.ts';
 import type { LanguageHost } from '../language/host.ts';
 
+/* The problems the sources of extensions report, which reach a client as a language server's do. */
+interface ReportedProblems extends EventSource {
+    replay(clientId: string, projectId: string): void;
+}
+
 interface LanguageDeps {
     host: LanguageHost;
+    reported: ReportedProblems;
 }
 
 /* Every request here comes from a client, so an install or a restart is a person's. */
 export function languageArea(deps: LanguageDeps): Area {
-    const { host } = deps;
+    const { host, reported } = deps;
 
     return {
         name: 'language',
-        sources: [host],
+        sources: [host, reported],
         handlers: (dispatcher) => registerRequests(dispatcher, deps),
         stop: [{ phase: 'end', label: 'Stopping language servers', run: () => host.close() }]
     };
 }
 
-function registerRequests(dispatcher: Dispatcher, { host }: LanguageDeps): void {
+function registerRequests(dispatcher: Dispatcher, { host, reported }: LanguageDeps): void {
+    dispatcher.register('language.reportedProblems', async (payload, client) => {
+        reported.replay(client.id, payload.projectId);
+
+        return {};
+    });
+
     dispatcher.register('language.status', async (payload) => ({ servers: await host.status(payload.projectId) }));
 
     dispatcher.register('language.install', async (payload) => ({ status: await host.install(payload.server) }));

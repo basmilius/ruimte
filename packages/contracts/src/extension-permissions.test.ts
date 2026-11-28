@@ -1,9 +1,15 @@
 import { expect, test } from 'bun:test';
-import { EXTENSION_CLIENT_PERMISSIONS } from './extension-client.ts';
+import { EXTENSION_CLIENT_PERMISSIONS, EXTENSION_SERVER_PERMISSIONS } from './extension-client.ts';
 import { EXTENSION_ACTIONS, EXTENSION_PERMISSIONS, extensionFrameHost, extensionPermissionProblems, isExtensionPermission } from './extension-permissions.ts';
+import { EXTENSION_PROVIDER_POINTS } from './extension-providers.ts';
 
-test('every permission a call or an action needs is one a manifest may ask for', () => {
-    const needed = new Set([...Object.values(EXTENSION_CLIENT_PERMISSIONS), ...Object.values(EXTENSION_ACTIONS)]);
+test('every permission a call, an action or a provider needs is one a manifest may ask for', () => {
+    const needed = new Set([
+        ...Object.values(EXTENSION_CLIENT_PERMISSIONS),
+        ...Object.values(EXTENSION_SERVER_PERMISSIONS),
+        ...Object.values(EXTENSION_ACTIONS),
+        ...Object.values(EXTENSION_PROVIDER_POINTS).map((point) => point.permission)
+    ]);
 
     expect([...needed].filter((permission) => !EXTENSION_PERMISSIONS.includes(permission))).toEqual([]);
 });
@@ -23,7 +29,7 @@ test('a manifest is told which of its permissions this Ruimte does not know', ()
     expect(isExtensionPermission('chats.send')).toBe(true);
     expect(isExtensionPermission('chat.send')).toBe(false);
     expect(extensionPermissionProblems({ 'files.read': 'Reads', 'chat.send': 'Sends', 'net:a.com;': 'Calls' })).toEqual([
-        'chat.send is not a permission this Ruimte knows (canvas.write, views.write, artifacts.read, artifacts.write, browser.control, context.read, database.read, devices.control, languages.servers, launches.read, launches.run, routines.read, routines.run, terminals.read, files.read, files.write, git.read, chats.read, chats.send, agents.run, agents.start, agents.status, agents.tools, usage.read, clock or net:<host>)',
+        `chat.send is not a permission this Ruimte knows (${EXTENSION_PERMISSIONS.join(', ')} or net:<host>)`,
         'net:a.com; does not name a host; write net:example.com'
     ]);
     expect(extensionPermissionProblems(undefined)).toEqual([]);

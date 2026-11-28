@@ -3,6 +3,7 @@ import type { LaunchStatus } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { mayNotify, raiseNotification } from '@/attention/system-notification';
 import { projectOnScreen, showLaunchOutput, startLaunch } from '@/launches/actions';
+import { shownLaunches } from '@/launches/model';
 import { useLaunches } from '@/launches/state';
 import { endpointKey } from '@/state/keys';
 import { defaultProjectStore } from '@/state/project';
@@ -27,7 +28,7 @@ const failureNotifications = new Map<string, Notification>();
 
 function launchName(endpointId: string, status: LaunchStatus): string {
     const document = useLaunches.getState().documents[endpointKey(endpointId, status.projectId)];
-    return document?.launches.find((launch) => launch.id === status.launchId)?.name ?? status.launchId;
+    return (document === undefined ? [] : shownLaunches(document)).find((launch) => launch.id === status.launchId)?.name ?? status.launchId;
 }
 
 /* Only a launch that went down by itself says so; one a person or an agent stopped is expected to end. */

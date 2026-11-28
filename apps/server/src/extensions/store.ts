@@ -312,8 +312,11 @@ export class ExtensionStore {
         });
     }
 
-    /* A folder `ruimte extension dev` builds into. A save moves the revision, which is how a client knows to load it again. */
-    async link(folder: string, owner?: string): Promise<ExtensionManifest> {
+    /*
+     * A folder `ruimte extension dev` builds into. A save moves the revision, which is how a client knows to load it
+     * again. With `startsOff` an extension that was not linked yet is off until a person turns it on.
+     */
+    async link(folder: string, owner?: string, startsOff = false): Promise<ExtensionManifest> {
         const manifest = await this.manifestIn(folder).catch(() => null);
 
         if (manifest === null) {
@@ -338,6 +341,12 @@ export class ExtensionStore {
             // leaves the link and its owner as they were, and the link is the one write that changes what runs. A link
             // of the folder linked now changes nothing in `dev-links.json`, so its owner is its one write.
             await this.writeJson(join(this.root, LINK_OWNERS_FILE), Object.keys(next).length === 0 ? owners : { ...owners, [id]: next });
+
+            // Before the link, so it never runs between the two writes. Only for an id not linked yet: a person who
+            // turned it on keeps it on over every later link.
+            if (startsOff && linkedNow === undefined) {
+                await this.writeLinksOff(id, true);
+            }
 
             if (linkedNow !== folder) {
                 await this.writeJson(join(this.root, LINKS_FILE), { ...links, [id]: folder });

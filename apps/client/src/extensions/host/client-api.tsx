@@ -2,6 +2,10 @@ import { useChats, useProvidersStore } from '@adecore/agents-react/state';
 import { ErrorBoundary } from '@adecore/ui';
 import * as format from '@adecore/ui/format';
 import {
+    clientPointRefusal,
+    editorDecorationsOf,
+    languageProblem,
+    projectSettingKey,
     extensionActionCall,
     extensionAgentStatus,
     extensionCallPermission,
@@ -30,6 +34,7 @@ import { createContext, createElement, lazy, Suspense, use, useContext, useEffec
 import { useTranslation } from 'react-i18next';
 import { create } from 'zustand';
 import { accentColor } from '@/canvas-model/accents';
+import { registerGrammar } from '@/code-highlighter';
 import { folderWatches } from '@/controllers/fs-watch';
 import { databaseConnections } from '@/database/connections';
 import { desktop } from '@/desktop/bridge';
@@ -54,7 +59,9 @@ import { ExtensionChat } from '@/extensions/host/ExtensionChat';
 import { askHost, openOverlay, type OpenOverlay } from '@/extensions/host/host-dialog-state';
 import { useMachineStorage } from '@/extensions/host/machine-storage';
 import { namedIcon } from '@/extensions/host/named-icon';
+import { fetchGrammar } from '@/extensions/languages';
 import { extensionRequest } from '@/extensions/machine-request';
+import { ProjectSchemaSettings } from '@/extensions/ProjectSchemaSettings';
 import { baseContext, nodeInfoIn, useNodeInfo, useNodeSources, type NodeInfo } from '@/extensions/slots';
 import { focusView } from '@/extensions/view-focus';
 import { isUnderFolder } from '@/paths/file-path';
@@ -619,6 +626,14 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             permit(permission);
         }
     };
+    // A proposed part registers at the top of the module, where a Result has nobody to read it, so one it may not use throws.
+    const mayUse = (define: string): void => {
+        const refused = clientPointRefusal(extension.manifest, define, extension.dev === true || extension.builtIn === true);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
     // A callback of a load that was taken down or replaced reads, writes and changes nothing any more.
     const withdrawn = (): Refused => new Refused('unavailable', `${extension.manifest.name} was turned off or replaced`);
     const assertLive = (): void => {
@@ -939,6 +954,54 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 component: surfaceOf(extension, viewer) as ComponentType<{ file: { path: string; name: string; extension: string }; diff: string }>
             });
         },
+        defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }) {
+            mayUse('defineLanguage');
+
+            const problem = languageProblem(language);
+
+            if (problem !== null) {
+                throw new TypeError(problem);
+            }
+
+            add('languages', {
+                id: `${id}/${language.id}`,
+                language: language.id,
+                name: language.name,
+                extensions: language.extensions,
+                filenames: language.filenames ?? []
+            });
+            hold(registerGrammar(language.id, () => fetchGrammar(`${extension.base}${language.grammar}`), reportFailure(`defineLanguage ${language.id}`)));
+        },
+        defineEditorDecoration(decoration: {
+            id: string;
+            provide: (file: PublicClient.FileInfo) => PublicClient.EditorDecoration[] | Promise<PublicClient.EditorDecoration[]>;
+        }) {
+            mayUse('defineEditorDecoration');
+
+            const listeners = new Set<() => void>();
+
+            add('editorDecorations', {
+                id: `${id}/${decoration.id}`,
+                // Only the file goes to the extension, and only marks of the fixed set come back.
+                provide: async (file) => (live() ? editorDecorationsOf(await decoration.provide({ ...file })) : []),
+                onRefresh(listener) {
+                    listeners.add(listener);
+
+                    return () => {
+                        listeners.delete(listener);
+                    };
+                },
+                onFailure: reportFailure(`defineEditorDecoration ${decoration.id}`)
+            });
+
+            return {
+                refresh: whileLive(() => {
+                    for (const listener of [...listeners]) {
+                        listener();
+                    }
+                })
+            };
+        },
         defineFileIcon(icon: { extensions: string[]; path: string }) {
             hold(addFileIcons(`${extension.base}${icon.path}`, icon.extensions));
         },
@@ -1026,6 +1089,23 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             }
 
             add('extensionSettings', { id, component, keywords: settings.keywords ?? [] });
+        },
+        defineProjectSettings(settings: PublicClient.ProjectSettings) {
+            mayUse('defineProjectSettings');
+
+            const groups = 'groups' in settings ? settings.groups : [{ fields: settings.fields }];
+
+            add('projectSettings', {
+                id,
+                icon: iconOf(settings.icon, extension),
+                title: settings.title ?? extension.manifest.name,
+                description: settings.description ?? extension.manifest.description ?? '',
+                groups,
+                fields: groups.flatMap((group) => group.fields),
+                component: function ExtensionProjectSettings() {
+                    return <ProjectSchemaSettings id={id} />;
+                }
+            });
         },
         defineAction(action: {
             id: string;
@@ -1224,6 +1304,16 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             const initial = fields?.find((field) => field.key === key)?.default;
 
             return useExtensionStorage(settingKey(extensionNow.manifest.id, key), initial as Value);
+        },
+        useProjectSetting<Value>(key: string): Value {
+            const extensionNow = useExtension();
+            const fields = useContributions((state) => state.projectSettings.find((section) => section.id === extensionNow.manifest.id)?.fields);
+            const initial = fields?.find((field) => field.key === key)?.default;
+            const { transport, endpointId } = useFocusedMachine();
+            const projectId = useProject((state) => state.current?.projectId ?? '');
+            const stored = useMachineStorage(transport, endpointId, extensionNow.manifest.id, projectSettingKey(projectId, key), initial, storageFailed);
+
+            return stored[0] as Value;
         },
         useMachine() {
             return { id: useFocusedMachine().endpointId };
@@ -1513,7 +1603,7 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                     }));
                 })
         },
-        launches: machineActions(['launch.list', 'launch.read', 'launch.start', 'launch.restart', 'launch.stop']),
+        launches: machineActions(['launch.list', 'launch.read', 'launch.start', 'launch.restart', 'launch.stop', 'launch.create', 'launch.edit']),
         routines: machineActions(['routine.list', 'routine.run', 'routine.pause', 'routine.resume']),
         artifacts: machineActions(['artifact.list', 'artifact.read', 'artifact.publish']),
         browser: machineActions(['browser.inspect', 'browser.navigate', 'browser.back', 'browser.forward', 'browser.reload', 'browser.screenshot']),
@@ -1523,15 +1613,47 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
                 settle('terminals.read', () => {
                     return readNodeText(terminal.id, 'terminal');
                 }),
-            // Opens a shell and types nothing: only a person types in a terminal.
-            open: (options?: { title?: string; cwd?: string; near?: { id: string }[] }) =>
-                attempt('terminals.open', () => {
-                    return createdNode(
-                        canvasInFront().addNode('terminal', besideNode(options?.near?.[0]?.id), {
-                            ...(options?.title === undefined ? {} : { title: options.title }),
-                            ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
-                        })
-                    );
+            // The machine makes and starts it, and writes down that this extension opened it: that record is what `write` goes by.
+            open: (options?: { profile?: string; title?: string; cwd?: string; near?: { id: string }[] }) =>
+                settle('terminals.open', async () => {
+                    const canvas = canvasInFront();
+                    const { link } = callScope();
+                    const beside = options?.near?.[0]?.id;
+
+                    if (!machineAnswers(link.connection, 'extension.terminalOpen')) {
+                        if (options?.profile !== undefined) {
+                            throw new Refused('unavailable', 'This machine starts no terminal profiles');
+                        }
+
+                        return createdNode(
+                            canvas.addNode('terminal', besideNode(beside), {
+                                ...(options?.title === undefined ? {} : { title: options.title }),
+                                ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                            })
+                        );
+                    }
+
+                    const { nodeId } = await extensionRequest(link, 'extension.terminalOpen', {
+                        id,
+                        projectId: currentProjectId(),
+                        ...(canvas.viewId === null ? {} : { viewId: canvas.viewId }),
+                        ...(beside === undefined ? {} : { beside }),
+                        ...(options?.profile === undefined ? {} : { profile: options.profile }),
+                        ...(options?.title === undefined ? {} : { title: options.title }),
+                        ...(options?.cwd === undefined ? {} : { cwd: options.cwd })
+                    });
+
+                    return { id: nodeId };
+                }),
+            write: (terminal: { id: string }, text: string) =>
+                settle('terminals.write', async () => {
+                    const { link } = callScope();
+
+                    if (!machineAnswers(link.connection, 'extension.terminalWrite')) {
+                        throw new Refused('unavailable', 'This machine types into no terminal for an extension');
+                    }
+
+                    await extensionRequest(link, 'extension.terminalWrite', { id, nodeId: terminal.id, text });
                 })
         },
         database: {
@@ -1568,7 +1690,8 @@ export function clientApiFor(extension: LoadedExtension, live: () => boolean = (
             send: (chatId: string, text: string) =>
                 settle('chats.send', async () => {
                     await callScope().link.request('chat.send', { chatId, text });
-                })
+                }),
+            ...machineActions(['chat.inspect'])
         },
         views: {
             open: whileLive((view: { id: string }) => {

@@ -129,6 +129,28 @@ describe('loading extensions', () => {
         expect(hasCommand('acme.again')).toBe(true);
     });
 
+    test('loads no installed extension that uses a proposed part, says why on its row, and loads the same one under a dev link', async () => {
+        const written = writeExtension(
+            'acme.proposed',
+            "globalThis.__ruimteExtension.for('acme.proposed').client.defineCommand({ id: 'hello', title: 'Hello', run: () => undefined });\n"
+        );
+        const proposed = { ...written, manifest: { ...written.manifest, proposed: ['terminalProfiles'] } };
+
+        installed = [proposed];
+        await syncExtensions();
+
+        expect(hasCommand('acme.proposed')).toBe(false);
+        expect(useInstalledExtensions.getState().failures['acme.proposed']).toBe(
+            'This extension uses a part of Ruimte that is not final yet (terminalProfiles). It works while its author develops it, and an installed extension cannot use it.'
+        );
+
+        installed = [{ ...proposed, dev: true }];
+        await syncExtensions();
+
+        expect(hasCommand('acme.proposed')).toBe(true);
+        expect(useInstalledExtensions.getState().failures['acme.proposed']).toBeUndefined();
+    });
+
     test('adds nothing an extension registers after it was turned off', async () => {
         installed = [
             writeExtension(

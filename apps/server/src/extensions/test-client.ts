@@ -6,8 +6,10 @@ import { parseExtensionActionInput, type ExtensionActionName } from '@ruimte/con
  */
 import { extensionWord, lazyComponentProblem, shortcutProblem } from '@ruimte/contracts/extension-client';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { clientPointRefusal, languageProblem, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { NODE_ACCENT_COLORS } from '@ruimte/contracts/node-accents';
 import type * as PublicClient from '../../../../packages/extension/client';
+import { terminalProfileRefusal, terminalWriteRefusal } from './policy.ts';
 import { callHandler, MissingHandler } from './server-api.ts';
 import { NEW_NODE, Refused, wire, type Entry, type TestHost } from './test-host.ts';
 import { formatModule, nodeContextOf, react } from './test-react.ts';
@@ -175,9 +177,9 @@ function nodeText(host: TestHost, id: string, kind: 'terminal' | 'chat'): string
     return node.text;
 }
 
-function settingDefault(host: TestHost, key: string): unknown {
+function settingDefault(host: TestHost, of: 'settings' | 'projectSettings', key: string): unknown {
     for (const { kind, definition } of host.definitions) {
-        if (kind !== 'settings') {
+        if (kind !== of) {
             continue;
         }
 
@@ -215,6 +217,14 @@ export function clientApi(host: TestHost) {
         });
     const entry = (definition: object, details: Omit<Entry, 'slots'> & { slots?: Slots }): void =>
         host.addEntry(definition, { ...details, slots: details.slots ?? {} });
+    // A test host runs an author's own code, where a proposed part works once the manifest names it.
+    const mayUse = (define: string): void => {
+        const refused = clientPointRefusal(host.manifest, define, true);
+
+        if (refused !== null) {
+            throw new Error(refused);
+        }
+    };
     const actionHandle = (id: string): PublicClient.ActionHandle & { actionId: string } => ({
         actionId: id,
         run: async (context?: object) => {
@@ -355,6 +365,29 @@ export function clientApi(host: TestHost) {
             assertLazy(viewer, `defineDiffViewer ${viewer.id}`);
             host.record('diffViewer', viewer);
         },
+        defineLanguage(language: { id: string; name: string; extensions: string[]; filenames?: string[]; grammar: string }): void {
+            mayUse('defineLanguage');
+
+            const problem = languageProblem(language);
+
+            if (problem !== null) {
+                throw new TypeError(problem);
+            }
+
+            host.record('language', language);
+        },
+        defineEditorDecoration(decoration: { id: string; provide(file: PublicClient.FileInfo): unknown }): { refresh(): void } {
+            mayUse('defineEditorDecoration');
+            host.record('editorDecoration', decoration);
+
+            return {
+                refresh: () => {
+                    for (const ask of [...host.editors]) {
+                        ask();
+                    }
+                }
+            };
+        },
         defineFileIcon: (icon: object): void => host.record('fileIcon', icon),
         defineVoiceAction: (action: object): void => host.record('voiceAction', action),
         defineTemplate(template: { id: string; title: string; icon?: string; create(context: never): void | Promise<void> }): void {
@@ -387,6 +420,10 @@ export function clientApi(host: TestHost) {
             }
 
             host.record('settings', settings);
+        },
+        defineProjectSettings(settings: PublicClient.ProjectSettings): void {
+            mayUse('defineProjectSettings');
+            host.record('projectSettings', settings);
         },
         defineAction(action: { id: string; title: string; icon?: string; shortcut?: string; slots?: Slots; run(context: never): void | Promise<void> }) {
             const problem = action.shortcut === undefined ? null : shortcutProblem(action.shortcut);
@@ -492,7 +529,15 @@ export function clientApi(host: TestHost) {
         useSetting<Value extends boolean | string>(key: string): Value {
             useHost(host);
 
-            return (Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, key)) as Value;
+            return (Object.hasOwn(host.settings, key) ? host.settings[key] : settingDefault(host, 'settings', key)) as Value;
+        },
+        useProjectSetting<Value extends boolean | string>(key: string): Value {
+            useHost(host);
+
+            // On the machine, as the client keeps it, so a test server handed to this host reads the same value.
+            const kept = projectSettingKey(host.project?.id ?? '', key);
+
+            return (Object.hasOwn(host.storage.machine, kept) ? host.storage.machine[kept] : settingDefault(host, 'projectSettings', key)) as Value;
         },
         useMachine: () => ({ id: host.machineId }),
         useTheme: () => ({ side: host.theme }),
@@ -713,7 +758,9 @@ export function clientApi(host: TestHost) {
             'launch.read',
             'launch.start',
             'launch.restart',
-            'launch.stop'
+            'launch.stop',
+            'launch.create',
+            'launch.edit'
         ]) as unknown as typeof PublicClient.launches,
         routines: machineCalls(host, 'routines', ['routine.list', 'routine.run', 'routine.pause', 'routine.resume']) as unknown as typeof PublicClient.routines,
         artifacts: machineCalls(host, 'artifacts', ['artifact.list', 'artifact.read', 'artifact.publish']) as unknown as typeof PublicClient.artifacts,
@@ -735,13 +782,47 @@ export function clientApi(host: TestHost) {
         terminals: {
             read: (terminal: NodeRef) =>
                 host.settle('terminals.read', [terminal], () => host.scripted('terminals.read', [terminal], () => nodeText(host, terminal.id, 'terminal'))),
-            open: (options: { title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
-                host.attempt('terminals.open', [options], () =>
-                    host.addNode('terminal', host.beside(options.near), {
-                        ...(options.title === undefined ? {} : { title: options.title }),
-                        ...(options.cwd === undefined ? {} : { path: options.cwd })
-                    })
-                )
+            open: (options: { profile?: string; title?: string; cwd?: string; near?: NodeRef[] } = {}) =>
+                host.settle('terminals.open', [options], () => {
+                    const { profile, title, cwd } = options;
+                    // A test host runs an author's own code, where a proposed part works.
+                    const refused = profile === undefined ? null : terminalProfileRefusal(host.manifest, profile, true);
+
+                    if (refused !== null) {
+                        throw new Refused(refused.code, refused.message);
+                    }
+
+                    const opened = host.addNode('terminal', host.beside(options.near), {
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { path: cwd })
+                    });
+
+                    host.terminals.push({
+                        id: opened.id,
+                        openedBy: 'extension',
+                        needsYou: false,
+                        written: [],
+                        ...(profile === undefined ? {} : { profile }),
+                        ...(title === undefined ? {} : { title }),
+                        ...(cwd === undefined ? {} : { cwd })
+                    });
+
+                    return opened;
+                }),
+            write: (terminal: NodeRef, text: string) =>
+                host.settle('terminals.write', [terminal, text], () => {
+                    const opened = host.terminals.find((candidate) => candidate.id === terminal.id);
+                    const record = opened === undefined ? null : { openedBy: opened.openedBy === 'extension' ? host.id : undefined };
+                    const refused = terminalWriteRefusal(host.id, terminal.id, record, opened?.needsYou === true);
+
+                    if (refused !== null) {
+                        throw new Refused(refused.code, refused.message);
+                    }
+
+                    opened?.written.push(text);
+
+                    return undefined;
+                })
         },
         database: {
             connections: () => host.settle('database.connections', [], () => host.scripted<{ id: string; name: string }[]>('database.connections', [])),
@@ -758,7 +839,8 @@ export function clientApi(host: TestHost) {
             send: (chatId: string, text: string) =>
                 host.settle('chats.send', [chatId, text], async () => {
                     await host.scripted<void>('chats.send', [chatId, text]);
-                })
+                }),
+            ...(machineCalls(host, 'chats', ['chat.inspect']) as unknown as Pick<typeof PublicClient.chats, 'inspect'>)
         },
         views: {
             open(view: { id: string }): void {

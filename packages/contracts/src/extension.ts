@@ -9,6 +9,9 @@ export const ExtensionIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]*\.[a-z0-9]
 /* Where a pack keeps its mark, the same for every extension, so a list needs no word from its code. */
 export const EXTENSION_ICON_PATH = 'assets/icon.svg';
 
+/* What a manifest names one thing it supplies by, such as a terminal profile. */
+export const ExtensionProvidedIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
+
 export const ExtensionManifestSchema = z.object({
     id: ExtensionIdSchema,
     name: z.string().min(1).max(80),
@@ -28,7 +31,11 @@ export const ExtensionManifestSchema = z.object({
     permissions: z.record(z.string().min(1), z.string().min(1).max(200)).optional(),
     themes: z.array(z.string().min(1)).optional(),
     // When client/ loads, such as node:stamp or file:csv. Without it, with the app.
-    activation: z.array(z.string().min(1)).optional()
+    activation: z.array(z.string().min(1)).optional(),
+    // What it supplies, by kind and id, so Ruimte lists a provider before `server/` runs. Any kind is kept: `extensionProvidesProblems` says which this Ruimte takes.
+    provides: z.record(z.string().min(1).max(40), z.array(ExtensionProvidedIdSchema).max(32)).optional(),
+    // The proposed parts it uses, by name (`EXTENSION_PROPOSED_PARTS`).
+    proposed: z.array(z.string().min(1).max(40)).max(32).optional()
 });
 export type ExtensionManifest = z.infer<typeof ExtensionManifestSchema>;
 
@@ -143,6 +150,19 @@ export function clashingPackPath(paths: readonly string[]): string | null {
 export const ExtensionStatusSchema = z.enum(['idle', 'running', 'crashed', 'disabled']);
 export type ExtensionStatus = z.infer<typeof ExtensionStatusSchema>;
 
+/*
+ * Where an extension came from, as the machine or the client that holds it knows, never as its manifest says: a pack a
+ * person installed, a folder `ruimte extension dev` linked, a development extension of Ruimte's own repository, or one
+ * that ships inside the client.
+ */
+export const EXTENSION_PROVENANCES = ['installed', 'dev-link', 'development', 'built-in'] as const;
+export type ExtensionProvenance = (typeof EXTENSION_PROVENANCES)[number];
+
+/* What a machine said of an extension, or undefined for nothing and for a value this Ruimte does not know. */
+export function extensionProvenanceOf(value: string | undefined): ExtensionProvenance | undefined {
+    return EXTENSION_PROVENANCES.find((provenance) => provenance === value);
+}
+
 export const ExtensionInfoSchema = z.object({
     manifest: ExtensionManifestSchema,
     hash: z.string().min(1),
@@ -153,8 +173,12 @@ export const ExtensionInfoSchema = z.object({
     // Linked from a folder by `ruimte extension dev`, which is where a client on this machine reads it from.
     devFolder: z.string().optional(),
     revision: z.number().int().nonnegative().optional(),
+    // One of `EXTENSION_PROVENANCES`, absent from a machine of before it. Open on the wire, so a value a later machine adds never fails the list.
+    provenance: z.string().max(40).optional(),
     // Why its files could not be read. It does not run, and its manifest only names it by its id, so a person can remove it.
-    error: z.string().optional()
+    error: z.string().optional(),
+    // Why this machine does not run it though its files are fine, such as a proposed part in one a person installed.
+    refused: z.string().optional()
 });
 export type ExtensionInfo = z.infer<typeof ExtensionInfoSchema>;
 
@@ -267,6 +291,104 @@ export const ExtensionAgentRunPayloadSchema = z.object({
 
 export const ExtensionAgentRunResultSchema = z.object({ text: z.string() });
 
+/* A terminal profile an extension of this machine supplies, as the menu of a new terminal lists it. */
+export const ExtensionTerminalProfileSchema = z.object({
+    extension: ExtensionIdSchema,
+    id: ExtensionProvidedIdSchema,
+    // What its `server/` called it, or the extension's name while that has not run yet.
+    title: z.string().min(1).max(80),
+    // A Lucide name.
+    icon: z.string().max(60).optional()
+});
+export type ExtensionTerminalProfile = z.infer<typeof ExtensionTerminalProfileSchema>;
+
+export const ExtensionTerminalProfilesPayloadSchema = z.object({ projectId: z.string().min(1) });
+export const ExtensionTerminalProfilesResultSchema = z.object({ profiles: z.array(ExtensionTerminalProfileSchema) });
+
+/* A way an extension of this machine tells a person outside Ruimte, as Settings lists it. Off until a person turns it on. */
+export const ExtensionNotificationChannelSchema = z.object({
+    extension: ExtensionIdSchema,
+    id: ExtensionProvidedIdSchema,
+    // What its `server/` called it, or the extension's name while that has not run yet.
+    title: z.string().min(1).max(80),
+    on: z.boolean()
+});
+export type ExtensionNotificationChannel = z.infer<typeof ExtensionNotificationChannelSchema>;
+
+/* A thing an extension's `server/` offers after `#` in a chat, under the reference that lists it. */
+export const ExtensionComposerReferenceSchema = z.object({
+    extension: ExtensionIdSchema,
+    reference: ExtensionProvidedIdSchema,
+    // What the reference is called, such as the name of the service its things come from.
+    title: z.string().min(1).max(80),
+    id: z.string().min(1).max(200),
+    name: z.string().min(1).max(200)
+});
+export type ExtensionComposerReference = z.infer<typeof ExtensionComposerReferenceSchema>;
+
+/* A command an extension's `server/` offers after `/` in a chat. */
+export const ExtensionComposerCommandSchema = z.object({
+    extension: ExtensionIdSchema,
+    name: ExtensionProvidedIdSchema,
+    description: z.string().max(200)
+});
+export type ExtensionComposerCommand = z.infer<typeof ExtensionComposerCommandSchema>;
+
+export const ExtensionComposerItemsPayloadSchema = z.object({ projectId: z.string().min(1) });
+export const ExtensionComposerItemsResultSchema = z.object({
+    references: z.array(ExtensionComposerReferenceSchema),
+    commands: z.array(ExtensionComposerCommandSchema)
+});
+export const ExtensionReferenceReadPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    extension: ExtensionIdSchema,
+    reference: ExtensionProvidedIdSchema,
+    id: z.string().min(1).max(200),
+    name: z.string().min(1).max(200)
+});
+export const ExtensionCommandExpandPayloadSchema = z.object({
+    projectId: z.string().min(1),
+    extension: ExtensionIdSchema,
+    name: ExtensionProvidedIdSchema,
+    args: z.string().max(10_000)
+});
+// The text that goes in the prompt, which the person still sends.
+export const ExtensionComposerTextResultSchema = z.object({ text: z.string() });
+
+export const ExtensionNotificationChannelsResultSchema = z.object({ channels: z.array(ExtensionNotificationChannelSchema) });
+export const ExtensionNotificationChannelSetPayloadSchema = z.object({
+    extension: ExtensionIdSchema,
+    channel: ExtensionProvidedIdSchema,
+    on: z.boolean()
+});
+
+/*
+ * A terminal the machine makes and starts: beside `beside` or at `at` on the canvas `viewId`, or a view of its own
+ * without one. With `picked` a person chose the profile from a menu, so no extension opened the terminal.
+ */
+export const ExtensionTerminalOpenPayloadSchema = z.object({
+    id: ExtensionIdSchema,
+    projectId: z.string().min(1),
+    profile: ExtensionProvidedIdSchema.optional(),
+    picked: z.boolean().optional(),
+    title: z.string().min(1).max(200).optional(),
+    cwd: z.string().min(1).optional(),
+    viewId: z.string().min(1).optional(),
+    beside: z.string().min(1).optional(),
+    at: z.object({ x: z.number(), y: z.number() }).optional()
+});
+export const ExtensionTerminalOpenResultSchema = z.object({ nodeId: z.string() });
+
+// As much as a pasted script, and far below what a frame of the wire holds.
+export const EXTENSION_TERMINAL_TEXT_MAX = 65_536;
+
+/* Text typed into a terminal the extension opened itself. */
+export const ExtensionTerminalWritePayloadSchema = z.object({
+    id: ExtensionIdSchema,
+    nodeId: z.string().min(1),
+    text: z.string().min(1).max(EXTENSION_TERMINAL_TEXT_MAX)
+});
+
 export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.contextRead': { payload: ExtensionContextReadPayloadSchema, result: ExtensionContextReadResultSchema },
     'extension.chatRead': { payload: ExtensionChatReadPayloadSchema, result: ExtensionChatReadResultSchema },
@@ -284,7 +406,15 @@ export const EXTENSION_REQUEST_SCHEMAS = {
     'extension.action': { payload: ExtensionActionPayloadSchema, result: ExtensionActionResultSchema },
     'extension.clientFiles': { payload: ExtensionIdPayloadSchema, result: ExtensionClientFilesResultSchema },
     'extension.log': { payload: ExtensionLogPayloadSchema, result: EmptySchema },
-    'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema }
+    'extension.call': { payload: ExtensionCallPayloadSchema, result: ExtensionCallResultSchema },
+    'extension.terminalProfiles': { payload: ExtensionTerminalProfilesPayloadSchema, result: ExtensionTerminalProfilesResultSchema },
+    'extension.terminalOpen': { payload: ExtensionTerminalOpenPayloadSchema, result: ExtensionTerminalOpenResultSchema },
+    'extension.terminalWrite': { payload: ExtensionTerminalWritePayloadSchema, result: EmptySchema },
+    'extension.notificationChannels': { payload: EmptySchema, result: ExtensionNotificationChannelsResultSchema },
+    'extension.notificationChannelSet': { payload: ExtensionNotificationChannelSetPayloadSchema, result: EmptySchema },
+    'extension.composerItems': { payload: ExtensionComposerItemsPayloadSchema, result: ExtensionComposerItemsResultSchema },
+    'extension.referenceRead': { payload: ExtensionReferenceReadPayloadSchema, result: ExtensionComposerTextResultSchema },
+    'extension.commandExpand': { payload: ExtensionCommandExpandPayloadSchema, result: ExtensionComposerTextResultSchema }
 } as const;
 
 export const EXTENSION_EVENT_SCHEMAS = {

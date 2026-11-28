@@ -87,6 +87,7 @@ A machine without the desktop app runs the same binary from npm (`packages/npm`)
 ```sh
 npx ruimte                                # the daemon, with every flag above
 npx ruimte login                          # onto an account with a code
+npx ruimte join <account id>              # signs it onto that account and prints the registration
 npx ruimte status                         # how clients reach it (--check, --json)
 npx ruimte logout                         # off its account again
 npx ruimte service install [flags]        # the background service for this user
@@ -586,7 +587,7 @@ Read state lives in `push-attention.json`; a client acknowledges what a focused 
 
 ### One account per machine
 
-A machine is on at most one account. It joins one only by signing a registration: `endpoint.signRegistration` (owner only) or `POST /machine/registration` for `ruimte login`. The account is written to `auth.json` before the signature leaves. Another account gets `machine-has-account` until a person leaves the first with `endpoint.leaveAccount` or `ruimte logout`, both local secret only. `endpoint.info` names the account only on the local secret.
+A machine is on at most one account. It joins one only by signing a registration: `endpoint.signRegistration` (owner only) or `POST /machine/registration` for `ruimte login` and `ruimte join`. `ruimte join <account id>` is for whoever started the machine and already knows the account: it waits up to 30 seconds for the daemon, also for one that holds its port and still answers 503 while it starts, has it sign, and prints the registration as JSON for a client of that account to post. It needs no network, and a machine source's start runs it in the place it started (`docs/EXTENSIONS.md`). The account is written to `auth.json` before the signature leaves. Another account gets `machine-has-account` until a person leaves the first with `endpoint.leaveAccount` or `ruimte logout`, both local secret only. `endpoint.info` names the account only on the local secret.
 
 A client the machine does not know gets in on a v2 statement (`src/pulsar/statement.ts`) that names this machine's own key and holds its signature. `AuthStore.admitStatement` decides:
 

@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    ExtensionInfoSchema,
     ExtensionMessageEventSchema,
+    extensionProvenanceOf,
     ExtensionStorageChangedEventSchema,
     ExtensionStorageGetResultSchema,
     ExtensionStorageSetPayloadSchema,
@@ -47,5 +49,21 @@ describe('a value that is not there survives JSON', () => {
 
     test('hears an event emitted without a payload', () => {
         expect(ExtensionMessageEventSchema.safeParse(throughJson({ id: 'acme.notes', name: 'done', payload: undefined })).success).toBe(true);
+    });
+});
+
+describe('where an extension came from, as a machine tells it', () => {
+    const info = { manifest: { id: 'acme.notes', name: 'Notes', version: '1.0.0', api: 1 }, hash: 'aaa', enabled: true, hasServer: false, status: 'idle' };
+
+    test('is read as one this Ruimte knows, and as nothing from a machine of before', () => {
+        expect(extensionProvenanceOf(ExtensionInfoSchema.parse({ ...info, provenance: 'development' }).provenance)).toBe('development');
+        expect(extensionProvenanceOf(ExtensionInfoSchema.parse(info).provenance)).toBeUndefined();
+    });
+
+    test('never fails the list for a value a later machine adds', () => {
+        const parsed = ExtensionInfoSchema.safeParse({ ...info, provenance: 'sideloaded' });
+
+        expect(parsed.success).toBe(true);
+        expect(extensionProvenanceOf(parsed.data?.provenance)).toBeUndefined();
     });
 });

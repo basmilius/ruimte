@@ -1,9 +1,12 @@
 import { afterEach } from 'bun:test';
 import { useChats, useProvidersStore } from '@adecore/agents-react/state';
+import { FakeEditor } from '@adecore/editor/fake';
 import { REQUEST_SCHEMAS, type ChatSubagentItem, type ExtensionManifest, type ProjectView, type RequestMap, type RequestType } from '@ruimte/contracts';
 import { contextSelection } from '@ruimte/contracts/extension-context';
+import { definedLanguageOf, projectSettingKey } from '@ruimte/contracts/extension-providers';
 import { act, createElement, type ComponentType, type ReactElement } from 'react';
 import { runAction } from '@/extensions/action-runs';
+import { DECORATION_COLORS, useEditorDecorations } from '@/extensions/editor-decorations';
 import { clientApiFor, type LoadedExtension } from '@/extensions/host/client-api';
 import * as ui from '@/extensions/host/extension-ui';
 import { useHostDialog } from '@/extensions/host/host-dialog-state';
@@ -180,13 +183,23 @@ function seedAgents(nodes: readonly SeedNode[]): void {
 
 /* The real client host of `poc.contract`, on a fake machine that keeps what it is told to store and answers by its own rules. */
 clientContract(async (permissions, seed = {}) => {
-    const manifest: ExtensionManifest = { id: ID, name: NAME, version: '0.1.0', api: 1, permissions };
-    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null };
+    const manifest: ExtensionManifest = {
+        id: ID,
+        name: NAME,
+        version: '0.1.0',
+        api: 1,
+        permissions,
+        ...(seed.proposed === undefined ? {} : { proposed: seed.proposed })
+    };
+    // Linked by its author, which is where a proposed part works.
+    const extension: LoadedExtension = { manifest, base: '/', disposers: [], settings: null, ...(seed.proposed === undefined ? {} : { dev: true }) };
     const machine = new FakeMachine();
     const stored = new Map<string, unknown>();
     const before = useToasts.getState().toasts.length;
     const nodes = [{ ...SEED.node, text: '' }, ...(seed.nodes ?? []).flatMap((node) => (node.kind === 'extension' ? [] : [node]))];
     const stops = new Map<string, () => void>();
+    const opened = new Set<string>();
+    const typed: { terminal: string; text: string }[] = [];
     const asked = Promise.withResolvers<void>();
     const start = Promise.withResolvers<void>();
     // A chat the machine runs, with or without a node, as `extension.chatRead` finds it.
@@ -244,6 +257,24 @@ clientContract(async (permissions, seed = {}) => {
 
         return { nodeId };
     });
+    // The machine makes the terminal and keeps who opened it, which is all it goes by when one is typed into.
+    answer('extension.terminalOpen', ({ title }) => {
+        const nodeId = `terminal-${opened.size + 1}`;
+
+        opened.add(nodeId);
+        nodes.push({ id: nodeId, kind: 'terminal', title: title ?? 'Terminal', text: '' });
+
+        return { nodeId };
+    });
+    answer('extension.terminalWrite', ({ id, nodeId, text }) => {
+        if (!opened.has(nodeId)) {
+            throw new TransportError('refused', `${id} did not open the terminal ${nodeId}, so it cannot type into it`);
+        }
+
+        typed.push({ terminal: nodeId, text });
+
+        return {};
+    });
     // As the machine's runtime calls `server/`: only a method of its own, and any throw answers `failed`.
     answer('extension.call', async ({ method, args }) => {
         const run = seed.server !== undefined && Object.hasOwn(seed.server, method) ? seed.server[method] : undefined;
@@ -257,6 +288,15 @@ clientContract(async (permissions, seed = {}) => {
         } catch (e) {
             throw new TransportError('failed', e instanceof Error ? e.message : String(e));
         }
+    });
+    answer('extension.action', ({ action, input }) => {
+        const run = seed.actions !== undefined && Object.hasOwn(seed.actions, action) ? seed.actions[action] : undefined;
+
+        if (run === undefined) {
+            throw new TransportError('unavailable', `This machine does not run ${action} for an extension`);
+        }
+
+        return { output: run(input) };
     });
     answer('extension.agentStream', async ({ runId }) => {
         asked.resolve();
@@ -431,12 +471,51 @@ clientContract(async (permissions, seed = {}) => {
             focusedCanvas()
                 .getState()
                 .edges.map((edge) => ({ from: edge.from, to: edge.to })),
+        typed: () => [...typed],
         focused: () => [...focused],
         settingsSections: () =>
             useContributions
                 .getState()
                 .settingsSections.filter((section) => section.id === ID)
                 .map((section) => section.id),
+        projectSettings: () =>
+            useContributions
+                .getState()
+                .projectSettings.filter((section) => section.id === ID)
+                .map((section) => section.title),
+        languageOf: (path) => definedLanguageOf(useContributions.getState().languages, path)?.language ?? null,
+        // The hook `CodeFile` runs for its editor, on an editor that only keeps what it was told to draw.
+        async openEditor(path) {
+            const editor = new FakeEditor(document.createElement('div'), { text: '' } as never);
+            const full = `${SEED.project.folder}/${path}`;
+            const Open = (): null => {
+                useEditorDecorations(editor, full);
+
+                return null;
+            };
+            const mounted = mount();
+            const kindOf = (color: string): string => Object.entries(DECORATION_COLORS).find(([, token]) => token === color)?.[0] ?? color;
+
+            mounts.push(mounted);
+            await mounted.render(createElement(Open));
+
+            return {
+                marks: () => editor.lineHighlights.map((mark) => ({ line: mark.startLine, endLine: mark.endLine, kind: kindOf(mark.color) })),
+                async close() {
+                    mounts.splice(mounts.indexOf(mounted), 1);
+                    await mounted.unmount();
+                }
+            };
+        },
+        // The dialog's row writes the field to the machine, which tells every window that reads it.
+        async chooseProjectSetting(key, value) {
+            const kept = projectSettingKey(SEED.project.id, key);
+
+            await act(async () => {
+                stored.set(kept, value);
+                machine.emit('extension.storageChanged', { id: ID, key: kept, value });
+            });
+        },
         failures: () =>
             useToasts
                 .getState()

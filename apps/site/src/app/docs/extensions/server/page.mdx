@@ -48,8 +48,43 @@ onEvent('chat.status', ({ chat }) => {
 | `chat.status` | `{ chat }`, a chat that changed what it is doing | `chats.read` |
 | `chat.event` | `{ chatId }`, something new in a chat's thread | `chats.read` |
 | `session.status` | `{ nodeId, status }`, the agent in a terminal | `terminals.read` |
+| `launch.status` | `{ project, launch, state, exitCode }`, a launch that started, came up, is being stopped or ended | `launches.read` |
+| `project.opened` | `{ project }`, with its name and folder, when the first client opens a project | `projects.read` |
+| `project.closed` | `{ project }`, when the last client closed it and nothing of it runs any more | `projects.read` |
 
 Any other name is refused, and the log says why. To follow them while no client is open, set `"autostart": true` in the manifest.
+
+Each event has a shape of its own, smaller than what Ruimte's clients hear. A third argument narrows an event to one project:
+
+```ts
+onEvent('launch.status', ({ launch, state }) => log.info(`${launch} is ${state}`), {
+    project: {
+        id: projectId
+    }
+});
+```
+
+`project.opened` fires for a project a person opens while the server part runs. With `"autostart": true` that is every project, since the server part then starts with the machine.
+
+## Files
+
+With `files.read`, the server part reads the files of a project. It names the project, and a path outside the project folder answers `outside-project`:
+
+```ts
+const project = {
+    id: projectId
+};
+const read = await files.readText(project, 'compose.yaml');
+const listed = await files.list(project, 'src');
+const watching = await files.watch(project, 'compose.yaml', () => log.info('compose.yaml changed'));
+
+if (watching.ok) {
+    // Later, to stop following it.
+    watching.value();
+}
+```
+
+`watch` follows one file, or everything under a folder. It also tells of a file that is not there yet, once someone writes it. Ruimte lets go of every watch when the server part stops.
 
 ## Storage and secrets
 
@@ -107,6 +142,352 @@ const started = await machine.run(project, 'launch.start', {
     launch: 'web'
 });
 ```
+
+## Terminals
+
+`terminals.read`, `terminals.open` and `terminals.write` work as in [the client](/docs/extensions/machine#terminals), with the same permissions. The server part names the project. With `near` the terminal stands beside that node on its canvas, and without it the terminal is a view of its own:
+
+```ts
+const opened = await terminals.open({
+    project: {
+        id: projectId
+    },
+    profile: 'service-shell',
+    title: 'Shell in web'
+});
+
+if (opened.ok) {
+    await terminals.write(opened.value, 'ls\n');
+}
+```
+
+## Terminal profiles
+
+A terminal profile is a kind of terminal your extension adds to the menu of a new terminal. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `terminalProfiles` under `proposed`, list the id under `provides.terminalProfiles` and ask for `terminals.profiles`.
+
+```ts
+defineTerminalProfile({
+    id: 'service-shell',
+    title: 'Shell in web',
+    icon: 'container',
+    available: (project) => project.folder.endsWith('/shop'),
+    spawn: ({ project, cwd }) => ({
+        command: 'docker',
+        args: ['compose', 'exec', 'web', 'sh'],
+        env: {
+            COMPOSE_PROJECT_NAME: project.name
+        },
+        cwd
+    })
+});
+```
+
+Your extension describes the program and Ruimte runs it. The terminal, its scrollback, its status and its stop stay Ruimte's, and `spawn` never reads what the program writes. The program starts without asking the person, since installing the extension was the approval.
+
+- The menu lists a profile from the manifest, so it shows before the server part ran, under the extension's name. Once the server part runs, the row takes the profile's `title` and `icon`.
+- Picking a profile starts the server part and calls `spawn`. `project` is the project the terminal is in, and `cwd` the folder the terminal starts in.
+- `available` hides a profile in a project where it has nothing to open. Ruimte asks it only while the server part runs, and again when a person picks the profile.
+- `cwd` in what `spawn` answers stays inside the project folder or one of its worktrees.
+- `defineTerminalProfile` throws for an id the manifest does not list, so call it as the module loads.
+
+A terminal a person opened with your profile is theirs: `terminals.write` refuses it. Turning the extension off takes the profile out of the menu. A terminal that already runs keeps running, and starts as a plain shell the next time, with a line that says why.
+
+## Launch sources
+
+A launch source lists launches Ruimte finds for a project, such as the services of a compose file or the scripts of a build tool. They show in the launch menu under the title of the source, beside the launches a person made, and agents see them in `launch_list`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `launchSources` under `proposed`, list the id under `provides.launchSources` and ask for `launches.provide`.
+
+```ts
+defineLaunchSource({
+    id: 'compose',
+    title: 'Compose',
+    async list(project) {
+        const read = await files.readText(project, 'compose.yaml');
+
+        if (!read.ok) {
+            return [];
+        }
+
+        return servicesIn(read.value).map((service) => ({
+            id: service.name,
+            name: service.name,
+            kind: 'service',
+            spawn: {
+                command: 'docker',
+                args: ['compose', 'up', service.name]
+            },
+            fingerprint: digestOf(read.value),
+            port: service.port
+        }));
+    },
+    async watch(project, changed) {
+        const watching = await files.watch(project, 'compose.yaml', changed);
+
+        return watching.ok ? watching.value : () => undefined;
+    }
+});
+```
+
+Your extension describes each launch and Ruimte runs it, so its terminal, status, restart and stop work as for any launch. A source never starts a process itself.
+
+- **A person approves first.** A launch from a source starts only after a person approved it on this machine, as a command from a project file does. The approval covers the command, the folder, the variables and the `fingerprint`. A person approves one launch, or everything the source lists in the project at once.
+- **`fingerprint` is a digest of every file that decides what runs.** When it changes, Ruimte asks the person again, also when the command stayed the same. Ruimte reads the list again before every start, so a launch never runs on a file the person did not see.
+- **`watch` is optional.** Call `changed` when the list should be read again. Without it the menu shows what the source listed last, until a start or a reopened project reads it again.
+- A launch is `service` or `task`, and its `id` is lowercase letters, digits and dashes. Among the launches of a project its id is `<extension id>:<source id>:<id>`, which is what `launch.status` and the `launches` calls name it by.
+- `port` tells Ruimte when a service is up. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
+- A source lists at most 64 launches, and nothing of them is written to a project file. A launch is gone once its source stops listing it, or the extension is turned off.
+- `defineLaunchSource` throws for an id the manifest does not list, so call it as the module loads.
+
+No extension call approves a launch, and neither does an agent.
+
+## Machine sources
+
+A machine source lists places where a Ruimte machine can run for a project, such as a container or a volume the machine on this computer cannot work in. Each place shows in Settings, Machines of the app on that computer, under the title of the source. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `machineSources` under `proposed`, list the id under `provides.machineSources` and ask for `machines.provide`.
+
+```ts
+defineMachineSource({
+    id: 'container',
+    title: 'Containers',
+    async list(project) {
+        const read = await files.readText(project, 'container.json');
+
+        if (!read.ok) {
+            return [];
+        }
+
+        return [
+            {
+                id: 'dev',
+                title: 'Dev container',
+                place: nameIn(read.value),
+                running: false
+            }
+        ];
+    },
+    async start(candidate, { project, report, signal }) {
+        report('Reading container.json');
+
+        const read = await files.readText(project, 'container.json');
+
+        signal.throwIfAborted();
+
+        if (!read.ok) {
+            throw new Error(read.error.message);
+        }
+
+        return {
+            steps: [
+                {
+                    title: 'Build the image',
+                    spawn: {
+                        command: 'docker',
+                        args: ['build', '-t', 'dev', '.']
+                    }
+                },
+                {
+                    title: 'Start the container',
+                    spawn: {
+                        command: 'docker',
+                        args: ['run', '-d', '--name', 'dev', '-v', 'dev-home:/root', 'dev']
+                    }
+                }
+            ],
+            inside: {
+                command: 'docker',
+                args: ['exec', 'dev']
+            },
+            fingerprint: digestOf(read.value)
+        };
+    }
+});
+```
+
+`start` only describes. Ruimte runs the steps on this computer, one after another, with no shell in between, and shows their output to the person. A step that ends with another code than 0 ends the start.
+
+- **A person approves first.** Ruimte shows every program with its folder before anything runs, and the person approves it in the app on that computer. The approval covers the programs, their folders, their variables and the `fingerprint`, so a changed file asks again. No extension call approves a start, and neither does an agent.
+- **The new machine joins the person's account.** `inside` says how a command runs where the new machine lives. After the steps, Ruimte appends a command of its own to its `args` and runs it. That has the new machine sign itself onto the account of the machine that started it, and the person's app adds it. The approval says so, and the person opens no page and types no code. From there every client reaches the machine as it reaches any other. Ruimte needs to be installed in that place, as `ruimte`.
+- **No account, no start.** With `inside` and a machine that is on no account, the start ends before anything runs and says why. Leave `inside` out for a machine that is on the account already, or that a person adds with `ruimte login`.
+- **Your extension gets no way in.** No call hands it a key, an account token, the registration or a connection to the machine it started. It names no account, and it does not see the output of the steps or of the command Ruimte runs through `inside`.
+- **The same broker.** Every program of a start, and `inside`, runs with `RUIMTE_BROKER_URL` in its environment. That is the broker the machine on this computer dials, or `off` when it dials none. `RUIMTE_BROKER_ADVERTISE_URL` is there too when clients reach that broker under another address. A machine reads the same names, so hand them on as they are, such as `--env RUIMTE_BROKER_URL` without a value on a container engine. A new machine that announces itself to another broker, or opens no way in, joins the account and nobody reaches it.
+- **A login of its own.** Give the new machine a home of its own, in a volume, so its CLIs sign in there once. Do not mount the login of a CLI on this computer into it: the code of the project runs there too.
+- **Nothing is cleaned up.** A person's stop asks the program that runs to end, once. Ruimte stops and removes no container, volume or file a start made, also not after a failure.
+- `report` writes a line of progress above the output. `signal` aborts once the person stopped the start while `start` still runs.
+- `running: true` says a machine already runs in a place, and Ruimte then offers no start there.
+- A source lists at most 16 places, and a start has at most 16 steps. `cwd` in `spawn` stays inside the project folder or one of its worktrees.
+- `defineMachineSource` throws for an id the manifest does not list, so call it as the module loads.
+
+## References and slash commands
+
+`defineReference` and `defineSlashCommand` of `client/` add to `#` and `/` in a chat, in the window that loaded your client part. The same two in `server/` add them from the machine, so they show in every client of it, such as a phone. Both are [proposed parts](/docs/extensions/manifest#proposed-parts): name `references` and `slashCommands` under `proposed`, list the ids and the names under `provides` and ask for `composer.provide`.
+
+```ts
+defineReference({
+    id: 'tickets',
+    title: 'Tickets',
+    async list({ project }) {
+        const tickets = await ticketsOf(project.folder);
+
+        return tickets.map((ticket) => ({
+            id: ticket.key,
+            name: `${ticket.key} ${ticket.title}`
+        }));
+    },
+    read: (ticket) => textOf(ticket.id)
+});
+
+defineSlashCommand({
+    name: 'ticket',
+    description: 'Puts a ticket in the prompt, by its key',
+    run: (args) => textOf(args.trim())
+});
+```
+
+- Both come down to text in the prompt. The person reads it there and still sends it, so neither starts or sends anything.
+- `list` answers at most 200 things, each with an `id` and a `name` of at most 200 characters. `read` and `run` answer at most 100,000 characters.
+- Both get the project of the chat. Ruimte starts your server part for the list.
+- After a throw the prompt gets a line with your message in place of the text.
+- A reference with the id your client part also uses shows once, and so does a command with the same name. In that window the client's is the one that runs.
+- The name of a command is of lowercase letters, digits and dashes.
+- Both throw for an id or a name the manifest does not list, so call them as the module loads.
+
+## Live data for a chat
+
+An agent answers with blocks: a table, a chart, a list of entries. A UI source gives those blocks live data of your extension, so the agent writes where the rows come from and Ruimte reads them again while the chat is on screen. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `uiSources` under `proposed`, list the id under `provides.uiSources` and ask for `ui.provide`.
+
+```ts
+defineUiSource({
+    id: 'checks',
+    description: 'The checks of a change: name, state and duration',
+    parameters: {
+        type: 'object',
+        properties: {
+            change: { type: 'string' }
+        },
+        required: ['change']
+    },
+    async read({ change }, { project }) {
+        if (typeof change !== 'string') {
+            throw new Error('Name a change');
+        }
+
+        return checksOf(project.folder, change);
+    }
+});
+```
+
+The agent reads it in a block as `@Query("extension", { source: "acme.builds/checks", args: { change: "42" } })`. The name is your extension's id, a slash and the id of the source, so it never meets a source of Ruimte or of another extension.
+
+- The agent is told the name and the `description` in its prompt, and `ui_catalog` lists the `parameters`. Keep the description under 200 characters and the parameters, a JSON Schema, under 2 KB. A source without a description reaches no agent.
+- `read` gets `args` as the block wrote them. Ruimte does not hold them to `parameters`, so check what you use.
+- `project` is the project of the chat that wrote the block. A block reads with that chat's access: once the chat moved to another project, the read is refused.
+- `read` only reads. Every client that shows the block reads it again, at most once every ten seconds, so it must be safe to run any number of times.
+- The answer is JSON of at most 32 KB. Rows as an array of records draw in a Table or a Chart. A larger answer, a throw and a read that takes too long show in the block as a read that failed.
+- The components stay Ruimte's. To draw something of your own in a chat, use [`defineMarkdownBlock`](/docs/extensions/chats-and-agents).
+- `defineUiSource` throws for an id the manifest does not list, so call it as the module loads.
+
+## Notification channels
+
+A notification channel delivers what Ruimte tells a person about their agents somewhere else, such as a chat room or a pager. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `notificationChannels` under `proposed`, list the id under `provides.notificationChannels` and ask for `notifications.provide`.
+
+```ts
+defineNotificationChannel({
+    id: 'room',
+    title: 'Team room',
+    async deliver({ title, body, reason }) {
+        const hook = await secrets.get('hook');
+
+        if (hook === undefined) {
+            throw new Error('Connect the team room first');
+        }
+
+        await post(hook, {
+            text: `${title}: ${body}`,
+            urgent: reason !== 'done'
+        });
+    }
+});
+```
+
+Ruimte decides when, and your channel only delivers.
+
+- **Off until a person turns it on.** The channel shows under Settings, Notifications of the app on the computer that runs the machine, as "Notify through" and its `title`. Nothing reaches `deliver` before that.
+- **The same quiet as a phone.** `deliver` runs when a phone would get the push. While the person is at a desktop a wait holds for a minute and an approval for ten seconds, and each goes out only if it is still unread then. A finished turn that came due at the desk goes nowhere, and neither does a node the person snoozed.
+- `reason` says why: `needsYou` for a wait, a question or an approval, `done` for a finished turn and `limit` for a chat that stopped on a usage limit, told once per limit.
+- A notification names its `project` and its `node`, the chat or terminal it is about. It carries no way to answer: an approval is answered in Ruimte.
+- A `deliver` that throws or does not settle in time loses that one notification. Ruimte writes the reason to your log and tries the next one as if nothing happened. No other channel and no phone waits for yours.
+- A device's own quiet hours and what it follows stay that device's. A channel gets every notification of the machine, so filter on `reason` or `project` if yours should say less.
+- `defineNotificationChannel` throws for an id the manifest does not list, so call it as the module loads.
+
+## Agent providers
+
+An agent provider offers an agent of your own in the model pickers, beside the agents Ruimte knows. The agent has to speak the Agent Client Protocol (ACP) on its standard input and output. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `agentProviders` under `proposed`, list the id under `provides.agentProviders` and ask for `agents.provide`.
+
+```ts
+import { defineAgentProvider } from '@ruimte/extension/server';
+
+defineAgentProvider({
+    id: 'inspector',
+    name: 'Beacon Inspector',
+    protocol: 'acp',
+    spawn: () => ({
+        command: 'beacon-inspector',
+        args: ['acp'],
+        env: {
+            BEACON_RULES: 'account'
+        }
+    }),
+    models: async () => [
+        {
+            id: 'inspector-fast',
+            name: 'Inspector Fast'
+        }
+    ]
+});
+```
+
+You describe the agent and Ruimte starts it. The chat, its thread, its approvals and its stop are Ruimte's, as for every agent.
+
+- Ruimte calls `spawn` once, as your server part loads, and runs that program for each chat in the chat's own folder. It ignores `cwd`. `env` goes on top of the person's own variables.
+- `models` names what the picker offers first, at most 64. Without it the picker has one entry, Default. Once a chat runs, the models the agent reports take their place.
+- Ruimte hands the agent no key and reads none. The agent signs in the way it does on its own, and a chat that needs a sign-in says so.
+- The picker lists the agent once your server part ran, which happens when a project opens. An agent whose program is not on the machine shows as not installed. Ruimte looks for the program on the path and never runs it to find out.
+- The agent leaves the pickers when a person turns your extension off or removes it. A chat that used it stays in the project and cannot go on until the agent is back.
+- The extension's id and this `id` together are at most 29 characters, and `defineAgentProvider` throws past that and for an id the manifest does not list.
+
+In a test, `server.agentProvider(id)` answers what the machine takes of your description.
+
+## Problems
+
+A problem source reports what a linter or a scanner found. Its problems show with the editor's own in the Problems panel, under the title of the source, and agents read them with `language_problems`. It is a [proposed part](/docs/extensions/manifest#proposed-parts): name `problemSources` under `proposed`, list the id under `provides.problemSources` and ask for `problems.provide`.
+
+```ts
+defineProblemSource({
+    id: 'rules',
+    title: 'Lintel'
+});
+
+const reported = await problems.report(project, 'rules', [
+    {
+        path: 'src/app.ts',
+        problems: [
+            {
+                line: 12,
+                column: 5,
+                severity: 'warning',
+                message: 'A TODO is left here',
+                code: 'marker'
+            }
+        ]
+    }
+]);
+```
+
+- `report` replaces everything the source said about the files it names, and leaves every other file alone. A file with an empty `problems` is cleared.
+- `clear(project, source)` takes back everything the source said in the project.
+- A `Problem` counts lines and columns from 1. `column`, `endLine`, `endColumn` and `code` are optional, and `severity` is `error`, `warning`, `information` or `hint`.
+- A source holds at most 200 problems per file and 500 files per project. A report past either answers `limit` and changes nothing.
+- Ruimte keeps the problems in memory. They go when the project closes, and when the extension is turned off, changed or removed, so report again when the server part starts.
+
+`defineProblemSource` throws for an id the manifest does not list, and `report` answers `not-found` for a source it did not define.
 
 ## Language servers
 

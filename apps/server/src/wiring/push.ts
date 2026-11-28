@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import { errorText } from '../error-text.ts';
+import type { NotificationChannels } from '../extensions/notification-channels.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { LimitContext } from '../push/limit-alert.ts';
 import { pushNodeTitle } from '../push/node-title.ts';
@@ -18,7 +19,8 @@ export function wirePush(
     agents: AgentsBundle,
     projects: ProjectStore,
     snoozes: SnoozeStore,
-    usage: UsageBundle
+    usage: UsageBundle,
+    channels: NotificationChannels
 ): PushService {
     const { sessions, chats } = agents;
     const limitContext = (chatId: string): LimitContext | null => {
@@ -74,6 +76,7 @@ export function wirePush(
         ],
         onError: (error) => console.error('Push delivery failed:', errorText(error)),
         snoozes,
-        limitContext
+        limitContext,
+        channels: (notification) => channels.notify(notification)
     });
 }

@@ -25,6 +25,12 @@ test('node runs the packaged daemon and its search worker', async () => {
         stdio: ['ignore', 'inherit', 'inherit']
     });
     expect(compile.exitCode).toBe(0);
+    // The one place CI has a compiled daemon before a release does.
+    expect(
+        Bun.spawnSync(['bun', 'scripts/check-build-outputs.ts', join(work, 'binaries', target)], { cwd: repoRoot, stdio: ['ignore', 'inherit', 'inherit'] })
+            .exitCode
+    ).toBe(0);
+
     if (process.platform === 'darwin') {
         expect(existsSync(join(work, 'binaries', target, 'native', 'serve-sim-duo-hid'))).toBe(true);
         expect(existsSync(join(work, 'binaries', target, 'native', 'serve-sim-camera-helper'))).toBe(true);

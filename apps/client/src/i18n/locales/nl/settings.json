@@ -1307,6 +1307,10 @@
                 "description": "Werken zonder pauze."
             }
         },
+        "notificationChannels": {
+            "label": "Melden via {{title}}",
+            "description": "Stuurt ook wat je telefoon zou krijgen, als een agent je nodig heeft, klaar is of een gebruikslimiet bereikt. Het wacht zolang je achter deze computer zit."
+        },
         "notify": {
             "title": "Meldingen over",
             "preview": "Voorbeeld: {{event}}",
@@ -2041,6 +2045,15 @@
             "enterCode": "Code invoeren",
             "short": "Toevoegen"
         },
+        "devcontainer": {
+            "label": "Een map openen in een dev container",
+            "description": "Ruimte start de dev container van de map met Docker op deze computer, zet er een machine in en opent de map daar.",
+            "signedOut": "Log eerst in. De nieuwe machine komt op het account waarmee je bent ingelogd.",
+            "action": "Map kiezen",
+            "held": "Ruimte las dit uit de devcontainer.json in {{folder}}. Er draait niets tot je het goedkeurt, en na een wijziging van dat bestand vraagt Ruimte het opnieuw.",
+            "joined": "Hij staat op je account. Ruimte opent {{folder}} erop in dit venster.",
+            "open": "Map openen"
+        },
         "listLabel": "Account en machines",
         "failed": "Kon de instellingen van het account niet tonen",
         "thisComputer": {
@@ -2057,6 +2070,73 @@
                 "description": "Alle vensters sluiten en openen opnieuw. Agents op je andere machines werken door.",
                 "action": "Opnieuw starten",
                 "failed": "Ruimte kon niet opnieuw starten om hier een machine te draaien. Probeer het opnieuw."
+            }
+        },
+        "sources": {
+            "title": "Van {{source}}",
+            "subtitle": "{{place}}, van {{source}}",
+            "stop": "Stoppen",
+            "row": {
+                "idle": "Niet gestart",
+                "running": "Hier draait een machine",
+                "preparing": "Bezig met voorbereiden",
+                "held": "Wacht op je goedkeuring",
+                "starting": "Bezig met starten",
+                "joining": "Komt op je account",
+                "done": "Gestart",
+                "failed": "Niet gestart",
+                "stopped": "Gestopt"
+            },
+            "start": {
+                "label": "Hier een machine starten",
+                "description": "Je ziet wat er op deze computer draait voordat er iets start.",
+                "action": "Starten"
+            },
+            "running": {
+                "label": "Hier draait al een machine",
+                "description": "Zodra die op je account staat, vind je hem in de lijst met machines."
+            },
+            "preparing": {
+                "label": "{{source}} wordt gevraagd wat er moet draaien"
+            },
+            "held": {
+                "title": "Dit op deze computer uitvoeren?",
+                "description": "{{source}} las dit uit een bestand in dit project. Er draait niets tot je het goedkeurt, en na een wijziging van dat bestand vraagt Ruimte het opnieuw.",
+                "join": "De nieuwe machine op je account zetten",
+                "folder": "In {{folder}}",
+                "ask": "Dit draait na elkaar, in deze volgorde.",
+                "joins": "Met je goedkeuring komt de nieuwe machine ook op je account.",
+                "approve": "Goedkeuren en starten",
+                "cancel": "Annuleren"
+            },
+            "starting": {
+                "label": "De machine start"
+            },
+            "joining": {
+                "label": "De nieuwe machine komt op je account",
+                "signIn": {
+                    "label": "Log in om de nieuwe machine op je account te zetten",
+                    "description": "De machine draait. Log in deze app in op je account, dan voegt Ruimte hem toe."
+                },
+                "failed": {
+                    "label": "De nieuwe machine staat nog niet op je account",
+                    "retry": "Opnieuw proberen"
+                }
+            },
+            "done": {
+                "label": "De machine draait",
+                "description": "Zodra hij op je account staat, vind je hem in de lijst met machines.",
+                "joined": "Hij staat op je account, in de lijst met machines. Open hem daar."
+            },
+            "failed": {
+                "label": "De machine is niet gestart"
+            },
+            "stopped": {
+                "label": "Gestopt",
+                "description": "Ruimte heeft niets verwijderd van wat de start had gemaakt."
+            },
+            "log": {
+                "title": "Wat het schreef"
             }
         }
     },
@@ -2125,6 +2205,9 @@
         }
     },
     "providers": {
+        "extensionAgent": {
+            "notInstalled": "Niet geïnstalleerd"
+        },
         "nanogpt": {
             "description": "Chat met de modellen die je NanoGPT-abonnement bevat. Verzoeken gaan alleen via je abonnement, nooit via pay as you go.",
             "footer": "De sleutel blijft op deze machine en wordt nooit meer getoond. Elke tool die een model vraagt, heeft jouw goedkeuring nodig.",
@@ -2297,6 +2380,8 @@
         "noPermissions": "Vraagt nergens extra om.",
         "removeDescription": "Verwijdert de extensie en wat die bewaarde van deze computer.",
         "groupDevelopment": "In ontwikkeling",
+        "groupTest": "Testextensies",
+        "testExtension": "Testextensie",
         "groupInstalled": "Geïnstalleerd",
         "builtIn": "Ingebouwd",
         "development": "Ontwikkeling",

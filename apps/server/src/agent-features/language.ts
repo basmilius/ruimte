@@ -21,6 +21,10 @@ export const languageFeature = defineAgentFeature({
                 programOf: (kind) => later.language().host.programOf(kind),
                 cachedWorkspaceProblems: (projectId) => later.language().host.cachedWorkspaceProblems(projectId)
             },
+            reported: {
+                sourcesOf: (projectId) => later.extensions().problems.sourcesOf(projectId),
+                of: (projectId) => later.extensions().problems.of(projectId)
+            },
             sql: databases.sqlAnalysis
         })
     })

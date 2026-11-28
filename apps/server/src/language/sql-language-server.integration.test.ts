@@ -178,7 +178,7 @@ describe.skipIf(!ready)('the SQL servers against a snapshot of the project datab
     }, 180_000);
 
     test('an agent reads the same diagnostics and the snapshot of the file', async () => {
-        const agent = new AgentLanguage({ host, sql: analysis });
+        const agent = new AgentLanguage({ host, sql: analysis, reported: { sourcesOf: () => [], of: () => [] } });
         const answer = await agent.diagnostics({ projectId: 'p1', folder: project }, 'chat-1', join(project, 'queries', 'users.sql'));
         expect(answer.diagnostics.some((item) => item.code === 'unresolved-column' && item.line === 1 && item.column === 8)).toBe(true);
         const file = await agent.sqlFile({ projectId: 'p1', folder: project }, join(project, 'queries', 'users.sql'));

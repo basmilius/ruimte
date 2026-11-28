@@ -1,13 +1,14 @@
 import { Button, ErrorBoundary, Icon, ScrollArea, SectionLabel, Tile, ContextMenu, useWindowControlsInset } from '@adecore/ui';
 import { isRecentProject } from '@ruimte/contracts';
 import clsx from 'clsx';
-import { FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
+import { Container, FolderOpen, LogIn, MessageSquarePlus, MessagesSquare, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { chatsProjects, openableRows, recentProjects, type ProjectMenuRow } from '@/clients/project/list';
 import { runCommand } from '@/commands/key-dispatch';
 import { STRIP_PADDING_PX, isDesktop } from '@/desktop/bridge';
 import { AddMachineDialog } from '@/machine-ui/AddMachineDialog';
+import { offersDevcontainers, pickDevcontainerFolder } from '@/machine-ui/devcontainers';
 import { LinkMachineDialog } from '@/machine-ui/LinkMachineDialog';
 import { SignInButtons } from '@/machine-ui/SignInButtons';
 import { useMachineIcon } from '@/machines/machine-icon';
@@ -250,6 +251,24 @@ function StartContent() {
         />
     );
 
+    // In the app that runs no machine of its own: a folder of this computer, in a dev container with a machine of its own.
+    const devcontainerTile = (disabled: boolean) =>
+        offersDevcontainers() && (
+            <Tile
+                icon={<Icon icon={Container} size={16} />}
+                title={t('start.devcontainer')}
+                description={t('start.devcontainerHint')}
+                disabled={disabled || accountStatus !== 'signed-in'}
+                onClick={() =>
+                    void pickDevcontainerFolder().then((picked) => {
+                        if (picked) {
+                            useUi.getState().setSettings({ open: true, section: 'machines' });
+                        }
+                    })
+                }
+            />
+        );
+
     const machineList = (
         <Section label={t('start.machines')}>
             {machines.length === 0 ? (
@@ -282,6 +301,7 @@ function StartContent() {
                     <div className="grid gap-2">
                         {chatTile(false)}
                         {connectTile(false)}
+                        {devcontainerTile(false)}
                     </div>
                     {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
@@ -312,6 +332,7 @@ function StartContent() {
                                     <ChatsTile key={row.endpointId} row={row} showMachine={chats.length > 1} disabled={waiting} />
                                 ))}
                                 {connectTile(waiting)}
+                                {devcontainerTile(waiting)}
                                 {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                             </div>
                         </Section>

@@ -224,6 +224,23 @@ describe('ExtensionStore', () => {
         expect(await store.get(id)).toBeNull();
     });
 
+    test('leaves a link that starts off off until a person turns it on, and on over every link after that', async () => {
+        const store = new ExtensionStore(join(root, 'starts-off'));
+        const folder = join(root, 'projects', 'starts-off');
+        const id = 'acme.breaks';
+
+        mkdirSync(folder, { recursive: true });
+        writeFileSync(join(folder, 'manifest.json'), manifestOf(id));
+        await store.link(folder, undefined, true);
+
+        expect((await store.get(id))?.enabled).toBe(false);
+
+        await store.setEnabled(id, true);
+        await store.link(folder, undefined, true);
+
+        expect((await store.get(id))?.enabled).toBe(true);
+    });
+
     test('keeps who owns a dev link over a restart of the machine, and unlinks only for exactly that run', async () => {
         const home = join(root, 'owned-restart');
         const first = join(root, 'projects', 'restart-first');

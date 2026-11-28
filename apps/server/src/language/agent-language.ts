@@ -276,8 +276,25 @@ function kindOfProcess(process: string): string {
     return kind?.kind ?? process;
 }
 
+interface ReportedProblem {
+    line: number;
+    column?: number | undefined;
+    endLine?: number | undefined;
+    endColumn?: number | undefined;
+    severity: AgentDiagnostic['severity'];
+    message: string;
+    code?: string | undefined;
+}
+
+interface ReportedSources {
+    sourcesOf(projectId: string): { server: string; title: string }[];
+    of(projectId: string): { server: string; title: string; path: string; problems: readonly ReportedProblem[] }[];
+}
+
 interface AgentLanguageOptions {
     host: Pick<LanguageHost, 'forAgent' | 'programOf' | 'cachedWorkspaceProblems'>;
+    /* What the problem sources of extensions hold for a project, read beside the servers' own. */
+    reported: ReportedSources;
     sql: { fileContext(projectId: string, path: string): Promise<SqlFileContext> };
     readText?: (path: string) => Promise<string | null>;
 }
@@ -400,9 +417,11 @@ export class AgentLanguage {
     }
 
     private async workspaceProblems(place: AgentLanguagePlace): Promise<AgentProblems> {
-        const { servers, pulled, files, reports } = this.options.host.cachedWorkspaceProblems(place.projectId);
+        const { servers, pulled, reports } = this.options.host.cachedWorkspaceProblems(place.projectId);
+        const sources = this.options.reported.sourcesOf(place.projectId);
+        const reported = this.options.reported.of(place.projectId);
 
-        if (servers.length === 0) {
+        if (servers.length === 0 && sources.length === 0) {
             throw new ToolRefusal(
                 'no-workspace-diagnostics',
                 'No running language server of this project reports problems for the whole project; language_file with action diagnostics reads one file'
@@ -443,11 +462,34 @@ export class AgentLanguage {
             }
         }
 
+        // What a source of an extension reported is counted from 1 already, and names its source as a language server names its own.
+        for (const file of reported) {
+            for (const problem of file.problems) {
+                const column = problem.column ?? 1;
+
+                found.push({
+                    path: file.path,
+                    line: problem.line,
+                    column,
+                    endLine: problem.endLine ?? problem.line,
+                    endColumn: problem.endColumn ?? column,
+                    severity: problem.severity,
+                    server: file.server,
+                    source: file.title,
+                    code: problem.code ?? null,
+                    message: problem.message
+                });
+            }
+        }
+
         found.sort((a, b) => a.path.localeCompare(b.path) || a.line - b.line || a.column - b.column);
 
         return {
-            servers: servers.map((process) => ({ kind: kindOfProcess(process), process })),
-            files,
+            servers: [
+                ...servers.map((process) => ({ kind: kindOfProcess(process), process })),
+                ...sources.map((source) => ({ kind: 'extension', process: source.server }))
+            ],
+            files: new Set([...reports.map((report) => report.path), ...reported.map((file) => file.path)]).size,
             diagnostics: found.slice(0, PROBLEMS_LIMIT),
             truncated: found.length > PROBLEMS_LIMIT,
             withheld: withheld.size,

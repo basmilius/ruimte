@@ -7,7 +7,7 @@ import { parseArgs } from 'node:util';
 const SUITES = ['default', 'core', 'package', 'devices'] as const;
 export type IntegrationSuite = (typeof SUITES)[number];
 
-const EXTENSION_HOST_TESTS = /^extensions\/(?:poc\/)?[^/]+\/test\//;
+const EXTENSION_HOST_TESTS = /^extensions\/(?:(?:poc|dev)\/)?[^/]+\/test\//;
 
 export function integrationFiles(root: string, suite: IntegrationSuite = 'default'): string[] {
     return (

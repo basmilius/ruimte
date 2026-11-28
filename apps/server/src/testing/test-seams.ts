@@ -17,6 +17,7 @@ import { untilChecked } from '../until-test-helpers.ts';
 import { openAiLive } from '../voice/openai-live.ts';
 import { loopbackUrls, type DaemonRuntime } from '../wiring/runtime.ts';
 import type { DaemonSeams } from '../wiring/seams.ts';
+import { FakeMachineSteps } from './fake-machine-steps.ts';
 
 /* The configuration of a daemon in a test: its own home, nothing fetched, no hooks written, nobody reached from outside. */
 export function testConfig(home: string): ServerConfig {
@@ -107,6 +108,8 @@ export interface TestFakes {
     /* Every piece of work owed since boot, kept after the worker took it off the outbox. */
     enqueued: OutboxWork[];
     drops: Promise<void>[];
+    /* The programs a machine start asked to run, none of which ran. */
+    machineSteps: FakeMachineSteps;
     /* Resolves once `check` holds, looked at again each time `recheck` runs. */
     until(check: () => boolean): Promise<void>;
     recheck(): void;
@@ -145,7 +148,8 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
     const alerts: string[] = [];
     const enqueued: OutboxWork[] = [];
     const drops: Promise<void>[] = [];
-    const fakes: TestFakes = { adapter, claude, codex, chatEnvs, chatCommands, alerts, enqueued, drops, until, recheck };
+    const machineSteps = new FakeMachineSteps();
+    const fakes: TestFakes = { adapter, claude, codex, chatEnvs, chatCommands, alerts, enqueued, drops, machineSteps, until, recheck };
     const seams: DaemonSeams = {
         clock,
         random: () => 0.5,
@@ -198,6 +202,8 @@ export function testSeams(choices: TestSeamChoices, overrides: Partial<DaemonSea
         voiceLive: openAiLive(),
         power: NO_POWER,
         machine: { model: async () => null, sessionFs: nodeSessionFs },
+        developmentExtensions: [],
+        machineSteps: machineSteps.run,
         remote: { connections: (real) => real, reconnect: (real) => real },
         peerNotify: (real) => real,
         observers: {

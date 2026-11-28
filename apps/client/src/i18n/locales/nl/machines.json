@@ -343,6 +343,7 @@
         "refusal": {
             "onlyOnMachine": "Alleen de app op die machine kan hem op een account zetten.",
             "machineHasAccount": "Deze machine staat op een ander account. Haal hem daar eerst af, op de machine zelf.",
+            "otherAccount": "De machine op deze computer staat op een ander account dan waarop je bent ingelogd.",
             "listedElsewhere": "Een ander account heeft deze machine nog in zijn lijst. Verwijder hem daar eerst, vanaf een apparaat dat op dat account is ingelogd."
         }
     },

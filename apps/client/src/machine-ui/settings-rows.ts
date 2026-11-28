@@ -13,6 +13,13 @@ export const MACHINE_SETTINGS_ROWS: readonly SettingsSearchRow[] = [
         available: () => isDesktop() && !hasLocalMachine()
     },
     { id: 'machines.add', section: 'machines', label: 'settings:machines.add.title', description: 'settings:machines.add.description' },
+    {
+        id: 'machines.devcontainer',
+        section: 'machines',
+        label: 'settings:machines.devcontainer.label',
+        description: 'settings:machines.devcontainer.description',
+        available: () => desktop()?.machine?.mode === 'none' && desktop()?.devcontainers !== undefined
+    },
     // On the detail of a machine this client opened: the one picked, else this machine.
     {
         id: 'machines.machine.identity',
